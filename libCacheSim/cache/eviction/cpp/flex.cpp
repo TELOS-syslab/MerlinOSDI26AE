@@ -88,7 +88,7 @@ extern "C"
 
     cache_t *flex_init(const common_cache_params_t ccache_params,
                         const char *cache_specific_params)
-    {printf("%s\n", __func__);
+    {
         cache_t *cache = cache_struct_init("flex", ccache_params, cache_specific_params);
         cache->eviction_params = reinterpret_cast<void *>(new eviction::flex_params_t);
 
@@ -183,13 +183,13 @@ extern "C"
     }
 
     static bool flex_get(cache_t *cache, const request_t *req)
-    {printf("%s\n", __func__);
+    {
         return cache_get_base(cache, req);
     }
     static void printstatus(cache_t *cache);
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq);
     static cache_obj_t *flex_prefetch(cache_t *cache, cache_obj_t *obj_toprefetch)
-    {printf("%s\n", __func__);
+    {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         if (obj_toprefetch->FLEX.prefetch != 0)
         {
@@ -203,7 +203,7 @@ extern "C"
         return obj_toprefetch;
     }
     static cache_obj_t *flex_prefetchinsert(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = params->front->insert(params->front, params->req_prefetch);
         obj->FLEX.freq = params->prefetch_freq;
@@ -214,7 +214,7 @@ extern "C"
 
     static cache_obj_t *flex_find(cache_t *cache, const request_t *req,
                                    const bool update_cache)
-    {printf("%s\n", __func__);
+    {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = NULL;
         if (!update_cache)
@@ -348,7 +348,7 @@ extern "C"
     }
 
     static void decreasepop(std::vector<int32_t> &popularity, int32_t ori_freq, int32_t dest_freq)
-    {printf("%s\n", __func__);
+    {
         for (int i = ori_freq; i > dest_freq; i--)
         {
             popularity[i]--;
@@ -356,7 +356,7 @@ extern "C"
     }
 
     static cache_obj_t *flex_insert(cache_t *cache, const request_t *req)
-    {printf("%s\n", __func__);
+    {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = NULL;
         // if(params->main->get_occupied_byte(params->main) < params->main_limit){
@@ -420,7 +420,7 @@ extern "C"
     }
 
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *object = params->ghost->insert(params->ghost, req);
         object->FLEX.freq = freq;
@@ -429,7 +429,7 @@ extern "C"
     }
 
     static int movefromghost(cache_t *cache, const request_t *req)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = params->ghost->find(params->ghost, req, false);
         if (obj != NULL)
@@ -443,7 +443,7 @@ extern "C"
     }
 
     static void adjust_main(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         while (params->main_limit < params->main->get_occupied_byte(params->main))
         {
@@ -464,7 +464,7 @@ extern "C"
     }
 
     static void evict_small(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *small_to_evict = params->small->to_evict(params->small, NULL);
         int ori_freq = small_to_evict->FLEX.freq;
@@ -509,7 +509,7 @@ extern "C"
     }
 
     static int duel(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *front_to_evict = params->front->to_evict(params->front, NULL);
         cache_obj_t *small_to_evict = params->small->to_evict(params->small, NULL);
@@ -555,7 +555,7 @@ extern "C"
     }
 
     static int adjust_small(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         while (params->small->get_occupied_byte(params->small) > 0)
         {
@@ -586,7 +586,7 @@ extern "C"
     }
 
     static int adjust_front(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         int has_evicted = 0;
 
@@ -646,7 +646,7 @@ extern "C"
     }
 
     static void adjust_ghost(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         while (params->ghost->get_occupied_byte(params->ghost) > params->ghost_limit)
         {
@@ -659,7 +659,7 @@ extern "C"
     }
 
     static void flex_adjustguard(cache_t *cache)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         // todo adjust gurad_freq
         int guradfreq = params->gurad_freq;
@@ -708,7 +708,7 @@ extern "C"
     }
 
     static void flex_evict(cache_t *cache, const request_t *req)
-    {printf("%s\n", __func__);
+    {
         if (cache == nullptr || cache->eviction_params == nullptr)
         {
             fprintf(stderr, "Error: cache or cache->eviction_params is null\n");
@@ -766,7 +766,7 @@ extern "C"
     }
 
     static bool flex_remove(cache_t *cache, const obj_id_t obj_id)
-    {printf("%s\n", __func__);
+    {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         bool removed = false;
         removed = removed || params->front->remove(params->front, obj_id);
