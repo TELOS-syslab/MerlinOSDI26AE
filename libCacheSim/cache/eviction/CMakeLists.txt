@@ -77,6 +77,10 @@ endif()
 set(sourceCPP
         cpp/LFU.cpp
         cpp/GDSF.cpp
+        cpp/flex.cpp
+        cpp/flex-cbf.cpp
+        cpp/flex-prefetch.cpp
+        cpp/flex-pp.cpp
         LHD/lhd.cpp
         LHD/LHD_Interface.cpp
         )

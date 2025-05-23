@@ -81,6 +81,10 @@ typedef struct {
   int64_t n_obj;
   int64_t occupied_byte;
   int64_t cache_size;
+  int64_t prefetchhit;
+  int64_t prefetchnum;
+  int64_t cfbincrease;
+  int64_t cbfquery;
 
   /* current trace time, used to determine obj expiration */
   int64_t curr_rtime;
@@ -117,6 +121,11 @@ struct cache {
   // other name: logical_time, virtual_time, reference_count
   int64_t n_req; /* number of requests (used by some eviction algo) */
 
+  int64_t prefetchhit;
+  int64_t prefetchnum;
+  int64_t cfbincrease;
+  int64_t cbfquery;
+  
   /**************** private fields *****************/
   // use cache->get_n_obj to obtain the number of objects in the cache
   // do not use this variable directly

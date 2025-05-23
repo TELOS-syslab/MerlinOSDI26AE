@@ -37,8 +37,8 @@ int main(int argc, char **argv) {
 
   char output_str[1024];
   char output_filename[128];
-  create_dir("result/");
-  sprintf(output_filename, "result/%s", basename(args.trace_path));
+  create_dir(args.odirpath);
+  sprintf(output_filename, "%s/%s",args.odirpath, basename(args.trace_path));
   FILE *output_file = fopen(output_filename, "a");
 
   uint64_t size_unit = 1;
@@ -61,13 +61,15 @@ int main(int argc, char **argv) {
   printf("\n");
   for (int i = 0; i < args.n_cache_size * args.n_eviction_algo; i++) {
     snprintf(output_str, 1024,
-             "%s %32s cache size %8ld%s, %lld req, miss ratio %.4lf, byte miss "
-             "ratio %.4lf\n",
-             output_filename, result[i].cache_name,
-             (long)(result[i].cache_size / size_unit), size_unit_str,
-             (long long)result[i].n_req,
-             (double)result[i].n_miss / (double)result[i].n_req,
-             (double)result[i].n_miss_byte / (double)result[i].n_req_byte);
+        "%s %32s cache size %8ld%s, %lld req, miss ratio %.4lf, byte miss "
+        "ratio %.4lf prefetchnum %lld, hit %lld, CBF query %lld, increase %lld\n",
+        output_filename, result[i].cache_name,
+        (long)result[i].cache_size / size_unit, size_unit_str,
+        (long long)result[i].n_req,
+        (double)result[i].n_miss / (double)result[i].n_req,
+        (double)result[i].n_miss_byte / (double)result[i].n_req_byte,
+        result[i].prefetchnum, result[i].prefetchhit,
+        result[i].cbfquery, result[i].cfbincrease);
     printf("%s", output_str);
     fprintf(output_file, "%s", output_str);
   }

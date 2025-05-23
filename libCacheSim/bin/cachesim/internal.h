@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 #define N_ARGS 4
-#define N_MAX_ALGO 16
+#define N_MAX_ALGO 256
 #define N_MAX_CACHE_SIZE 128
 #define OFILEPATH_LEN 128
 
@@ -31,6 +31,7 @@ struct arguments {
   int warmup_sec;
 
   char ofilepath[OFILEPATH_LEN];
+  char odirpath[OFILEPATH_LEN];
   char *trace_type_str;
   trace_type_e trace_type;
   char *trace_type_params;

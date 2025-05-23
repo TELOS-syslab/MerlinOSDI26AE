@@ -35,6 +35,7 @@ enum argp_option_short {
   OPTION_ADMISSION_ALGO = 'a',
   OPTION_ADMISSION_PARAMS = 0x100,
   OPTION_OUTPUT_PATH = 'o',
+  OPTION_OUTPUT_DIR_PATH = 'd',
   OPTION_NUM_REQ = 'n',
   OPTION_IGNORE_OBJ_SIZE = 0x101,
   OPTION_USE_TTL = 0x102,
@@ -82,6 +83,7 @@ static struct argp_option options[] = {
     {"ignore-obj-size", OPTION_IGNORE_OBJ_SIZE, "false", 0,
      "specify to ignore the object size from the trace", 6},
     {"output", OPTION_OUTPUT_PATH, "output", 0, "Output path", 6},
+    {"outputdir", OPTION_OUTPUT_DIR_PATH, "outputdir", 0, "Outputdir path", 6},
     {"num-thread", OPTION_NUM_THREAD, "16", 0,
      "Number of threads if running when using default cache sizes", 6},
 
@@ -139,6 +141,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
       break;
     case OPTION_OUTPUT_PATH:
       strncpy(arguments->ofilepath, arg, OFILEPATH_LEN);
+      break;
+    case OPTION_OUTPUT_DIR_PATH:
+      strncpy(arguments->odirpath, arg, OFILEPATH_LEN);
       break;
     case OPTION_NUM_REQ:
       arguments->n_req = atoi(arg);
@@ -231,6 +236,7 @@ static void init_arg(struct arguments *args) {
   args->n_thread = n_cores();
   args->warmup_sec = -1;
   memset(args->ofilepath, 0, OFILEPATH_LEN);
+  memset(args->odirpath, 0, OFILEPATH_LEN);
   args->n_req = -1;
   args->sample_ratio = 1.0;
   args->print_head_req = true;
@@ -293,6 +299,9 @@ void parse_cmd(int argc, char *argv[], struct arguments *args) {
     char *trace_filename = rindex(args->trace_path, '/');
     snprintf(args->ofilepath, OFILEPATH_LEN, "%s.cachesim",
              trace_filename == NULL ? args->trace_path : trace_filename + 1);
+  }
+  if (args->odirpath[0] == '\0') {
+    snprintf(args->odirpath, OFILEPATH_LEN, "result/");
   }
 
   /* convert trace type string to enum */
@@ -459,7 +468,7 @@ static int conv_cache_sizes(char *cache_size_str, struct arguments *args) {
 }
 
 static void set_cache_size(struct arguments *args, reader_t *reader) {
-#define N_AUTO_CACHE_SIZE 8
+#define N_AUTO_CACHE_SIZE 6
   // if (set_hard_code_cache_size(args)) {
   //   /* find the hard-coded cache size */
   //   return;
@@ -470,7 +479,7 @@ static void set_cache_size(struct arguments *args, reader_t *reader) {
   int64_t wss_obj = 0, wss_byte = 0;
   cal_working_set_size(reader, &wss_obj, &wss_byte);
   int64_t wss = args->ignore_obj_size ? wss_obj : wss_byte;
-  double s[N_AUTO_CACHE_SIZE] = {0.001, 0.003, 0.01, 0.03, 0.1, 0.2, 0.4, 0.8};
+  double s[N_AUTO_CACHE_SIZE] = {0.003, 0.01, 0.03, 0.1, 0.2, 0.4};
   for (int i = 0; i < N_AUTO_CACHE_SIZE; i++) {
     if (args->ignore_obj_size) {
       if ((long)(wss_obj * s[i]) > 4) {

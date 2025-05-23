@@ -120,6 +120,10 @@ static void _simulate(gpointer data, gpointer user_data) {
   result[idx].curr_rtime = req->clock_time;
   result[idx].n_obj = local_cache->n_obj;
   result[idx].occupied_byte = local_cache->occupied_byte;
+    result[idx].prefetchhit = local_cache->prefetchhit;
+    result[idx].prefetchnum = local_cache->prefetchnum;
+    result[idx].cfbincrease = local_cache->cfbincrease;
+    result[idx].cbfquery = local_cache->cbfquery;
   strncpy(result[idx].cache_name, local_cache->cache_name,
           CACHE_NAME_ARRAY_LEN);
 

@@ -83,17 +83,21 @@ void simulate(reader_t *reader, cache_t *cache, int report_interval, int warmup_
   if (!ignore_obj_size) {
     snprintf(output_str, 1024,
              "%s %s cache size %8s, %16lu req, miss ratio %.4lf, throughput "
-             "%.2lf MQPS\n",
+             "%.2lf MQPS prefetchnum %lld, hit %lld, CBF query %lld, increase %lld\n",
             reader->trace_path, cache->cache_name, size_str,
             (unsigned long)req_cnt, (double)miss_cnt / (double)req_cnt,
-            (double)req_cnt / 1000000.0 / runtime);
+            (double)req_cnt / 1000000.0 / runtime,
+            (double)req_cnt / 1000000.0 / runtime, cache->prefetchnum, cache->prefetchhit,
+            cache->cbfquery, cache->cfbincrease);
   } else {
     snprintf(output_str, 1024,
              "%s %s cache size %8ld, %16lu req, miss ratio %.4lf, throughput "
-             "%.2lf MQPS\n",
+             "%.2lf MQPS prefetchnum %lld, hit %lld, CBF query %lld, increase %lld\n",
             reader->trace_path, cache->cache_name, cache->cache_size,
             (unsigned long)req_cnt, (double)miss_cnt / (double)req_cnt,
-            (double)req_cnt / 1000000.0 / runtime);
+            (double)req_cnt / 1000000.0 / runtime,
+            (double)req_cnt / 1000000.0 / runtime, cache->prefetchnum, cache->prefetchhit,
+            cache->cbfquery, cache->cfbincrease);
   }
 
 #pragma GCC diagnostic pop

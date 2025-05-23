@@ -156,6 +156,14 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
   } else if (strcasecmp(eviction_algo, "myMQv1") == 0) {
     cache = myMQv1_init(cc_params, eviction_params);
 #endif
+  } else if (strcasecmp(eviction_algo, "flex") == 0) {
+    cache = flex_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "flexp") == 0) {
+    cache = flexp_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "flexc") == 0) {
+    cache = flexc_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "flexpp") == 0) {
+    cache = flexpp_init(cc_params, eviction_params);
   } else {
     ERROR("do not support algorithm %s\n", eviction_algo);
     abort();
