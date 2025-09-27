@@ -24,7 +24,7 @@
 ## is closely controlled, an explicit 'shellcheck disable SC2086'
 ## was added to the relevant lines.
 
-set -u
+set -ux
 
 die()
 {
@@ -197,6 +197,7 @@ case "$1" in
 
   folly)
     NAME=folly
+    REPO=https://github.com/facebook/folly.git
     SRCDIR=cachelib/external/$NAME
     update_submodules=yes
     cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
@@ -209,6 +210,7 @@ case "$1" in
 
   fizz)
     NAME=fizz
+    REPO=https://github.com/facebookincubator/fizz.git
     SRCDIR=cachelib/external/$NAME/$NAME
     update_submodules=yes
     cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
@@ -221,6 +223,7 @@ case "$1" in
 
   wangle)
     NAME=wangle
+    REPO=https://github.com/facebook/wangle.git
     SRCDIR=cachelib/external/$NAME/$NAME
     update_submodules=yes
     cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
@@ -233,6 +236,7 @@ case "$1" in
 
   mvfst)
     NAME=mvfst
+    REPO=https://github.com/facebook/mvfst.git
     SRCDIR=cachelib/external/$NAME
     update_submodules=yes
     cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
@@ -240,6 +244,7 @@ case "$1" in
 
   fbthrift)
     NAME=fbthrift
+    REPO=https://github.com/facebook/fbthrift.git
     SRCDIR=cachelib/external/$NAME
     update_submodules=yes
     cmake_custom_params="-DBUILD_SHARED_LIBS=ON"

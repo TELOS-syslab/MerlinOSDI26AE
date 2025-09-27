@@ -31,17 +31,23 @@ root=./cachelib/external
 
 # Temporary hack:
 # After updating, checkout the required version based on fbthrift's files.
-file="$root/fbthrift/build/deps/github_hashes/facebook/wangle-rev.txt"
-wangle_rev=$(awk '{print $3}' $file) \
-  || die "failed to detect required wangle revision"
+if test -d "$root/fbthrift" ; then
+    file="$root/fbthrift/build/deps/github_hashes/facebook/wangle-rev.txt"
+    wangle_rev=$(awk '{print $3}' $file) \
+    || die "failed to detect required wangle revision"
+fi
 
-( cd "$root/wangle" ; git checkout --force "$wangle_rev" ) \
-  || die "failed to checkout required wangle revision '$wangle_rev'"
+if test -d "$root/wangle" ; then
+    ( cd "$root/wangle" ; git checkout --force "$wangle_rev" ) \
+    || die "failed to checkout required wangle revision '$wangle_rev'"
 
-# Based on Wangle, checkout fizz
-file="$root/wangle/build/deps/github_hashes/facebookincubator/fizz-rev.txt"
-fizz_rev=$(awk '{print $3}' $file) \
-  || die "failed to detect required fizz revision"
+    # Based on Wangle, checkout fizz
+    file="$root/wangle/build/deps/github_hashes/facebookincubator/fizz-rev.txt"
+    fizz_rev=$(awk '{print $3}' $file) \
+    || die "failed to detect required fizz revision"
+fi
 
-( cd "$root/fizz" ; git checkout --force "$fizz_rev" ) \
-  || die "failed to checkout required fizz revision '$fizz_rev'"
+if test -d "$root/fizz" ; then
+    ( cd "$root/fizz" ; git checkout --force "$fizz_rev" ) \
+    || die "failed to checkout required fizz revision '$fizz_rev'"
+fi
