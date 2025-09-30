@@ -37,6 +37,7 @@
 namespace facebook {
 namespace cachelib {
 namespace util {
+uint32_t global_ts = 0;
 
 namespace {
 

@@ -394,7 +394,7 @@ class CACHELIB_PACKED_ATTR CacheItem {
 
   // Returns the offset of the beginning of usable memory for an item
   uint32_t getOffsetForMemory() const noexcept;
-
+public:
   /**
    * Functions to set, unset and get bits
    */

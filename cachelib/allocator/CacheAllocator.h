@@ -6077,6 +6077,7 @@ extern template class CacheAllocator<LruCacheWithSpinBucketsTrait>;
 extern template class CacheAllocator<Lru2QCacheTrait>;
 extern template class CacheAllocator<TinyLFUCacheTrait>;
 extern template class CacheAllocator<WTinyLFUCacheTrait>;
+extern template class CacheAllocator<S3FIFOCacheTrait>;
 
 // CacheAllocator with an LRU eviction policy
 // LRU policy can be configured to act as a segmented LRU as well
@@ -6111,4 +6112,6 @@ using TinyLFUAllocator = CacheAllocator<TinyLFUCacheTrait>;
 // evict out main queue, but moved into the probation segment. This will
 // prevent the popular items from being evicted out immediately.
 using WTinyLFUAllocator = CacheAllocator<WTinyLFUCacheTrait>;
+
+using S3FIFOAllocator = CacheAllocator<S3FIFOCacheTrait>;
 } // namespace facebook::cachelib

@@ -23,28 +23,38 @@ namespace facebook {
 namespace cachelib {
 namespace util {
 
+extern uint32_t global_ts;
+
 // ::time is the fastest for getting the second granularity system clock
 // through the vdso. This is faster than std::chrono::system_clock::now and
 // counting it as seconds since epoch.
 inline uint32_t getCurrentTimeSec() {
   // time in seconds since epoch will fit in 32 bit. We use this primarily for
   // storing in cache.
+  return global_ts;
   return static_cast<uint32_t>(std::time(nullptr));
+}
+
+inline void setCurrentTimeSec(uint32_t currTimeSec) {
+  global_ts = currTimeSec;
 }
 
 // For nano second granularity, std::chrono::steady_clock seems to do a fine
 // job.
 inline uint64_t getCurrentTimeMs() {
+    return (uint64_t) global_ts * 1000;
   auto ret = std::chrono::steady_clock::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::milliseconds>(ret).count();
 }
 
 inline uint64_t getCurrentTimeNs() {
+    return (uint64_t) global_ts * 1000 * 1000 * 1000;
   auto ret = std::chrono::steady_clock::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::nanoseconds>(ret).count();
 }
 
 inline uint32_t getSteadyCurrentTimeSec() {
+    return global_ts;
   auto ret = std::chrono::steady_clock::now().time_since_epoch();
   return std::chrono::duration_cast<std::chrono::seconds>(ret).count();
 }
