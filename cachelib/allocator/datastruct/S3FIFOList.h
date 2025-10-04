@@ -56,8 +56,6 @@ class S3FIFOList {
   S3FIFOList(const S3FIFOList&) = delete;
   S3FIFOList& operator=(const S3FIFOList&) = delete;
   ~S3FIFOList() {
-    stop_ = true;
-    evThread_->join();
   }
 
   S3FIFOList(PtrCompressor compressor) noexcept {
@@ -94,30 +92,6 @@ class S3FIFOList {
 
   T* getEvictionCandidate() noexcept;
 
-  T* getEvictionCandidate0() noexcept;
-
-  void prepareEvictionCandidates() noexcept;
-
-  void threadFunc() noexcept {
-    XLOG(INFO) << "S3FIFOList thread has started";
-    T* curr = nullptr;
-
-    // cpu_set_t cpuset;
-    // CPU_ZERO(&cpuset);
-    // for (int i = 0; i < 128; i++)
-    //   CPU_SET(i, &cpuset);
-    // pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-    // pthread_getaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
-
-    while (!stop_.load()) {
-      while (evictCandidateQueue_.size() <
-             (ssize_t)nMaxEvictionCandidates_ / 2) {
-        prepareEvictionCandidates();
-      }
-    }
-    printf("S3FIFOList thread has stopped\n");
-  }
-
   void add(T& node) noexcept {
     if (hist_.initialized() && hist_.contains(hashNode(node))) {
       mfifo_->linkAtHead(node);
@@ -129,10 +103,6 @@ class S3FIFOList {
       unmarkMain(node);
     }
   }
-
-  void evictPFifo() noexcept;
-
-  void evictMFifo() noexcept;
 
   // Bit MM_BIT_0 is used to record if the item is hot.
   void markProbationary(T& node) noexcept {
@@ -166,13 +136,6 @@ class S3FIFOList {
         folly::hasher<folly::StringPiece>()(node.getKey()));
   }
 
-  /* different from previous one - we load 1/4 of the nMax */
-  size_t nCandidateToPrepare() {
-    size_t n = 0;
-    n = std::min(pfifo_->size() + mfifo_->size(), nMaxEvictionCandidates_);
-    n = std::max(n / 4, 1ul);
-    return n;
-  }
 
   std::unique_ptr<ADList> pfifo_;
 
@@ -186,14 +149,6 @@ class S3FIFOList {
   constexpr static double pRatio_ = 0.05;
 
   AtomicFIFOHashTable hist_;
-
-  constexpr static size_t nMaxEvictionCandidates_ = 64;
-
-  folly::MPMCQueue<T*> evictCandidateQueue_{nMaxEvictionCandidates_};
-
-  std::unique_ptr<std::thread> evThread_{nullptr};
-
-  std::atomic<bool> stop_{false};
 };
 } // namespace cachelib
 } // namespace facebook
