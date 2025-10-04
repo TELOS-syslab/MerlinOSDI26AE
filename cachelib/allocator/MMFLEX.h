@@ -438,21 +438,7 @@ namespace facebook::cachelib
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
     {
-        LruType type = getLruType(node);
-        switch (type)
-        {
-        case LruType::Small:
-            flexlist_.getListSmall().remove(node);
-            break;
-        case LruType::Main:
-            flexlist_.getListMain().remove(node);
-            break;
-        case LruType::Suspicious:
-            flexlist_.getListSuspicious().remove(node);
-            break;
-        case LruType::NumTypes:
-            XDCHECK(false);
-        }
+        flexlist_.remove(node);        
         node.unmarkInMMContainer();
         return;
     }

@@ -347,7 +347,7 @@ namespace facebook::cachelib
                 while (evictCandidateQueue_.size() <
                        nMaxEvictionCandidates_)
                 {
-                    //prepareEvictionCandidates();
+                    // prepareEvictionCandidates();
                 }
                 // sleep for 1ms
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -387,8 +387,29 @@ namespace facebook::cachelib
             return;
         }
 
-        void evict() noexcept
+        void remove(T &node) noexcept
         {
+            LruType type = getType(node);
+            int freq = getFreq(node);
+            
+            switch (type)
+            {
+            case LruType::Small:
+                smallfifo_->remove(node);
+                break;
+            case LruType::Main:
+                mainfifo_->remove(node);
+                break;
+            case LruType::Suspicious:
+                susfifo_->remove(node);
+                break;
+            case LruType::NumTypes:
+                XDCHECK(false);
+            }
+            if (freq > 1 && freq < MAX_FREQ)
+            {
+                freq_distribution_[freq].fetch_sub(1, std::memory_order_relaxed);
+            }
         }
 
     private:
