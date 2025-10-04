@@ -52,9 +52,9 @@ class FOLLY_PACK_ATTR RefcountWithFlags {
   static_assert(std::is_unsigned<Value>::value,
                 "Unsigned Integral type required");
 
-  static constexpr uint8_t kNumFlags = 11;
+  static constexpr uint8_t kNumFlags = 13;
   static constexpr uint8_t kNumAdminRefBits = 3;
-  static constexpr uint8_t kNumAccessRefBits = 18;
+  static constexpr uint8_t kNumAccessRefBits = 16;
   static_assert(kNumAccessRefBits <= NumBits<Value>::value, "Invalid type");
   static_assert(kNumAccessRefBits >= 1, "Need at least one bit for refcount");
   static_assert(
@@ -99,6 +99,8 @@ class FOLLY_PACK_ATTR RefcountWithFlags {
     kMMFlag0 = kNumAccessRefBits + kNumAdminRefBits,
     kMMFlag1,
     kMMFlag2,
+    kMMFlag3,
+    kMMFlag4,
 
     // Whether or not an item is a regular item or chained alloc
     kIsChainedItem,
@@ -455,8 +457,7 @@ class FOLLY_PACK_ATTR RefcountWithFlags {
     return getRaw() & getFlag<flagBit>();
   }
 
- private:
-  /**
+    /**
    * Helper function to modify refCount_ atomically.
    *
    * If predicate(currentValue) is true, then it atomically assigns result
@@ -488,6 +489,8 @@ class FOLLY_PACK_ATTR RefcountWithFlags {
       }
     }
   }
+ public:
+
 
   template <Flags flagBit>
   static Value getFlag() noexcept {

@@ -20,6 +20,8 @@
 #include "cachelib/allocator/MMTinyLFU.h"
 #include "cachelib/allocator/MMWTinyLFU.h"
 #include "cachelib/allocator/MMS3FIFO.h"
+#include "cachelib/allocator/MMFLEX.h"
+
 namespace facebook::cachelib {
 // Types of AccessContainer and MMContainer
 // MMType
@@ -28,6 +30,7 @@ const int MM2Q::kId = 2;
 const int MMTinyLFU::kId = 3;
 const int MMWTinyLFU::kId = 4;
 const int MMS3FIFO::kId = 5;
+const int MMFLEX::kId = 6;
 
 // AccessType
 const int ChainedHashTable::kId = 1;

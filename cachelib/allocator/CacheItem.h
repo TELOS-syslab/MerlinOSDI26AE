@@ -426,10 +426,10 @@ public:
   using MMContainer =
       typename CacheTrait::MMType::template Container<Item, &Item::mmHook_>;
 
- protected:
+
   // Refcount for the item and also flags on the items state
   RefcountWithFlags ref_;
-
+ protected:
   // Time when this cache item is created
   const uint32_t creationTime_{0};
 

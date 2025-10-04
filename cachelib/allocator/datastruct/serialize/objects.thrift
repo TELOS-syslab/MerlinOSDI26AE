@@ -49,3 +49,11 @@ struct S3FIFOListObject {
   1: required AtomicDListObject pfifo;
   2: required AtomicDListObject mfifo;
 }
+
+struct FLEXListObject {
+  1: required AtomicDListObject smallfifo;
+  2: required AtomicDListObject mainfifo;
+  3: required AtomicDListObject susfifo;
+  4: required i32 guard_freq;
+  5: required list<i32> freq_distribution;
+}
