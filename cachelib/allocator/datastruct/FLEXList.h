@@ -51,7 +51,7 @@ namespace facebook::cachelib
 
 #define MAX_FREQ 7
 #define TypeMask 0x3
-#define FreqMask 0x1C
+#define FreqMask 0x7
         using Value = uint32_t;
         static constexpr Value kTypeMask = (TypeMask << RefFlags::kMMFlag0);
         static constexpr Value kFreqMask = (FreqMask << RefFlags::kMMFlag2);
