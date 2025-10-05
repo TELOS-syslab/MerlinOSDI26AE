@@ -23,10 +23,6 @@ template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
 MMS3FIFO::Container<T, HookPtr>::Container(serialization::MMS3FIFOObject object,
                                          PtrCompressor compressor)
     : qdlist_(*object.qdlist(), compressor), config_(*object.config()) {
-  nextReconfigureTime_ = config_.mmReconfigureIntervalSecs.count() == 0
-                             ? std::numeric_limits<Time>::max()
-                             : static_cast<Time>(util::getCurrentTimeSec()) +
-                                   config_.mmReconfigureIntervalSecs.count();
 }
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
@@ -73,10 +69,6 @@ template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
 void MMS3FIFO::Container<T, HookPtr>::setConfig(const Config& newConfig) {
   lruMutex_->lock_combine([this, newConfig]() {
     config_ = newConfig;
-    nextReconfigureTime_ = config_.mmReconfigureIntervalSecs.count() == 0
-                               ? std::numeric_limits<Time>::max()
-                               : static_cast<Time>(util::getCurrentTimeSec()) +
-                                     config_.mmReconfigureIntervalSecs.count();
   });
 }
 
@@ -225,10 +217,6 @@ MMContainerStat MMS3FIFO::Container<T, HookPtr>::getStats() const noexcept {
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
 void MMS3FIFO::Container<T, HookPtr>::reconfigureLocked(const Time& currTime) {
-  if (currTime < nextReconfigureTime_) {
-    return;
-  }
-  nextReconfigureTime_ = currTime + config_.mmReconfigureIntervalSecs.count();
 }
 } // namespace cachelib
 } // namespace facebook

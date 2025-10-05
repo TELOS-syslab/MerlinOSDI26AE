@@ -131,10 +131,6 @@ class MMS3FIFO {
     // to the head of the lru.
     bool updateOnRead{true};
 
-    // whether to tryLock or lock the lru lock when attempting promotion on
-    // access. If set, and tryLock fails, access will not result in promotion.
-    bool tryLockUpdate{false};
-
     // By default insertions happen at the head of the LRU. If we need
     // insertions at the middle of lru we can adjust this to be a non-zero.
     // Ex: lruInsertionPointSpec = 1, we insert at the middle (1/2 from end)
@@ -171,11 +167,6 @@ class MMS3FIFO {
         :  // : compressor_(std::move(compressor)),
           qdlist_(std::move(compressor)),
           config_(std::move(c)) {
-      nextReconfigureTime_ =
-          config_.mmReconfigureIntervalSecs.count() == 0
-              ? std::numeric_limits<Time>::max()
-              : static_cast<Time>(util::getCurrentTimeSec()) +
-                    config_.mmReconfigureIntervalSecs.count();
     }
     Container(serialization::MMS3FIFOObject object, PtrCompressor compressor);
 
@@ -420,9 +411,6 @@ class MMS3FIFO {
 
     // the fifo
     FIFOList qdlist_{};
-
-    // The next time to reconfigure the container.
-    std::atomic<Time> nextReconfigureTime_{};
 
     // Config for this lru.
     // Write access to the MMS3FIFO Config is serialized.
