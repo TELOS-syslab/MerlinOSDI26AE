@@ -102,7 +102,7 @@ namespace facebook::cachelib
         struct Container
         {
         private:
-            using FLEXList = FLEXList<T, HookPtr>;
+            using LIST = FLEXList<T, HookPtr>;
             using Mutex = folly::DistributedMutex;
             using LockHolder = std::unique_lock<Mutex>;
             using PtrCompressor = typename T::PtrCompressor;
@@ -173,13 +173,13 @@ namespace facebook::cachelib
                 LockedIterator &operator=(LockedIterator &&) noexcept = default;
 
                 // create an lru iterator with the lock being held.
-                LockedIterator(FLEXList *flexlist)
+                LockedIterator(LIST *flexlist)
                 {
                     flexlist_ = flexlist;
                     candidate_ = flexlist_->getEvictionCandidate();
                 }
 
-                FLEXList* flexlist_;
+                LIST *flexlist_;
 
                 T *candidate_;
 
@@ -278,13 +278,43 @@ namespace facebook::cachelib
             // return the stats for this container.
             MMContainerStat getStats() const noexcept;
 
+            void setSmall(T &node) noexcept
+            {
+                node.template setFlag<RefFlags::kMMFlag0>();
+            }
+            void unSetSmall(T &node) noexcept
+            {
+                node.template unSetFlag<RefFlags::kMMFlag0>();
+            }
+            bool isSmall(const T &node) const noexcept
+            {
+                return node.template isFlagSet<RefFlags::kMMFlag0>();
+            }
+            void setMain(T &node) noexcept
+            {
+                node.template setFlag<RefFlags::kMMFlag1>();
+            }
+            void unSetMain(T &node) noexcept
+            {
+                node.template unSetFlag<RefFlags::kMMFlag1>();
+            }
+            bool isMain(const T &node) const noexcept
+            {
+                return node.template isFlagSet<RefFlags::kMMFlag1>();
+            }
+
             LruType getLruType(const T &node) noexcept
             {
-                return static_cast<LruType>(flexlist_.template getType(node));
+                if (isSmall(node))
+                    return LruType::Small;
+                if (isMain(node))
+                    return LruType::Main;
+                return LruType::Suspicious;
             }
 
         private:
-            EvictionAgeStat getEvictionAgeStatLocked(
+            EvictionAgeStat
+            getEvictionAgeStatLocked(
                 uint64_t projectedLength) const noexcept;
 
             static Time getUpdateTime(const T &node) noexcept
@@ -309,32 +339,34 @@ namespace facebook::cachelib
 
             void incFreq(T &node) noexcept
             {
+                node.template setFlag<RefFlags::kMMFlag2>();
+                return;
                 flexlist_.incFreq(node);
-            }
-
-            void decFreq(T &node) noexcept
-            {
-                flexlist_.decFreq(node);
             }
 
             int getFreq(const T &node) const noexcept
             {
+                return (int) node.template isFlagSet<RefFlags::kMMFlag2>();
                 return flexlist_.getFreq(node);
             }
 
             void setFreq(T &node, int freq) noexcept
             {
+                node.template setFlag<RefFlags::kMMFlag2>();
+                return;
                 flexlist_.setFreq(node, freq);
             }
 
             void resetFreq(T &node) noexcept
             {
+                node.template unSetFlag<RefFlags::kMMFlag2>();
+                return;
                 flexlist_.resetFreq(node);
             }
 
             mutable folly::cacheline_aligned<Mutex> Mutex_;
             // the flex cache
-            FLEXList flexlist_{};
+            LIST flexlist_{};
             Config config_{};
         };
     };
@@ -359,7 +391,7 @@ namespace facebook::cachelib
         // check if the node is still being memory managed
         if (node.isInMMContainer())
         {
-            int retval = flexlist_.incFreq(node);
+            incFreq(node);
             setUpdateTime(node, curr);
             return true;
         }
@@ -408,6 +440,7 @@ namespace facebook::cachelib
             return false;
         }
         flexlist_.add(node);
+        resetFreq(node);
         node.markInMMContainer();
         setUpdateTime(node, currTime);
         return true;
@@ -438,7 +471,22 @@ namespace facebook::cachelib
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
     {
-        flexlist_.remove(node);        
+        //flexlist_.remove(node);
+        LruType type = getLruType(node);
+        switch (type)
+        {
+        case LruType::Small:
+            flexlist_.getListSmall().remove(node);
+            break;
+        case LruType::Main:
+            flexlist_.getListMain().remove(node);
+            break;
+        case LruType::Suspicious:
+            flexlist_.getListSuspicious().remove(node);
+            break;
+        case LruType::NumTypes:
+            XDCHECK(false);
+        }
         node.unmarkInMMContainer();
         return;
     }
@@ -460,8 +508,7 @@ namespace facebook::cachelib
     {
         T &node = *it;
         XDCHECK(node.isInMMContainer());
-        ++it;
-        removeLocked(node);
+        node.unmarkInMMContainer();
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
@@ -475,18 +522,16 @@ namespace facebook::cachelib
     const auto updateTime = getUpdateTime(oldNode);
 
     LruType type = getLruType(oldNode);
-
     switch (type) {
     case LruType::Small:
-    flexlist_.setType(newNode, LruType::Small);
+    setSmall(newNode);
       flexlist_.getListSmall().replace(oldNode, newNode);
       break;
     case LruType::Main:
-    flexlist_.setType(newNode, LruType::Main);
+    setMain(newNode);
       flexlist_.getListMain().replace(oldNode, newNode);
       break;
     case LruType::Suspicious:
-    flexlist_.setType(newNode, LruType::Suspicious);
       flexlist_.getListSuspicious().replace(oldNode, newNode);
       break;
     case LruType::NumTypes:
@@ -523,7 +568,7 @@ namespace facebook::cachelib
     MMContainerStat MMFLEX::Container<T, HookPtr>::getStats() const noexcept
     {
         auto stat = Mutex_->lock_combine([this]()
-                                            {
+                                         {
             // we return by array here because DistributedMutex is fastest when the
             // output data fits within 48 bytes.  And the array is exactly 48 bytes, so
             // it can get optimized by the implementation.

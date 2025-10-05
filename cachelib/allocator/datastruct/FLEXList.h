@@ -41,14 +41,6 @@ namespace facebook::cachelib
         using RefFlags = typename T::Flags;
         using FLEXListObject = serialization::FLEXListObject;
 
-        enum LruType
-        {
-            Small,
-            Main,
-            Suspicious,
-            NumTypes
-        };
-
 #define MAX_FREQ 7
 #define TypeMask 0x3
 #define FreqMask 0x7
@@ -56,25 +48,56 @@ namespace facebook::cachelib
         static constexpr Value kTypeMask = (TypeMask << RefFlags::kMMFlag0);
         static constexpr Value kFreqMask = (FreqMask << RefFlags::kMMFlag2);
 
+        void setSmall(T &node) noexcept
+        {
+            node.template setFlag<RefFlags::kMMFlag0>();
+        }
+        void unSetSmall(T &node) noexcept
+        {
+            node.template unSetFlag<RefFlags::kMMFlag0>();
+        }
+        bool isSmall(const T &node) const noexcept
+        {
+            return node.template isFlagSet<RefFlags::kMMFlag0>();
+        }
+        void setMain(T &node) noexcept
+        {
+            node.template setFlag<RefFlags::kMMFlag1>();
+        }
+        void unSetMain(T &node) noexcept
+        {
+            node.template unSetFlag<RefFlags::kMMFlag1>();
+        }
+        bool isMain(const T &node) const noexcept
+        {
+            return node.template isFlagSet<RefFlags::kMMFlag1>();
+        }
         void unSetType(T &node) noexcept
         {
+            unSetSmall(node);
+            unSetMain(node);
+            return;
             constexpr Value bitMask =
                 std::numeric_limits<Value>::max() - kTypeMask;
             __atomic_and_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
         }
-        FOLLY_ALWAYS_INLINE LruType getType(const T &node) const noexcept
+        FOLLY_ALWAYS_INLINE int getType(const T &node) const noexcept
         {
+
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
-            return static_cast<LruType>((ret >> RefFlags::kMMFlag0) & TypeMask);
+            return (ret >> RefFlags::kMMFlag0) & TypeMask;
         }
         void setType(T &node, int type) noexcept
         {
+            return;
             // unSetType(node);
             Value bitMask = ((static_cast<Value>(type) & TypeMask) << RefFlags::kMMFlag0);
             __atomic_or_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
         }
         FOLLY_ALWAYS_INLINE int incFreq(T &node) noexcept
         {
+            node.template setFlag<RefFlags::kMMFlag2>();
+            return 1;
             int res = 0;
             auto predicate = [&res](const Value curValue)
             {
@@ -93,7 +116,7 @@ namespace facebook::cachelib
 
             node.ref_.template atomicUpdateValue(predicate, newValue);
             int retval = (res >> RefFlags::kMMFlag2) + 1;
-            if (retval > 1 && retval < MAX_FREQ)
+            if (retval > 1 && retval <= MAX_FREQ)
             {
                 freq_distribution_[retval].fetch_add(1, std::memory_order_relaxed);
             }
@@ -101,6 +124,8 @@ namespace facebook::cachelib
         }
         FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
         {
+            node.template unSetFlag<RefFlags::kMMFlag2>();
+            return 0;
             int res = 0;
             auto predicate = [&res](const Value curValue)
             {
@@ -118,26 +143,31 @@ namespace facebook::cachelib
             };
 
             node.ref_.template atomicUpdateValue(predicate, newValue);
-            int retval = (res >> RefFlags::kMMFlag2) - 1;
-            if (retval > 1 && retval < MAX_FREQ)
+            int retval = (res >> RefFlags::kMMFlag2);
+            if (retval > 1 && retval <= MAX_FREQ)
             {
                 freq_distribution_[retval].fetch_sub(1, std::memory_order_relaxed);
             }
-            return retval;
+            return retval - 1;
         }
         FOLLY_ALWAYS_INLINE int getFreq(const T &node) const noexcept
         {
+            return node.template isFlagSet<RefFlags::kMMFlag2>();
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
             return (ret >> RefFlags::kMMFlag2) & (MAX_FREQ);
         }
         void resetFreq(T &node) noexcept
         {
+            node.template unSetFlag<RefFlags::kMMFlag2>();
+            return;
             constexpr Value bitMask =
                 std::numeric_limits<Value>::max() - kFreqMask;
             __atomic_and_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
         }
         void setFreq(T &node, int freq) noexcept
         {
+            node.template setFlag<RefFlags::kMMFlag2>();
+            return;
             // resetFreq(node);
             Value bitMask = ((static_cast<Value>(freq) & MAX_FREQ) << RefFlags::kMMFlag2);
             __atomic_or_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
@@ -175,7 +205,7 @@ namespace facebook::cachelib
             int i = 0;
             for (auto f : *object.freq_distribution())
             {
-                freq_distribution_[i++] = f;
+                //freq_distribution_[i++] = f;
             }
         }
 
@@ -191,7 +221,7 @@ namespace facebook::cachelib
             *state.guard_freq() = guard_freq_;
             for (auto &f : freq_distribution_)
             {
-                state.freq_distribution()->emplace_back(f.load());
+                //state.freq_distribution()->emplace_back(f.load());
             }
             return state;
         }
@@ -231,105 +261,54 @@ namespace facebook::cachelib
                 return nullptr;
             }
             T *curr = nullptr;
-            if (!hist_.initialized())
+            if (!hashTable_.initialized())
             {
                 LockHolder l(*mtx_);
-                if (!hist_.initialized())
-                {
-                    hist_.setFIFOSize(listSize / 2);
-                    hist_.initHashtable();
-                }
+                hashTable_.setFIFOSize(listSize / 2);
+                hashTable_.initHashtable();
             }
             while (true)
             {
-                if (smallfifo_->size() > size() * smallRatio_)
+                if (smallfifo_->size() > (double)(size()) * smallRatio_)
                 {
                     curr = smallfifo_->removeTail();
                     if (curr)
                     {
                         int freq = getFreq(*curr);
-                        if (freq > guard_freq_)
+                        if (freq >= guard_freq_)
                         {
+                            resetFreq(*curr);
                             unSetType(*curr);
                             mainfifo_->linkAtHead(*curr);
-                            setType(*curr, LruType::Main);
-                            hist_.estimate(hashNode(*curr));
+                            setMain(*curr);
                             continue;
                         }
                         else
                         {
-                            T *tailptr = susfifo_->removeTail();
-                            if (tailptr != nullptr)
-                            {
-                                int tail_freq = decFreq(*tailptr);
-                                if (tail_freq == -1)
-                                {
-                                    // duel
-                                    if (hist_.getEstimate(hashNode(*curr)) > hist_.getEstimate(hashNode(*tailptr)))
-                                    {
-                                        // curr wins
-                                        unSetType(*curr);
-                                        susfifo_->linkAtHead(*curr);
-                                        setType(*curr, LruType::Suspicious);
-                                        hist_.estimate(hashNode(*curr));
-                                        adjustGuardFreq();
-                                        return tailptr;
-                                    }
-                                    else
-                                    {
-                                        // tail wins
-                                        susfifo_->linkAtHead(*tailptr);
-                                        hist_.insert(hashNode(*curr), freq);
-                                    }
-                                }
-                                else
-                                {
-                                    // tail wins
-                                    unSetType(*tailptr);
-                                    mainfifo_->linkAtHead(*tailptr);
-                                    setType(*tailptr, LruType::Main);
-                                    hist_.estimate(hashNode(*tailptr));
-                                }
-                            }
-                            for (int i = 2; i <= freq; i++)
-                            {
-                                freq_distribution_[i].fetch_sub(1, std::memory_order_relaxed);
-                            }
-                            hist_.estimate(hashNode(*curr));
-                            adjustGuardFreq();
+                            hashTable_.insert(hashNode(*curr));
                             return curr;
                         }
                     }
                 }
                 else
                 {
-                    while (mainfifo_->size() > size() * mainRatio_)
+                    curr = mainfifo_->removeTail();
+                    if (curr == nullptr)
                     {
-                        curr = mainfifo_->removeTail();
-                        if (curr == nullptr)
-                        {
-                            break;
-                        }
-                        unSetType(*curr);
-                        susfifo_->linkAtHead(*curr);
-                        setType(*curr, LruType::Suspicious);
+                        continue;
                     }
-                    curr = susfifo_->removeTail();
-                    if (curr)
+                    else
                     {
-                        int retval = decFreq(*curr);
-                        if (retval == -1)
+                        int freq = getFreq(*curr);
+                        if (freq > 0)
                         {
-                            adjustGuardFreq();
-                            return curr;
+                            resetFreq(*curr);
+                            mainfifo_->linkAtHead(*curr);
+                            continue;
                         }
-                        unSetType(*curr);
-                        mainfifo_->linkAtHead(*curr);
-                        setType(*curr, LruType::Main);
-                        if (retval < 4)
+                        else
                         {
-
-                            hist_.estimate(hashNode(*curr));
+                            return curr;
                         }
                     }
                 }
@@ -357,58 +336,38 @@ namespace facebook::cachelib
 
         void add(T &node) noexcept
         {
-            int hist_freq = -1;
-            if (hist_.initialized())
+            if (hist_.initialized() && hist_.contains(hashNode(node)))
             {
-                hist_freq = hist_.contains(hashNode(node));
-            }
-            if (hist_freq == -1)
-            {
-                setFreq(node, 0);
-                smallfifo_->linkAtHead(node);
-                setType(node, LruType::Small);
-            }
-            else if (hist_freq >= guard_freq_)
-            {
-                setFreq(node, hist_freq);
                 mainfifo_->linkAtHead(node);
-                setType(node, LruType::Main);
-                for (int i = 2; i <= hist_freq; i++)
-                {
-                    freq_distribution_[i].fetch_add(1, std::memory_order_relaxed);
-                }
+                unSetType(node);
+                setMain(node);
             }
             else
             {
-                setFreq(node, 0);
-                susfifo_->linkAtHead(node);
-                setType(node, LruType::Suspicious);
+                smallfifo_->linkAtHead(node);
+                unSetType(node);
+                setSmall(node);
             }
             return;
         }
 
         void remove(T &node) noexcept
         {
-            LruType type = getType(node);
             int freq = getFreq(node);
-            
-            switch (type)
+            if (isSmall(node))
             {
-            case LruType::Small:
                 smallfifo_->remove(node);
-                break;
-            case LruType::Main:
-                mainfifo_->remove(node);
-                break;
-            case LruType::Suspicious:
-                susfifo_->remove(node);
-                break;
-            case LruType::NumTypes:
-                XDCHECK(false);
             }
-            if (freq > 1 && freq < MAX_FREQ)
+            else
             {
-                freq_distribution_[freq].fetch_sub(1, std::memory_order_relaxed);
+                if (isMain(node))
+                {
+                    mainfifo_->remove(node);
+                }
+                else
+                {
+                    susfifo_->remove(node);
+                }
             }
         }
 
@@ -441,6 +400,7 @@ namespace facebook::cachelib
         constexpr static double mainRatio_ = 0.85;
 
         AtomicSketch hist_;
+        AtomicFIFOHashTable hashTable_;
 
         constexpr static size_t nMaxEvictionCandidates_ = 64;
 
