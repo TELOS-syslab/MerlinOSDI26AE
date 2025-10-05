@@ -176,18 +176,6 @@ class AtomicDList {
 
   size_t size() const noexcept { return size_.load(); }
 
-  void markAccessed(T& node) noexcept {
-    node.template setFlag<RefFlags::kMMFlag1>();
-  }
-
-  void unmarkAccessed(T& node) noexcept {
-    node.template unSetFlag<RefFlags::kMMFlag1>();
-  }
-
-  bool isAccessed(const T& node) const noexcept {
-    return node.template isFlagSet<RefFlags::kMMFlag1>();
-  }
-
   void sanityCheck(); 
 
   // Iterator interface for the double linked list. Supports both iterating

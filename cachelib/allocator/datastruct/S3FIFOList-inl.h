@@ -46,8 +46,8 @@ T* S3FIFOList<T, HookPtr>::getEvictionCandidate() noexcept {
         }
         continue;
       }
-      if (pfifo_->isAccessed(*curr)) {
-        pfifo_->unmarkAccessed(*curr);
+      if (isAccessed(*curr)) {
+        unmarkAccessed(*curr);
         XDCHECK(isProbationary(*curr));
         unmarkProbationary(*curr);
         markMain(*curr);
@@ -62,8 +62,8 @@ T* S3FIFOList<T, HookPtr>::getEvictionCandidate() noexcept {
       if (curr == nullptr) {
         continue;
       }
-      if (mfifo_->isAccessed(*curr)) {
-        mfifo_->unmarkAccessed(*curr);
+      if (isAccessed(*curr)) {
+        unmarkAccessed(*curr);
         mfifo_->linkAtHead(*curr);
       } else {
         return curr;

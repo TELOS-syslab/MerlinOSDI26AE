@@ -130,6 +130,19 @@ class S3FIFOList {
     return node.template isFlagSet<RefFlags::kMMFlag2>();
   }
 
+
+  void markAccessed(T& node) noexcept {
+    node.template setFlag<RefFlags::kMMFlag1>();
+  }
+
+  void unmarkAccessed(T& node) noexcept {
+    node.template unSetFlag<RefFlags::kMMFlag1>();
+  }
+
+  bool isAccessed(const T& node) const noexcept {
+    return node.template isFlagSet<RefFlags::kMMFlag1>();
+  }
+
  private:
   static uint32_t hashNode(const T& node) noexcept {
     return static_cast<uint32_t>(
