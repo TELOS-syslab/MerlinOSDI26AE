@@ -75,7 +75,7 @@ namespace facebook
                     if (matchKey(valInTable, key))
                     {
                         int ori_freq = getFreq(valInTable);
-                        return ori_freq;
+                        return ori_freq+1;
                     }
                 }
                 return -1;
@@ -87,9 +87,9 @@ namespace facebook
                 freq++;
                 // update sketch
                 //  decay every 64 inserts
-                if ((currTime & 0x3f) == 0)
+                if ((currTime & 0x3f) == 0x3f)
                 {
-                    int64_t cleanid = ((currTime >>= 6) % numElem_) << 2;
+                    int64_t cleanid = ((currTime >> 6) % numElem_) << 2;
                     int val = hashTable_[cleanid].load(std::memory_order_relaxed);
                     val /= 2;
                     hashTable_[cleanid].store(val, std::memory_order_relaxed);
