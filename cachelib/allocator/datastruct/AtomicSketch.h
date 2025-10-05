@@ -101,6 +101,7 @@ namespace facebook
                     currTime = 0;
                 }
                 size_t bucketIdx = getBucketIdx(key);
+                // estimate
                 hashTable_[bucketIdx].fetch_add(1, std::memory_order_relaxed);
                 // find and increase
                 int empty_slot = -1;

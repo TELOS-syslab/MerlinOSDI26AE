@@ -74,21 +74,23 @@ namespace facebook::cachelib
         }
         void unSetType(T &node) noexcept
         {
-            unSetSmall(node);
-            unSetMain(node);
-            return;
+           // unSetSmall(node);
+           // unSetMain(node);
+           // return;
             constexpr Value bitMask =
                 std::numeric_limits<Value>::max() - kTypeMask;
             __atomic_and_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
         }
         FOLLY_ALWAYS_INLINE int getType(const T &node) const noexcept
         {
-
+            //not used
+            assert(0);
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
             return (ret >> RefFlags::kMMFlag0) & TypeMask;
         }
         void setType(T &node, int type) noexcept
         {
+            //not used
             return;
             // unSetType(node);
             Value bitMask = ((static_cast<Value>(type) & TypeMask) << RefFlags::kMMFlag0);
@@ -233,7 +235,7 @@ namespace facebook::cachelib
         void adjustGuardFreq() noexcept
         {
             int total_size = size();
-            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);// + hist_.freq_distribution_[2].load(std::memory_order_relaxed);
+            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed) + hist_.freq_distribution_[2].load(std::memory_order_relaxed);
             if (freq2 > total_size)
             {
                 guard_freq_ = 3;
@@ -256,11 +258,14 @@ namespace facebook::cachelib
                 return nullptr;
             }
             T *curr = nullptr;
-            if (!hashTable_.initialized())
+            if (!hist_.initialized())
             {
                 LockHolder l(*mtx_);
-                hashTable_.setFIFOSize(listSize / 2);
-                hashTable_.initHashtable();
+                if (!hist_.initialized())
+                {
+                    hist_.setFIFOSize(listSize / 2);
+                    hist_.initHashtable();
+                }
             }
             while (true)
             {
@@ -272,15 +277,18 @@ namespace facebook::cachelib
                         int freq = getFreq(*curr);
                         if (freq >= guard_freq_)
                         {
-                            resetFreq(*curr);
+                            //resetFreq(*curr);
                             unSetType(*curr);
                             mainfifo_->linkAtHead(*curr);
                             setMain(*curr);
+                            hist_.estimate(hashNode(*curr));
                             continue;
                         }
                         else
                         {
-                            hashTable_.insert(hashNode(*curr));
+                            //hashTable_.insert(hashNode(*curr));
+                            hist_.estimate(hashNode(*curr));
+                            adjustGuardFreq();
                             return curr;
                         }
                     }
@@ -296,7 +304,7 @@ namespace facebook::cachelib
                         }
                         unSetType(*curr);
                         susfifo_->linkAtHead(*curr);
-                        //setType(*curr, LruType::Suspicious);
+                        //set Type LruType::Suspicious 
                     }
                     curr = susfifo_->removeTail();
                     if (curr)
@@ -309,6 +317,9 @@ namespace facebook::cachelib
                         }else{
                             mainfifo_->linkAtHead(*curr);
                             setMain(*curr);
+                        }if (retval < 4)
+                        {
+                            hist_.estimate(hashNode(*curr));
                         }
                         /*
                         int freq = getFreq(*curr);
@@ -331,7 +342,35 @@ namespace facebook::cachelib
 
         void add(T &node) noexcept
         {
-
+            int hist_freq = -1;
+            if (hist_.initialized())
+            {
+                hist_freq = hist_.contains(hashNode(node));
+            }
+            
+            if (hist_freq == -1)
+            {
+                resetFreq(node);
+                smallfifo_->linkAtHead(node);
+                setSmall(node);
+            }
+            else if (hist_freq >= guard_freq_)
+            {
+                setFreq(node, hist_freq);
+                mainfifo_->linkAtHead(node);
+                setMain(node);
+                for (int i = 2; i <= hist_freq; i++)
+                {
+                    freq_distribution_[i].fetch_add(1, std::memory_order_relaxed);
+                }
+            }
+            else
+            {
+                resetFreq(node);
+                susfifo_->linkAtHead(node);
+                // set type LruType::Suspicious
+            }
+            return;
             resetFreq(node);
             if (hist_.initialized() && hist_.contains(hashNode(node)))
             {
@@ -365,6 +404,10 @@ namespace facebook::cachelib
                 {
                     susfifo_->remove(node);
                 }
+            }
+            for(int i = 2; i <= freq; i++)
+            {
+                freq_distribution_[i].fetch_sub(1, std::memory_order_relaxed);
             }
         }
 
