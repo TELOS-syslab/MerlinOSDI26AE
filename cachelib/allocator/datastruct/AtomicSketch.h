@@ -95,7 +95,7 @@ namespace facebook
                     hashTable_[cleanid].store(val, std::memory_order_relaxed);
                 }
                 // reset if overflow
-                if (currTime > UINT32_MAX)
+                if (currTime > MAX_VALUE)
                 {
                     numInserts_ = 0;
                     currTime = 0;
