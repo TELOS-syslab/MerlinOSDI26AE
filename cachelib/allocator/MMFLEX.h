@@ -339,29 +339,32 @@ namespace facebook::cachelib
 
             void incFreq(T &node) noexcept
             {
-                node.template setFlag<RefFlags::kMMFlag2>();
-                return;
+                //node.template setFlag<RefFlags::kMMFlag2>();
+                
                 flexlist_.incFreq(node);
+                return;
             }
 
             int getFreq(const T &node) const noexcept
             {
-                return (int) node.template isFlagSet<RefFlags::kMMFlag2>();
+                //return (int) node.template isFlagSet<RefFlags::kMMFlag2>();
                 return flexlist_.getFreq(node);
             }
 
             void setFreq(T &node, int freq) noexcept
             {
-                node.template setFlag<RefFlags::kMMFlag2>();
-                return;
+                //node.template setFlag<RefFlags::kMMFlag2>();
+                
                 flexlist_.setFreq(node, freq);
+                return;
             }
 
             void resetFreq(T &node) noexcept
             {
-                node.template unSetFlag<RefFlags::kMMFlag2>();
-                return;
+                //node.template unSetFlag<RefFlags::kMMFlag2>();
+                
                 flexlist_.resetFreq(node);
+                return;
             }
 
             mutable folly::cacheline_aligned<Mutex> Mutex_;
@@ -440,7 +443,6 @@ namespace facebook::cachelib
             return false;
         }
         flexlist_.add(node);
-        resetFreq(node);
         node.markInMMContainer();
         setUpdateTime(node, currTime);
         return true;
@@ -471,7 +473,9 @@ namespace facebook::cachelib
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
     {
-        //flexlist_.remove(node);
+        flexlist_.remove(node);
+        node.unmarkInMMContainer();
+        return;
         LruType type = getLruType(node);
         switch (type)
         {

@@ -96,8 +96,8 @@ namespace facebook::cachelib
         }
         FOLLY_ALWAYS_INLINE int incFreq(T &node) noexcept
         {
-            node.template setFlag<RefFlags::kMMFlag2>();
-            return 1;
+            //node.template setFlag<RefFlags::kMMFlag2>();
+            //return 1;
             int res = 0;
             auto predicate = [&res](const Value curValue)
             {
@@ -124,8 +124,8 @@ namespace facebook::cachelib
         }
         FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
         {
-            node.template unSetFlag<RefFlags::kMMFlag2>();
-            return 0;
+            //node.template unSetFlag<RefFlags::kMMFlag2>();
+            //return 0;
             int res = 0;
             auto predicate = [&res](const Value curValue)
             {
@@ -152,38 +152,33 @@ namespace facebook::cachelib
         }
         FOLLY_ALWAYS_INLINE int getFreq(const T &node) const noexcept
         {
-            return node.template isFlagSet<RefFlags::kMMFlag2>();
+            //return node.template isFlagSet<RefFlags::kMMFlag2>();
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
             return (ret >> RefFlags::kMMFlag2) & (MAX_FREQ);
         }
         void resetFreq(T &node) noexcept
         {
-            node.template unSetFlag<RefFlags::kMMFlag2>();
-            return;
+            //node.template unSetFlag<RefFlags::kMMFlag2>();
             constexpr Value bitMask =
                 std::numeric_limits<Value>::max() - kFreqMask;
             __atomic_and_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
+            return;
         }
         void setFreq(T &node, int freq) noexcept
         {
-            node.template setFlag<RefFlags::kMMFlag2>();
-            return;
-            // resetFreq(node);
+            //node.template setFlag<RefFlags::kMMFlag2>();
+            
+            resetFreq(node);
             Value bitMask = ((static_cast<Value>(freq) & MAX_FREQ) << RefFlags::kMMFlag2);
             __atomic_or_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
+            return;
         }
 
         FLEXList() = default;
         FLEXList(const FLEXList &) = delete;
         FLEXList &operator=(const FLEXList &) = delete;
         ~FLEXList()
-        {
-            stop_ = true;
-            if (evThread_ && evThread_->joinable())
-            {
-                evThread_->join();
-            }
-        }
+        {        }
 
         FLEXList(PtrCompressor compressor) noexcept
         {
@@ -205,7 +200,7 @@ namespace facebook::cachelib
             int i = 0;
             for (auto f : *object.freq_distribution())
             {
-                //freq_distribution_[i++] = f;
+                freq_distribution_[i++] = f;
             }
         }
 
@@ -221,7 +216,7 @@ namespace facebook::cachelib
             *state.guard_freq() = guard_freq_;
             for (auto &f : freq_distribution_)
             {
-                //state.freq_distribution()->emplace_back(f.load());
+                state.freq_distribution()->emplace_back(f.load());
             }
             return state;
         }
@@ -238,7 +233,7 @@ namespace facebook::cachelib
         void adjustGuardFreq() noexcept
         {
             int total_size = size();
-            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed) + hist_.freq_distribution_[2].load(std::memory_order_relaxed);
+            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);// + hist_.freq_distribution_[2].load(std::memory_order_relaxed);
             if (freq2 > total_size)
             {
                 guard_freq_ = 3;
@@ -292,50 +287,52 @@ namespace facebook::cachelib
                 }
                 else
                 {
-                    curr = mainfifo_->removeTail();
-                    if (curr == nullptr)
+                    while (mainfifo_->size() > size() * mainRatio_)
                     {
-                        continue;
+                        curr = mainfifo_->removeTail();
+                        if (curr == nullptr)
+                        {
+                            break;
+                        }
+                        unSetType(*curr);
+                        susfifo_->linkAtHead(*curr);
+                        //setType(*curr, LruType::Suspicious);
                     }
-                    else
+                    curr = susfifo_->removeTail();
+                    if (curr)
                     {
+                        int retval = decFreq(*curr);
+                        if (retval == -1)
+                        {
+                            adjustGuardFreq();
+                            return curr;
+                        }else{
+                            mainfifo_->linkAtHead(*curr);
+                            setMain(*curr);
+                        }
+                        /*
                         int freq = getFreq(*curr);
-                        if (freq > 0)
+                        if (freq >= guard_freq_)
                         {
                             resetFreq(*curr);
                             mainfifo_->linkAtHead(*curr);
-                            continue;
+                            setMain(*curr);
                         }
                         else
                         {
                             return curr;
                         }
+                            */
                     }
                 }
             }
             return nullptr;
         }
 
-        void threadFunc() noexcept
-        {
-            XLOG(INFO) << "FLEXList thread has started";
-            T *curr = nullptr;
-
-            while (!stop_.load())
-            {
-                while (evictCandidateQueue_.size() <
-                       nMaxEvictionCandidates_)
-                {
-                    // prepareEvictionCandidates();
-                }
-                // sleep for 1ms
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
-            }
-            XLOG(INFO) << "FLEXList thread is stopping";
-        }
-
         void add(T &node) noexcept
         {
+
+            resetFreq(node);
             if (hist_.initialized() && hist_.contains(hashNode(node)))
             {
                 mainfifo_->linkAtHead(node);
@@ -378,12 +375,6 @@ namespace facebook::cachelib
                 folly::hasher<folly::StringPiece>()(node.getKey()));
         }
 
-        /* different from previous one - we load 1/4 of the nMax */
-        size_t nCandidateToPrepare()
-        {
-            size_t n = 0;
-            return n;
-        }
         std::unique_ptr<ADList> smallfifo_;
 
         std::unique_ptr<ADList> mainfifo_;
@@ -401,14 +392,6 @@ namespace facebook::cachelib
 
         AtomicSketch hist_;
         AtomicFIFOHashTable hashTable_;
-
-        constexpr static size_t nMaxEvictionCandidates_ = 64;
-
-        folly::MPMCQueue<T *> evictCandidateQueue_{nMaxEvictionCandidates_};
-
-        std::unique_ptr<std::thread> evThread_{nullptr};
-
-        std::atomic<bool> stop_{false};
     };
 
 } // namespace facebook::cachelib
