@@ -44,6 +44,7 @@ namespace facebook::cachelib
 #define MAX_FREQ 7
 #define TypeMask 0x3
 #define FreqMask 0x7
+#define SCATTER_SIZE 15
         using Value = uint32_t;
         static constexpr Value kTypeMask = (TypeMask << RefFlags::kMMFlag0);
         static constexpr Value kFreqMask = (FreqMask << RefFlags::kMMFlag2);
@@ -118,7 +119,7 @@ namespace facebook::cachelib
 
             node.ref_.template atomicUpdateValue(predicate, newValue);
             int retval = (res >> RefFlags::kMMFlag2) + 1;
-            if (retval > 1 && retval <= MAX_FREQ)
+            if (retval == 2)
             {
                 freq_distribution_[retval].fetch_add(1, std::memory_order_relaxed);
             }
@@ -126,8 +127,9 @@ namespace facebook::cachelib
         }
         FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
         {
+            // int ret = node.template isFlagSet<RefFlags::kMMFlag2>();
             // node.template unSetFlag<RefFlags::kMMFlag2>();
-            // return 0;
+            // return ret - 1;
             int res = 0;
             auto predicate = [&res](const Value curValue)
             {
@@ -146,7 +148,7 @@ namespace facebook::cachelib
 
             node.ref_.template atomicUpdateValue(predicate, newValue);
             int retval = (res >> RefFlags::kMMFlag2);
-            if (retval > 1 && retval <= MAX_FREQ)
+            if (retval == 2)
             {
                 freq_distribution_[retval].fetch_sub(1, std::memory_order_relaxed);
             }
@@ -228,20 +230,25 @@ namespace facebook::cachelib
         ADList &getListMain() const noexcept { return *mainfifo_; }
         ADList &getListSuspicious() const noexcept { return *susfifo_; }
 
-        size_t size() const noexcept
+        inline size_t size() const noexcept
         {
             return smallfifo_->size() + mainfifo_->size() + susfifo_->size();
         }
 
         void adjustGuardFreq() noexcept
         {
+            if ((numInserts_ & 0x3f) != 0)
+            {
+                return;
+            }
+
             int total_size = size();
-            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed) + hist_.freq_distribution_[2].load(std::memory_order_relaxed);
-            if (freq2 > total_size)
+            int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);
+            if (freq2 * 2 > total_size)
             {
                 guard_freq_ = 3;
             }
-            else if (freq2 * 2 > total_size)
+            else if (freq2 * 3 > total_size)
             {
                 guard_freq_ = 2;
             }
@@ -249,10 +256,12 @@ namespace facebook::cachelib
             {
                 guard_freq_ = 1;
             }
+            return;
         }
 
         T *getEvictionCandidate() noexcept
         {
+
             size_t listSize = size();
             if (listSize == 0)
             {
@@ -268,115 +277,150 @@ namespace facebook::cachelib
                     hist_.initHashtable();
                 }
             }
+            if (!hashTable_.initialized())
+            {
+                LockHolder l(*mtx_);
+                if (!hashTable_.initialized())
+                {
+                    hashTable_.setFIFOSize(listSize / 2);
+                    hashTable_.initHashtable();
+                }
+            }
+            int retry = 0;
             while (true)
             {
-                if (smallfifo_->size() > (double)(size()) * smallRatio_)
+                while (smallfifo_->size() > ((double)(listSize)*smallRatio_))
                 {
+                    T *curr = nullptr;
                     curr = smallfifo_->removeTail();
-                    if (curr)
+                    if (curr == nullptr)
                     {
-                        int freq = getFreq(*curr);
-                        if (freq >= guard_freq_)
+                        printf("nullptr %s %d small size %ld main size %ld sus size %ld\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
+                        abort();
+                        return nullptr;
+                    }
+
+                    int freq = getFreq(*curr);
+                    int guard = guard_freq_;
+                    if (freq >= guard)
+                    {
+                        unSetSmall(*curr);
+                        mainfifo_->linkAtHead(*curr);
+                        setMain(*curr);
+                        // hist_.estimate(hashNode(*curr));
+                    }
+                    else
+                    {
+                        T *tailptr = susfifo_->removeTail();
+                        int tail_freq = MAX_FREQ + 1;
+                        if (tailptr != nullptr)
                         {
-                            // resetFreq(*curr);
-                            unSetType(*curr);
-                            mainfifo_->linkAtHead(*curr);
-                            setMain(*curr);
-                            hist_.estimate(hashNode(*curr));
-                            continue;
-                        }
-                        else
-                        {
-                            // hashTable_.insert(hashNode(*curr));
-                            T *tailptr = susfifo_->removeTail();
-                            int tail_freq = MAX_FREQ + 1;
-                            if (tailptr != nullptr)
+                            tail_freq = decFreq(*tailptr);
+                            if (tail_freq == -1)
                             {
-                                tail_freq = decFreq(*tailptr);
-                                if (tail_freq == -1)
-                                {
-                                    // duel
-                                    if (hist_.getEstimate(hashNode(*curr)) > hist_.getEstimate(hashNode(*tailptr)))
-                                    {
-                                        // curr wins
-                                        unSetType(*curr);
+                                // duel
+                                int est_curr = hist_.getEstimate(hashNode(*curr));
+                                if(est_curr < 0x3f){
+                                    int est_tail = hist_.getEstimate(hashNode(*tailptr));
+                                    if(est_curr > est_tail){
+                                        unSetSmall(*curr);
                                         susfifo_->linkAtHead(*curr);
                                         // set type LruType::Suspicious
                                         hist_.estimate(hashNode(*curr));
                                         adjustGuardFreq();
                                         return tailptr;
                                     }
-                                    else
-                                    {
-                                        // sus wins
-                                        susfifo_->linkAtHead(*tailptr);
-                                    }
                                 }
-                                else
-                                {
-                                    // sus wins
-                                    mainfifo_->linkAtHead(*tailptr);
-                                    setMain(*tailptr);
-                                    if (tail_freq < 4)
-                                    {
-                                        hist_.estimate(hashNode(*tailptr));
-                                    }
-                                }
+                                susfifo_->linkAtHead(*tailptr);
                             }
-                            for (int i = 2; i <= freq; i++)
+                            else
                             {
-                                freq_distribution_[i].fetch_sub(1, std::memory_order_relaxed);
+                                // sus wins
+                                mainfifo_->linkAtHead(*tailptr);
+                                setMain(*tailptr);
+                                if (tail_freq < 2)
+                                {
+                                    hist_.estimate(hashNode(*tailptr));
+                                }
                             }
-                            hist_.insert(hashNode(*curr),freq);
-                            adjustGuardFreq();
-                            return curr;
                         }
+                        if (freq >= 2)
+                        {
+                            freq_distribution_[2].fetch_sub(1, std::memory_order_relaxed);
+                        }
+                        hist_.estimate(hashNode(*curr));
+                        adjustGuardFreq();
+                        hashTable_.insert(hashNode(*curr));
+                        return curr;
+                    }
+                    retry++;
+                    if (retry > 10)
+                    {
+                        listSize = size();
+                        retry = 0;
                     }
                 }
-                else
+                // printf("%s %d small size %d main size %d sus size %d\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
+                while (mainfifo_->size() > (double)(listSize)*mainRatio_)
                 {
-                    while (mainfifo_->size() > size() * mainRatio_)
+                    curr = mainfifo_->removeTail();
+                    if (curr == nullptr)
                     {
-                        curr = mainfifo_->removeTail();
-                        if (curr == nullptr)
-                        {
-                            break;
-                        }
-                        unSetType(*curr);
-                        susfifo_->linkAtHead(*curr);
-                        // set Type LruType::Suspicious
+                        printf("nullptr %s %d small size %ld main size %ld sus size %ld\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
+                        abort();
+                        break;
                     }
-                    curr = susfifo_->removeTail();
-                    if (curr)
+                    // unSetType(*curr);
+                    // susfifo_->linkAtHead(*curr);
+                    //  set Type LruType::Suspicious
+                    int retval = decFreq(*curr);
+                    if (retval == -1)
                     {
-                        int retval = decFreq(*curr);
-                        if (retval == -1)
-                        {
-                            adjustGuardFreq();
-                            return curr;
-                        }
-                        else
-                        {
-                            mainfifo_->linkAtHead(*curr);
-                            setMain(*curr);
-                        }
-                        if (retval < 4)
-                        {
-                            hist_.estimate(hashNode(*curr));
-                        }
-                        /*
-                        int freq = getFreq(*curr);
-                        if (freq >= guard_freq_)
-                        {
-                            resetFreq(*curr);
-                            mainfifo_->linkAtHead(*curr);
-                            setMain(*curr);
-                        }
-                        else
-                        {
-                            return curr;
-                        }
-                            */
+                        adjustGuardFreq();
+                        return curr;
+                    }
+                    else
+                    {
+                        mainfifo_->linkAtHead(*curr);
+                    }
+                    retry++;
+                    if (retry > 10)
+                    {
+                        listSize = size();
+                        retry = 0;
+                        break;
+                    }
+                }
+                while (susfifo_->size() > (double)(listSize)*susRatio_)
+                {
+                    curr = susfifo_->removeTail();
+                    if (curr == nullptr)
+                    {
+                        printf("nullptr %s %d small size %ld main size %ld sus size %ld\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
+                        abort();
+                        break;
+                    }
+
+                    int retval = decFreq(*curr);
+                    if (retval == -1)
+                    {
+                        adjustGuardFreq();
+                        return curr;
+                    }
+                    else
+                    {
+                        mainfifo_->linkAtHead(*curr);
+                        setMain(*curr);
+                    }
+                    if (retval < 2)
+                    {
+                        hist_.estimate(hashNode(*curr));
+                    }
+                    retry++;
+                    if (retry > 10)
+                    {
+                        listSize = size();
+                        retry = 0;
                     }
                 }
             }
@@ -385,47 +429,27 @@ namespace facebook::cachelib
 
         void add(T &node) noexcept
         {
-            int hist_freq = -1;
-            if (hist_.initialized())
+            int hist_freq = 0;
+            if (hashTable_.initialized())
             {
-                hist_freq = hist_.contains(hashNode(node));
+                hist_freq = hashTable_.contains(hashNode(node));
             }
-
-            if (hist_freq == -1)
+            if (hist_freq)
             {
-                resetFreq(node);
-                smallfifo_->linkAtHead(node);
-                setSmall(node);
-            }
-            else if (hist_freq >= guard_freq_)
-            {
-                setFreq(node, hist_freq);
                 mainfifo_->linkAtHead(node);
                 setMain(node);
-                for (int i = 2; i <= hist_freq; i++)
-                {
-                    freq_distribution_[i].fetch_add(1, std::memory_order_relaxed);
-                }
-            }
-            else
-            {
-                resetFreq(node);
-                susfifo_->linkAtHead(node);
-                // set type LruType::Suspicious
-            }
-            return;
-            resetFreq(node);
-            if (hist_.initialized() && hist_.contains(hashNode(node)))
-            {
-                mainfifo_->linkAtHead(node);
-                unSetType(node);
-                setMain(node);
+                unSetSmall(node);
             }
             else
             {
                 smallfifo_->linkAtHead(node);
-                unSetType(node);
                 setSmall(node);
+                unSetMain(node);
+            }
+            numInserts_++;
+            if (numInserts_ > MAX_VALUE)
+            {
+                numInserts_ = 0;
             }
             return;
         }
@@ -448,9 +472,9 @@ namespace facebook::cachelib
                     susfifo_->remove(node);
                 }
             }
-            for (int i = 2; i <= freq; i++)
+            if (freq >= 2)
             {
-                freq_distribution_[i].fetch_sub(1, std::memory_order_relaxed);
+                freq_distribution_[2].fetch_sub(1, std::memory_order_relaxed);
             }
         }
 
@@ -469,8 +493,12 @@ namespace facebook::cachelib
 
         mutable folly::cacheline_aligned<Mutex> mtx_;
 
+        std::atomic<uint32_t> insert_count_{0};
+
         std::vector<std::atomic<uint32_t>> freq_distribution_{std::vector<std::atomic<uint32_t>>(MAX_FREQ + 1)};
-        int guard_freq_{1};
+        int32_t guard_freq_{1};
+        std::atomic<int64_t> numInserts_{0};
+        constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
 
         constexpr static double smallRatio_ = 0.1;
         constexpr static double susRatio_ = 0.05;
