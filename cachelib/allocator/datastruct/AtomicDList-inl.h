@@ -137,6 +137,10 @@ T* AtomicDList<T, HookPtr>::removeTail() noexcept {
 
   // if tail has not changed, the prev is correct
   while (!tail_.compare_exchange_weak(tail, prev)) {
+    if(tail == nullptr) {
+      // empty list
+      return nullptr;
+    }
     prev = getPrev(*tail);
   }
 
