@@ -79,7 +79,7 @@ set(sourceCPP
         cpp/GDSF.cpp
         cpp/flex.cpp
         cpp/flex-cbf.cpp
-        cpp/flex-prefetch.cpp
+        cpp/flexP.cpp
         cpp/flex-pp.cpp
         LHD/lhd.cpp
         LHD/LHD_Interface.cpp

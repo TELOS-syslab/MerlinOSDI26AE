@@ -172,7 +172,7 @@ cache_t *RandomLRU_init(const common_cache_params_t ccache_params,
 cache_t *flex_init(const common_cache_params_t ccache_params,
                          const char *cache_specific_params);
 
-cache_t *flexp_init(const common_cache_params_t ccache_params,
+cache_t *flexP_init(const common_cache_params_t ccache_params,
                          const char *cache_specific_params);
 
 cache_t *flexc_init(const common_cache_params_t ccache_params,
