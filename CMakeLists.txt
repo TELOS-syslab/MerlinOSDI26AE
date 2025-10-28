@@ -22,7 +22,7 @@ set(EXPORT_COMPILE_COMMANDS ON)
 # echo madvise | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 option(USE_HUGEPAGE "use transparent hugepage" ON)
 option(ENABLE_TESTS "whether enable test" ON)
-option(ENABLE_GLCACHE "enable group-learned cache" OFF)
+option(ENABLE_GLCACHE "enable group-learned cache" ON)
 option(SUPPORT_TTL "whether support TTL" OFF)
 option(OPT_SUPPORT_ZSTD_TRACE "whether support zstd trace" ON)
 option(ENABLE_LRB "enable LRB" OFF)

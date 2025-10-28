@@ -33,6 +33,8 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = ARC_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arcv0") == 0) {
     cache = ARCv0_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "car") == 0) {
+    cache = CAR_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "lhd") == 0) {
     cache = LHD_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "random") == 0) {

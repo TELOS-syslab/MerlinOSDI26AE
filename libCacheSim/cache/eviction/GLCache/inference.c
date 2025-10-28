@@ -5,6 +5,10 @@
 #include "obj.h"
 #include "utils.h"
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 static inline void resize_matrix(GLCache_params_t *params, feature_t **x_p,
                                  pred_t **y_p, int32_t *size_p,
                                  int64_t new_size) {
@@ -67,7 +71,17 @@ static int prepare_inference_data(cache_t *cache) {
   safe_call(XGDMatrixCreateFromMat(learner->inference_x, n_segs,
                                    learner->n_feature, -2, &learner->inf_dm));
 
-  safe_call(XGDMatrixSetUIntInfo(learner->inf_dm, "group", &n_segs, 1));
+  //safe_call(XGDMatrixSetUIntInfo(learner->inf_dm, "group", &n_segs, 1));
+  char json[256];
+    snprintf(json, sizeof(json),
+             "{"
+             "\"version\": 1, "
+             "\"shape\": [1], "
+             "\"typestr\": \"<u4\", "
+             "\"data\": [%" PRIu64 ", false]"
+             "}",
+             (uint64_t)(uintptr_t)&n_segs);
+  safe_call(XGDMatrixSetInfoFromInterface(learner->inf_dm, "group", json));
 
   return n_segs;
 }

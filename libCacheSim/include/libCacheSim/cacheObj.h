@@ -35,6 +35,12 @@ typedef struct {
 } ARC_obj_metadata_t;
 
 typedef struct {
+  int lru_id;
+  bool access;
+  bool ghost;
+} CAR_obj_metadata_t;
+
+typedef struct {
   void *lfu_next;
   void *lfu_prev;
   int64_t eviction_vtime:40;
@@ -169,6 +175,7 @@ typedef struct cache_obj {
     Clock_obj_metadata_t clock;      // for Clock
     Size_obj_metadata_t Size;        // for Size
     ARC_obj_metadata_t ARC;          // for ARC
+    CAR_obj_metadata_t CAR;          // for CAR
     LeCaR_obj_metadata_t LeCaR;      // for LeCaR
     Cacheus_obj_metadata_t Cacheus;  // for Cacheus
     SR_LRU_obj_metadata_t SR_LRU;
