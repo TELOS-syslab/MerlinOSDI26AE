@@ -1,20 +1,3 @@
-//
-//  ARC cache replacement algorithm
-//  https://www.usenix.org/conference/fast-03/arc-self-tuning-low-overhead-replacement-cache
-//
-//
-//  cross checked with https://github.com/trauzti/cache/blob/master/ARC.py
-//  one thing not clear in the paper is whether delta and p is int or float,
-//  we used int as first,
-//  but the implementation above used float, so we have changed to use float
-//
-//
-//  libCacheSim
-//
-//  Created by Juncheng on 09/28/20.
-//  Copyright © 2020 Juncheng. All rights reserved.
-//
-
 #include <string.h>
 
 #include "../../dataStructure/hashtable/hashtable.h"
@@ -267,17 +250,8 @@ static cache_obj_t *CAR_find(cache_t *cache, const request_t *req,
       return ret;
     }
 #endif
-
       //CAR hit
     obj->CAR.access = true;
-    if (lru_id == 1) {
-#if defined(TRACK_DEMOTION)
-      obj->misc.next_access_vtime = req->next_access_vtime;
-      printf("%ld keep %ld %ld\n", cache->n_req, obj->create_time,
-             obj->misc.next_access_vtime);
-#endif
-    } else {
-    }
   }
 
   return ret;
@@ -325,8 +299,11 @@ static void CAR_cycle_L1(cache_t *cache, const request_t *req) {
         cache_obj_t *obj = params->L1_data_tail;
         obj->CAR.access = false;
         remove_obj_from_list(&params->L1_data_head, &params->L1_data_tail, obj);
+        params->L1_data_size -= obj->obj_size + cache->obj_md_size;
         //insert to L2 from L1
+        obj->CAR.lru_id = 2;
         prepend_obj_to_head(&params->L2_data_head, &params->L2_data_tail, obj);
+        params->L2_data_size += obj->obj_size + cache->obj_md_size;
     }
     return;
 }
@@ -571,7 +548,7 @@ static void _CAR_evict_miss_on_all_queues(cache_t *cache,
 
   int64_t incoming_size = req->obj_size + cache->obj_md_size;
   if (params->L1_data_size + params->L1_ghost_size + incoming_size >
-      cache->cache_size) {
+      cache->cache_size) {  
     // case A: L1 = T1 U B1 has exactly c pages
     if (params->L1_ghost_size > 0) {
       // if T1 < c (ghost is not empty),
