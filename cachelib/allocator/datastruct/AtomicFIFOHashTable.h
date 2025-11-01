@@ -40,6 +40,11 @@ class AtomicFIFOHashTable {
   void setFIFOSize(uint32_t fifoSize) noexcept {
     fifoSize_ = ((fifoSize >> 3) + 1) << 3;
     numElem_ = fifoSize_ * loadFactorInv_;
+    timestampsize_.store(fifoSize_, std::memory_order_release);
+  }
+
+  void changeFIFOSize(uint32_t fifoSize) noexcept {
+    timestampsize_.store(((fifoSize >> 3) + 1) << 3, std::memory_order_release);
   }
 
   bool contains(uint32_t key) noexcept;
@@ -81,6 +86,7 @@ class AtomicFIFOHashTable {
   size_t fifoSize_{0};
   std::atomic<int64_t> numInserts_{0};
   std::atomic<int64_t> numEvicts_{0};
+  std::atomic<int64_t> timestampsize_{0};
   alignas(64) std::unique_ptr<uint64_t[]> hashTable_{nullptr};
   mutable folly::cacheline_aligned<Mutex> mtx_;
 };

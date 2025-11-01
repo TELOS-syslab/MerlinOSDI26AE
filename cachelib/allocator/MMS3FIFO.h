@@ -393,15 +393,18 @@ class MMS3FIFO {
     // being written in cache. Unaccessed items are ignored when determining
     // projected update time.
     void markAccessed(T& node) noexcept {
-      node.template setFlag<RefFlags::kMMFlag1>();
+        qdlist_.markAccessed(node);
+      //node.template setFlag<RefFlags::kMMFlag1>();
     }
 
     void unmarkAccessed(T& node) noexcept {
-      node.template unSetFlag<RefFlags::kMMFlag1>();
+        qdlist_.unmarkAccessed(node);
+      //node.template unSetFlag<RefFlags::kMMFlag1>();
     }
 
     bool isAccessed(const T& node) const noexcept {
-      return node.template isFlagSet<RefFlags::kMMFlag1>();
+        return qdlist_.isAccessed(node);
+      //return node.template isFlagSet<RefFlags::kMMFlag1>();
     }
 
     // protects all operations on the lru. We never really just read the state

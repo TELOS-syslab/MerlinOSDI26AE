@@ -19,7 +19,8 @@ bool AtomicFIFOHashTable::contains(uint32_t key) noexcept {
     if (valInTable == 0) {
       continue;
     }
-    if (age > fifoSize_) {
+    uint64_t tmpsize = timestampsize_.load(std::memory_order_acquire);
+    if (age > tmpsize) {
       __atomic_compare_exchange_n(&hashTable_[bucketIdx + i], &valInTable, 0,
                                   true, __ATOMIC_RELAXED, __ATOMIC_RELAXED);
       continue;

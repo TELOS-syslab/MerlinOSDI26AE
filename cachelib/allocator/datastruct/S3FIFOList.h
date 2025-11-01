@@ -104,6 +104,67 @@ class S3FIFOList {
     }
   }
 
+    #define s3FreqMask 0x3
+    #define s3kFreqMask (s3FreqMask << RefFlags::kMMFlag3)
+    #define s3MAX_FREQ 3
+        using Value = uint32_t;
+
+  FOLLY_ALWAYS_INLINE int incFreq(T &node) noexcept
+        {
+            // node.template setFlag<RefFlags::kMMFlag2>();
+            // return 1;
+            int res = 0;
+            auto predicate = [&res](const Value curValue)
+            {
+                res = curValue & s3kFreqMask;
+                if (res == s3kFreqMask)
+                {
+                    return false;
+                }
+                return true;
+            };
+
+            auto newValue = [](const Value curValue)
+            {
+                return (curValue + (static_cast<Value>(1) << RefFlags::kMMFlag3));
+            };
+
+            node.ref_.template atomicUpdateValue(predicate, newValue);
+            int retval = (res >> RefFlags::kMMFlag3) + 1;
+
+            return retval;
+        }
+        FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
+        {
+            // int ret = node.template isFlagSet<RefFlags::kMMFlag2>();
+            // node.template unSetFlag<RefFlags::kMMFlag2>();
+            // return ret - 1;
+            int res = 0;
+            auto predicate = [&res](const Value curValue)
+            {
+                res = curValue & s3kFreqMask;
+                if (res == 0)
+                {
+                    return false;
+                }
+                return true;
+            };
+
+            auto newValue = [](const Value curValue)
+            {
+                return (curValue - (static_cast<Value>(1) << RefFlags::kMMFlag3));
+            };
+
+            node.ref_.template atomicUpdateValue(predicate, newValue);
+            int retval = (res >> RefFlags::kMMFlag3);
+            return retval - 1;
+        }
+        FOLLY_ALWAYS_INLINE int getFreq(const T &node) const noexcept
+        {
+            int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
+            return (ret >> RefFlags::kMMFlag3) & (s3MAX_FREQ);
+        }
+
   // Bit MM_BIT_0 is used to record if the item is hot.
   void markProbationary(T& node) noexcept {
     node.template setFlag<RefFlags::kMMFlag0>();
@@ -132,14 +193,23 @@ class S3FIFOList {
 
 
   void markAccessed(T& node) noexcept {
+    incFreq(node);
+    return;
     node.template setFlag<RefFlags::kMMFlag1>();
   }
 
   void unmarkAccessed(T& node) noexcept {
+    decFreq(node);
+    return;
     node.template unSetFlag<RefFlags::kMMFlag1>();
   }
 
   bool isAccessed(const T& node) const noexcept {
+    int freq = getFreq(node);
+    if (freq > 0) {
+      return true;
+    }
+    return false;
     return node.template isFlagSet<RefFlags::kMMFlag1>();
   }
 

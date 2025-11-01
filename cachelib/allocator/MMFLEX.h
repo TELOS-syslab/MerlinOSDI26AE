@@ -340,7 +340,6 @@ namespace facebook::cachelib
             void incFreq(T &node) noexcept
             {
                 //node.template setFlag<RefFlags::kMMFlag2>();
-                
                 flexlist_.incFreq(node);
                 return;
             }
@@ -354,7 +353,6 @@ namespace facebook::cachelib
             void setFreq(T &node, int freq) noexcept
             {
                 //node.template setFlag<RefFlags::kMMFlag2>();
-                
                 flexlist_.setFreq(node, freq);
                 return;
             }
@@ -362,7 +360,6 @@ namespace facebook::cachelib
             void resetFreq(T &node) noexcept
             {
                 //node.template unSetFlag<RefFlags::kMMFlag2>();
-                
                 flexlist_.resetFreq(node);
                 return;
             }
@@ -416,7 +413,6 @@ namespace facebook::cachelib
     {
         EvictionAgeStat stat{};
         const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
-        printf("getEvictionAgeStatLocked not implemented yet\n");
         return stat;
     }
 
@@ -474,23 +470,6 @@ namespace facebook::cachelib
     void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
     {
         flexlist_.remove(node);
-        node.unmarkInMMContainer();
-        return;
-        LruType type = getLruType(node);
-        switch (type)
-        {
-        case LruType::Small:
-            flexlist_.getListSmall().remove(node);
-            break;
-        case LruType::Main:
-            flexlist_.getListMain().remove(node);
-            break;
-        case LruType::Suspicious:
-            flexlist_.getListSuspicious().remove(node);
-            break;
-        case LruType::NumTypes:
-            XDCHECK(false);
-        }
         node.unmarkInMMContainer();
         return;
     }
