@@ -21,6 +21,7 @@
 #include "cachelib/allocator/datastruct/AtomicDList.h"
 #include "cachelib/allocator/datastruct/AtomicFIFOHashTable.h"
 #include "cachelib/allocator/datastruct/AtomicSketch.h"
+#include "cachelib/allocator/datastruct/AtomicFIFOSketch.h"
 #include "cachelib/allocator/datastruct/DList.h"
 #include "cachelib/common/BloomFilter.h"
 #include "cachelib/common/CompilerUtils.h"
@@ -241,7 +242,7 @@ namespace facebook::cachelib
 
         void adjustGuardFreq() noexcept
         {
-            if ((numInserts_ & 0xff) != 0)
+            if ((numInserts_ & 0xfff) != 0)
             {
                 return;
             }
@@ -251,15 +252,24 @@ namespace facebook::cachelib
             int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);
             if (freq2 * 2 > total_size)
             {
-                guard_freq_ = 3;
+                if(guard_freq_!=3){
+                    guard_freq_ = 3;
+                    printf("guard_freq_ set to 3\n");
+                }
             }
             else if (freq2 * 3 > total_size)
             {
-                guard_freq_ = 2;
+                if(guard_freq_!=2){
+                    guard_freq_ = 2;
+                    printf("guard_freq_ set to 2\n");
+                }
             }
             else
             {
-                guard_freq_ = 1;
+                if(guard_freq_!=1){
+                    guard_freq_ = 1;
+                    printf("guard_freq_ set to 1\n");
+                }
             }
             return;
         }
@@ -313,7 +323,10 @@ namespace facebook::cachelib
                     }
                     else
                     {
-                        T *tailptr = susfifo_->removeTail();
+                        T *tailptr = nullptr;
+                        if(susfifo_->size()>((double)(listSize)*0.01)){
+                           tailptr = susfifo_->removeTail();
+                        }
                         int tail_freq = MAX_FREQ + 1;
                         if (tailptr != nullptr)
                         {
@@ -366,58 +379,45 @@ namespace facebook::cachelib
                     }
                 }
                 // printf("%s %d small size %d main size %d sus size %d\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
-                while (mainfifo_->size() > (double)(listSize)*mainRatio_)
-                {
-                    curr = mainfifo_->removeTail();
-                    if (curr == nullptr)
-                    {
-                        break;
-                    }
-                    //unSetType(*curr);
-                    //susfifo_->linkAtHead(*curr);
-                    //continue;
-                    //  set Type LruType::Suspicious
-                    int retval = decFreq(*curr);
-                    if (retval == -1)
-                    {
-                        //susfifo_->linkAtHead(*curr);
-                        adjustGuardFreq();
-                        return curr;
-                    }
-                    else
-                    {
-                        mainfifo_->linkAtHead(*curr);
-                    }
-                    retry++;
-                    if (retry > 10)
-                    {
-                        listSize = size();
-                        retry = 0;
-                        break;
-                    }
-                }
-                while (susfifo_->size() > (double)(listSize)*susRatio_)
-                {
-                    curr = susfifo_->removeTail();
-                    if (curr == nullptr)
-                    {
-                        break;
-                    }
-
-                    int retval = decFreq(*curr);
-                    if (retval == -1)
-                    {
-                        adjustGuardFreq();
-                        return curr;
-                    }
-                    else
-                    {
-                        mainfifo_->linkAtHead(*curr);
-                        setMain(*curr);
-                    }
-                    if (retval < 2)
-                    {
-                        sketch_.estimate(hashNode(*curr));
+                while(smallfifo_->size() <= ((double)(listSize)*smallRatio_)){
+                    T *curr = nullptr;
+                    if(mainfifo_->size() > (double)(listSize)*mainRatio_){
+                        curr = mainfifo_->removeTail();
+                        if (curr != nullptr)
+                        {
+                            int retval = decFreq(*curr);
+                            if (retval == -1)
+                            {
+                                //susfifo_->linkAtHead(*curr);
+                                adjustGuardFreq();
+                                return curr;
+                            }
+                            else
+                            {
+                                mainfifo_->linkAtHead(*curr);
+                            }
+                        }
+                        
+                    }else{
+                        curr = susfifo_->removeTail();
+                        if (curr != nullptr)
+                        {
+                            int retval = decFreq(*curr);
+                            if (retval == -1)
+                            {
+                                adjustGuardFreq();
+                                return curr;
+                            }
+                            else
+                            {
+                                mainfifo_->linkAtHead(*curr);
+                                setMain(*curr);
+                            }
+                            if (retval < 2)
+                            {
+                                sketch_.estimate(hashNode(*curr));
+                            }
+                        }
                     }
                     retry++;
                     if (retry > 10)
@@ -439,9 +439,16 @@ namespace facebook::cachelib
             }
             if (hist_freq)
             {
-                mainfifo_->linkAtHead(node);
-                setMain(node);
-                unSetSmall(node);
+                if(hist_freq>=guard_freq_){
+                    mainfifo_->linkAtHead(node);
+                    setMain(node);
+                    unSetSmall(node);
+                }else{
+                    susfifo_->linkAtHead(node);
+                    unSetMain(node);
+                    unSetSmall(node);
+                }
+                
             }
             else
             {
@@ -515,6 +522,7 @@ namespace facebook::cachelib
 
         AtomicSketch sketch_;
         AtomicFIFOHashTable ghost_;
+        //AtomicFIFOSketch ghost_;
     };
 
 } // namespace facebook::cachelib
