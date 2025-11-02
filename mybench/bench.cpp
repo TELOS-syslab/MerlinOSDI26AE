@@ -61,15 +61,15 @@ void trace_replay_run(struct bench_data *bdata, bench_opts_t *opts) {
 
 void report_bench_result(struct bench_data *bdata, bench_opts_t *opts) {
   bdata->n_req = bdata->n_get + bdata->n_set + bdata->n_del;
-  double write_ratio = (double)bdata->n_set / bdata->n_req;
-  double miss_ratio = (double)bdata->n_get_miss / bdata->n_get;
-  double del_ratio = (double)bdata->n_del / bdata->n_req;
+  double write_ratio = (double)(bdata->n_set -bdata->warmup_n_set)/ (bdata->n_req - bdata->warmup_n_req);
+  double miss_ratio = (double)(bdata->n_get_miss -bdata->warmup_n_get_miss)/ (bdata->n_get - bdata->warmup_n_get);
+  double del_ratio = (double)(bdata->n_del - bdata->warmup_n_del)/ (bdata->n_req - bdata->warmup_n_req);
 
   gettimeofday(&bdata->end_time, nullptr);
   double start_time = bdata->start_time.tv_sec * 1e6 + bdata->start_time.tv_usec;
   double end_time = bdata->end_time.tv_sec * 1e6 + bdata->end_time.tv_usec;
   double runtime = end_time - start_time;
-  double throughput = (double)bdata->n_req / runtime;
+  double throughput = (double)(bdata->n_req - bdata->warmup_n_req)/ runtime;
 
   if (bdata->last_end_time_us == 0) {
     bdata->last_end_time_us = start_time;
@@ -82,12 +82,12 @@ void report_bench_result(struct bench_data *bdata, bench_opts_t *opts) {
 
   printf(
       "cachelib %s %ld MiB, %s, "
-      "%.2lf hour, runtime %.2lf sec, %ld requests, throughput "
+      "runtime %.2lf sec, %ld requests, throughput "
       "%.2lf MQPS, miss ratio %.4lf\n",
       // "utilization %.4lf, "
       // "write ratio %.4lf, del ratio %.4lf\n",
       typeid(bdata->cache).name(), opts->cache_size_in_mb, opts->trace_path,
-      (double)bdata->trace_time / 3600.0, runtime / 1.0e6, bdata->n_get,
+       runtime / 1.0e6, bdata->n_get - bdata->warmup_n_get,
       throughput, miss_ratio);
 }
 

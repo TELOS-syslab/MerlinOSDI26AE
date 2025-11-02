@@ -25,11 +25,12 @@ int main(int argc, char *argv[]) {
 
   if (opts.n_thread == 1) {
     trace_replay_run(&bench_data, &opts);
+    report_bench_result(&bench_data, &opts);
   } else {
     trace_replay_run_mt(&bench_data, &opts);
   }
 
-  report_bench_result(&bench_data, &opts);
+  
 
   return 0;
 }

@@ -131,6 +131,11 @@ T* AtomicDList<T, HookPtr>::removeTail() noexcept {
   T* tail = tail_.load();
   if (tail == nullptr) {
     // empty list
+    std::shared_lock lock(head_mutex);
+    if(head_.load()==nullptr&&size_!=0){
+        printf("size_=%lu but tail_ is nullptr %s %d\n", size_.load(), __func__, __LINE__);
+        abort();
+    }
     return nullptr;
   }
   T* prev = getPrev(*tail);

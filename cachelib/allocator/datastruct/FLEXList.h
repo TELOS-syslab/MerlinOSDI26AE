@@ -242,36 +242,70 @@ namespace facebook::cachelib
 
         void adjustGuardFreq() noexcept
         {
-            if ((numInserts_ & 0xfff) != 0)
+            if ((numInserts_ & 0xcff) != 0)
             {
                 return;
             }
 
             int total_size = size();
             int freq1 = freq_distribution_[1].load(std::memory_order_relaxed);
+            freq1 += ghost_.freq_distribution_[1].load(std::memory_order_relaxed);
             int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);
+            freq2 += ghost_.freq_distribution_[2].load(std::memory_order_relaxed);
+            
+            if(freq2 > total_size * 0.8){
+                if(guard_freq_!=3){
+                    guard_freq_ = 3;
+                }
+            }else if(freq1 > total_size * 0.8){
+                if(guard_freq_!=2){
+                    guard_freq_ = 2;
+                }
+            } else{
+                if(guard_freq_!=1){
+                    guard_freq_ = 1;
+                }
+            }
+            return;
             if (freq2 * 2 > total_size)
             {
                 if(guard_freq_!=3){
+                    printf("set guard freq 3, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
                     guard_freq_ = 3;
-                    printf("guard_freq_ set to 3\n");
                 }
             }
             else if (freq2 * 3 > total_size)
             {
                 if(guard_freq_!=2){
+                    printf("set guard freq 3, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
                     guard_freq_ = 2;
-                    printf("guard_freq_ set to 2\n");
                 }
             }
             else
             {
                 if(guard_freq_!=1){
+                    printf("set guard freq 3, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
                     guard_freq_ = 1;
-                    printf("guard_freq_ set to 1\n");
                 }
             }
             return;
+            
+            
         }
 
         T *getEvictionCandidate() noexcept
@@ -521,8 +555,8 @@ namespace facebook::cachelib
         constexpr static double mainRatio_ = 0.85;
 
         AtomicSketch sketch_;
-        AtomicFIFOHashTable ghost_;
-        //AtomicFIFOSketch ghost_;
+        //AtomicFIFOHashTable ghost_;
+        AtomicFIFOSketch ghost_;
     };
 
 } // namespace facebook::cachelib

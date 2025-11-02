@@ -20,6 +20,14 @@ struct bench_data {
   struct timeval start_time;
   struct timeval end_time;
   int64_t trace_time;
+
+  int64_t warmup_done;
+  int64_t warmup_n_get;
+  int64_t warmup_n_set;
+  int64_t warmup_n_del;
+  int64_t warmup_n_get_miss;
+  int64_t warmup_n_req;
+  struct timeval warmup_end_time;
 };
 
 typedef struct {

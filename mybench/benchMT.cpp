@@ -135,21 +135,37 @@ void trace_replay_run_mt(struct bench_data *bdata, bench_opts_t *opts) {
   STOP_FLAG.store(false);
   gettimeofday(&bdata->start_time, NULL);
 
-  // we wait for one thread to finish, then stop all threads
-  while (!STOP_FLAG.load()) {
-    sleep(8);
+  //warmup 4 seconds
+  /*
+    sleep(4);
     aggregate_results(bdata, opts, res);
-    report_bench_result(bdata, opts);
+    bdata->warmup_n_get = bdata->n_get;
+    bdata->warmup_n_set = bdata->n_set;
+    bdata->warmup_n_get_miss = bdata->n_get_miss;
+    bdata->warmup_n_del = bdata->n_del;
+    bdata->warmup_n_req = bdata->n_get + bdata->n_set + bdata->n_del;
+    gettimeofday(&bdata->start_time, nullptr);
+    */
+  // we wait for one thread to finish, then stop all threads
+  int counter = 0;
+  while (!STOP_FLAG.load()) {
+    sleep(1);
+    aggregate_results(bdata, opts, res);
+    counter++;
+    if(counter % 10 ==0){
+        report_bench_result(bdata, opts);
+    }
   }
-
+  aggregate_results(bdata, opts, res);
+  report_bench_result(bdata, opts);
   // wait for all threads to finish
   for (int i = 0; i < n_thread; i++) {
     threads[i].join();
   }
 
-  gettimeofday(&bdata->end_time, nullptr);
+  //gettimeofday(&bdata->end_time, nullptr);
 
-  aggregate_results(bdata, opts, res);
+  //aggregate_results(bdata, opts, res);
 
   delete[] res;
 }
