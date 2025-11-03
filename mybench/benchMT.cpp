@@ -126,7 +126,7 @@ void andlysis_log(struct bench_data *bdata){
     printf("collecting andlysis log\n");
     std::stringstream ss;
     bdata->cache->dump(ss);
-    printf("opoeration time");
+    printf("operation time");
     analysis(ss);
     ss.clear();
     dump(ss);
