@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <cstring>
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -172,6 +173,7 @@ class MMS3FIFO {
 
     Container(const Container&) = delete;
     Container& operator=(const Container&) = delete;
+    void dump(std::ostream& out) {}
 
     // context for iterating the MM container. At any given point of time,
     // there can be only one iterator active since we need to lock the LRU for

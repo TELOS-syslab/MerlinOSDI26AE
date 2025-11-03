@@ -19,6 +19,8 @@
 #include "reader.h"
 #include "request.h"
 
+#include <sstream>
+
 using namespace std;
 
 static atomic<bool> STOP_FLAG = true;
@@ -120,6 +122,19 @@ static void aggregate_results(struct bench_data *bdata, bench_opts_t *opts,
   //        max_trace_time);
 }
 
+void andlysis_log(struct bench_data *bdata){
+    printf("collecting andlysis log\n");
+    std::stringstream ss;
+    bdata->cache->dump(ss);
+    printf("opoeration time");
+    analysis(ss);
+    ss.clear();
+    dump(ss);
+    printf("response time");
+    analysis(ss);
+    return;
+}
+
 void trace_replay_run_mt(struct bench_data *bdata, bench_opts_t *opts) {
   int n_thread = opts->n_thread;
   struct thread_res *res = new struct thread_res[n_thread];
@@ -166,6 +181,8 @@ void trace_replay_run_mt(struct bench_data *bdata, bench_opts_t *opts) {
   //gettimeofday(&bdata->end_time, nullptr);
 
   //aggregate_results(bdata, opts, res);
-
+  #ifdef DUMP_TIME
+  andlysis_log(bdata);
+  #endif
   delete[] res;
 }

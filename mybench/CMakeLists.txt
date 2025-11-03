@@ -32,19 +32,19 @@ find_package(cachelib CONFIG REQUIRED)
 find_package(fmt)
 
 # add_library (mybenchlib reader.c)
-add_executable(strictlru main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(strictlru main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(strictlru PRIVATE USE_STRICTLRU)
 target_link_libraries(strictlru cachelib fmt::fmt atomic) 
 
-add_executable(lru main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(lru main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(lru PRIVATE USE_LRU)
 target_link_libraries(lru cachelib fmt::fmt atomic) 
 
-add_executable(twoq main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(twoq main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(twoq PRIVATE USE_TWOQ)
 target_link_libraries(twoq cachelib fmt::fmt atomic) 
 
-add_executable(tinylfu main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(tinylfu main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(tinylfu PRIVATE USE_TINYLFU)
 target_link_libraries(tinylfu cachelib fmt::fmt atomic)
 
@@ -60,10 +60,14 @@ target_link_libraries(tinylfu cachelib fmt::fmt atomic)
 # target_compile_definitions(sievebuffered PRIVATE USE_SIEVEBUFFERED)
 # target_link_libraries(sievebuffered cachelib fmt::fmt atomic)
 
-add_executable(s3fifo main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(s3fifo main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(s3fifo PRIVATE USE_S3FIFO)
 target_link_libraries(s3fifo cachelib fmt::fmt atomic) 
 
-add_executable(flex main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp)
+add_executable(flex main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(flex PRIVATE USE_FLEX)
 target_link_libraries(flex cachelib fmt::fmt atomic)
+
+add_executable(flexdump main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+target_compile_definitions(flexdump PRIVATE USE_FLEXDUMP)
+target_link_libraries(flexdump cachelib fmt::fmt atomic)

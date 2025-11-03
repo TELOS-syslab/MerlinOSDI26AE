@@ -2,7 +2,7 @@
 
 #include <atomic>
 #include <cstring>
-#include <iostream>
+#include <fstream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -19,10 +19,11 @@
 #include "cachelib/allocator/memory/serialize/gen-cpp2/objects_types.h"
 #include "cachelib/common/CompilerUtils.h"
 #include "cachelib/common/Mutex.h"
+#include <x86intrin.h>
 
 namespace facebook::cachelib
 {
-    class MMFLEX
+    class MMFLEXdump
     {
     public:
         // unique identifier per MMType
@@ -123,7 +124,36 @@ namespace facebook::cachelib
 
             Container(const Container &) = delete;
             Container &operator=(const Container &) = delete;
-            void dump(std::ostream& out) {}
+
+            static constexpr int MAX_RECORDS = 1000000;
+            std::vector<uint64_t> access_records{std::vector<uint64_t>(MAX_RECORDS)};
+            std::atomic<size_t> record_index{0};
+
+            inline unsigned long long rdtscp_now() {
+                unsigned int aux;
+                return __rdtscp(&aux);
+            }
+
+            void log(uint64_t val) {
+                if(record_index >= MAX_RECORDS){
+                    return;
+                }
+                size_t index = record_index.fetch_add(1, std::memory_order_relaxed);
+                if (index < MAX_RECORDS) {
+                    access_records[index] = val;
+                }
+                return;
+            }
+
+            void dump(std::ostream& out) {
+                
+                int total_size = std::min(record_index.load(std::memory_order_relaxed), (size_t)MAX_RECORDS);
+                //printf("dump data %ld, real size %d\n", record_index.load(std::memory_order_relaxed),total_size);
+                for (size_t i = 0; i < total_size; ++i) {
+                    out << access_records[i] << "\n";
+                }
+                return;
+            }
 
             // context for iterating the MM container. At any given point of time,
             // there can be only one iterator active since we need to lock the cache for
@@ -171,7 +201,7 @@ namespace facebook::cachelib
                 }
 
             private:
-                // private because it's easy to misuse and cause deadlock for MMFLEX
+                // private because it's easy to misuse and cause deadlock for MMFLEXdump
                 LockedIterator &operator=(LockedIterator &&) noexcept = default;
 
                 // create an lru iterator with the lock being held.
@@ -188,6 +218,8 @@ namespace facebook::cachelib
                 // only the container can create iterators
                 friend Container<T, HookPtr>;
             };
+
+            
 
             // records the information that the node was accessed. This could bump up
             //
@@ -371,16 +403,18 @@ namespace facebook::cachelib
             LIST flexlist_{};
             Config config_{};
         };
+
+
     };
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    MMFLEX::Container<T, HookPtr>::Container(serialization::MMFLEXObject object, PtrCompressor compressor)
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    MMFLEXdump::Container<T, HookPtr>::Container(serialization::MMFLEXObject object, PtrCompressor compressor)
         : flexlist_(*object.flexlist(), compressor), config_(*object.config())
     {
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::recordAccess(T &node,
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    bool MMFLEXdump::Container<T, HookPtr>::recordAccess(T &node,
                                                      AccessMode mode) noexcept
     {
         if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
@@ -388,29 +422,31 @@ namespace facebook::cachelib
         {
             return false;
         }
-
         const auto curr = static_cast<Time>(util::getCurrentTimeSec());
         // check if the node is still being memory managed
+        uint64_t t1 = (uint64_t)rdtscp_now();
         if (node.isInMMContainer())
         {
             incFreq(node);
             setUpdateTime(node, curr);
+            uint64_t t2 = (uint64_t)rdtscp_now();
+            log(t2 - t1);
             return true;
         }
         return false;
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    cachelib::EvictionAgeStat MMFLEX::Container<T, HookPtr>::getEvictionAgeStat(
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    cachelib::EvictionAgeStat MMFLEXdump::Container<T, HookPtr>::getEvictionAgeStat(
         uint64_t projectedLength) const noexcept
     {
         return Mutex_->lock_combine([this, projectedLength]()
                                     { return getEvictionAgeStatLocked(projectedLength); });
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
     cachelib::EvictionAgeStat
-    MMFLEX::Container<T, HookPtr>::getEvictionAgeStatLocked(
+    MMFLEXdump::Container<T, HookPtr>::getEvictionAgeStatLocked(
         uint64_t projectedLength) const noexcept
     {
         EvictionAgeStat stat{};
@@ -418,22 +454,22 @@ namespace facebook::cachelib
         return stat;
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::setConfig(const Config &newConfig)
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    void MMFLEXdump::Container<T, HookPtr>::setConfig(const Config &newConfig)
     {
         Mutex_->lock_combine([this, newConfig]()
                              { config_ = newConfig; });
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    typename MMFLEX::Config MMFLEX::Container<T, HookPtr>::getConfig() const
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    typename MMFLEXdump::Config MMFLEXdump::Container<T, HookPtr>::getConfig() const
     {
         return Mutex_->lock_combine([this]()
                                     { return config_; });
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::add(T &node) noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    bool MMFLEXdump::Container<T, HookPtr>::add(T &node) noexcept
     {
         const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
         if (node.isInMMContainer())
@@ -446,38 +482,38 @@ namespace facebook::cachelib
         return true;
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    typename MMFLEX::Container<T, HookPtr>::LockedIterator
-    MMFLEX::Container<T, HookPtr>::getEvictionIterator() noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    typename MMFLEXdump::Container<T, HookPtr>::LockedIterator
+    MMFLEXdump::Container<T, HookPtr>::getEvictionIterator() noexcept
     {
         return LockedIterator{&flexlist_};
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
     template <typename F>
-    void MMFLEX::Container<T, HookPtr>::withEvictionIterator(F &&fun)
+    void MMFLEXdump::Container<T, HookPtr>::withEvictionIterator(F &&fun)
     {
         fun(getEvictionIterator());
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
     template <typename F>
-    void MMFLEX::Container<T, HookPtr>::withContainerLock(F &&fun)
+    void MMFLEXdump::Container<T, HookPtr>::withContainerLock(F &&fun)
     {
         // LockHolder l(lruMutex_);
         fun();
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    void MMFLEXdump::Container<T, HookPtr>::removeLocked(T &node) noexcept
     {
         flexlist_.remove(node);
         node.unmarkInMMContainer();
         return;
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::remove(T &node) noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    bool MMFLEXdump::Container<T, HookPtr>::remove(T &node) noexcept
     {
         return Mutex_->lock_combine([this, &node]()
                                     {
@@ -488,16 +524,16 @@ namespace facebook::cachelib
     return true; });
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::remove(LockedIterator &it) noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    void MMFLEXdump::Container<T, HookPtr>::remove(LockedIterator &it) noexcept
     {
         T &node = *it;
         XDCHECK(node.isInMMContainer());
         node.unmarkInMMContainer();
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::replace(T &oldNode, T &newNode) noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    bool MMFLEXdump::Container<T, HookPtr>::replace(T &oldNode, T &newNode) noexcept
     {
         return Mutex_->lock_combine([this, &oldNode, &newNode]()
                                     {
@@ -535,8 +571,8 @@ namespace facebook::cachelib
     return true; });
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    serialization::MMFLEXObject MMFLEX::Container<T, HookPtr>::saveState()
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    serialization::MMFLEXObject MMFLEXdump::Container<T, HookPtr>::saveState()
         const noexcept
     {
         serialization::MMFLEXConfig configObject;
@@ -549,8 +585,8 @@ namespace facebook::cachelib
         return object;
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    MMContainerStat MMFLEX::Container<T, HookPtr>::getStats() const noexcept
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    MMContainerStat MMFLEXdump::Container<T, HookPtr>::getStats() const noexcept
     {
         auto stat = Mutex_->lock_combine([this]()
                                          {
@@ -566,8 +602,8 @@ namespace facebook::cachelib
                 0, 0 /* refresh time */, 0, 0, 0, 0};
     }
 
-    template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::reconfigureLocked(const Time &currTime)
+    template <typename T, MMFLEXdump::Hook<T> T::*HookPtr>
+    void MMFLEXdump::Container<T, HookPtr>::reconfigureLocked(const Time &currTime)
     {
         // not used
     }

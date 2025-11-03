@@ -23,6 +23,7 @@
 #include "cachelib/allocator/memory/CompressedPtr.h"
 #include "cachelib/allocator/MMS3FIFO.h"
 #include "cachelib/allocator/MMFLEX.h"
+#include "cachelib/allocator/MMFLEXdump.h"
 #include "cachelib/common/Mutex.h"
 
 namespace facebook {
@@ -114,6 +115,13 @@ struct S3FIFOCacheTrait {
 
 struct FLEXCacheTrait {
   using MMType = MMFLEX;
+  using AccessType = ChainedHashTable;
+  using AccessTypeLocks = SharedMutexBuckets;
+  using CompressedPtrType = CompressedPtr5B;
+};
+
+struct FLEXCachedumpTrait {
+  using MMType = MMFLEXdump;
   using AccessType = ChainedHashTable;
   using AccessTypeLocks = SharedMutexBuckets;
   using CompressedPtrType = CompressedPtr5B;

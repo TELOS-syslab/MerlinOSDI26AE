@@ -25,6 +25,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/synchronization/SanitizeThread.h>
 #include <gtest/gtest.h>
+#include <iostream>
 
 #include <chrono>
 #include <functional>
@@ -989,6 +990,27 @@ class CacheAllocator : public CacheBase {
   //                    cache dir
   //          kSavedOnlyDRAM and kSavedOnlyNvmCache - partial content saved
   ShutDownStatus shutDown();
+
+    void dump(std::ostream& out){
+    for(int i = 0; i < mmContainers_.size(); i++){
+        //of << "MM Container for PoolId: " << i << "\n";
+        for(int j = 0; j < mmContainers_[i].size(); j++){
+            //of << "  ClassId: " << j << "\n";
+            if( mmContainers_[i][j] != nullptr ){
+                //printf("dumping MM Container poolId: %d, classId: %d\n", i, j);
+                mmContainers_[i][j]->dump(out);
+            }
+        }
+    }
+    /*
+    for(auto mms:mmContainers_){
+        for(auto mm: mms){
+            mm->dump(of);
+        }
+    }
+        */
+       return;
+  }
 
   // No-op for workers that are already running. Typically user uses this in
   // conjunction with `config.delayWorkerStart()` to avoid initialization
@@ -6079,6 +6101,7 @@ extern template class CacheAllocator<TinyLFUCacheTrait>;
 extern template class CacheAllocator<WTinyLFUCacheTrait>;
 extern template class CacheAllocator<S3FIFOCacheTrait>;
 extern template class CacheAllocator<FLEXCacheTrait>;
+extern template class CacheAllocator<FLEXCachedumpTrait>;
 
 // CacheAllocator with an LRU eviction policy
 // LRU policy can be configured to act as a segmented LRU as well
@@ -6116,4 +6139,5 @@ using WTinyLFUAllocator = CacheAllocator<WTinyLFUCacheTrait>;
 
 using S3FIFOAllocator = CacheAllocator<S3FIFOCacheTrait>;
 using FLEXAllocator = CacheAllocator<FLEXCacheTrait>;
+using FLEXdumpAllocator = CacheAllocator<FLEXCachedumpTrait>;
 } // namespace facebook::cachelib

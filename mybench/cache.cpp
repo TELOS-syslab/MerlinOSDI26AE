@@ -78,7 +78,9 @@ int cache_get(Cache *cache, PoolId pool, struct request *req) {
   static __thread char buf[1024 * 1024];
 
   auto key = gen_key(req);
-
+    #ifdef DUMP_TIME
+    auto start = rdtscp_now();
+    #endif
   Cache::ReadHandle item_handle = cache->find(key);
   if (item_handle) {
     if (item_handle->isExpired()) {
@@ -88,7 +90,10 @@ int cache_get(Cache *cache, PoolId pool, struct request *req) {
       assert(!item_handle->isExpired());
       const char *data =
           reinterpret_cast<const char *>(item_handle->getMemory());
-
+        #ifdef DUMP_TIME
+        auto end = rdtscp_now();
+        log((uint64_t)end - (uint64_t)start);
+        #endif
       return 0;
     }
   } else {

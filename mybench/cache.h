@@ -1,6 +1,7 @@
 #pragma once
 
 #include "cachelib/allocator/CacheAllocator.h"
+#include "log.h"
 
 using namespace facebook::cachelib;
 #if defined(USE_LRU) || defined(USE_STRICTLRU)
@@ -15,6 +16,9 @@ using Cache = Lru2QAllocator;
 using Cache = TinyLFUAllocator;
 #elif defined(USE_FLEX)
 using Cache = FLEXAllocator;
+#elif defined(USE_FLEXDUMP)
+using Cache = FLEXdumpAllocator;
+#define DUMP_TIME
 #endif
 
 void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,

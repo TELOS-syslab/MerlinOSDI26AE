@@ -17,6 +17,8 @@
 #pragma once
 
 #include <atomic>
+#include <cstring>
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -354,6 +356,7 @@ class MMTinyLFU {
 
     Container(const Container&) = delete;
     Container& operator=(const Container&) = delete;
+    void dump(std::ostream& out) {}
 
     // records the information that the node was accessed. This could bump up
     // the node to the head of the lru depending on the time when the node was

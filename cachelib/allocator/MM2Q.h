@@ -17,6 +17,8 @@
 #pragma once
 
 #include <atomic>
+#include <cstring>
+#include <iostream>
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -392,6 +394,7 @@ class MM2Q {
 
     Container(const Container&) = delete;
     Container& operator=(const Container&) = delete;
+    void dump(std::ostream& out) {}
 
     using Iterator = typename LruList::Iterator;
 
