@@ -14,46 +14,45 @@ namespace eviction
     {
         int64_t timer = 0;
         request_t *req_local;
-        cache_t *front;
+        cache_t *filter;
         cache_t *main;
-        cache_t *small;
+        cache_t *sus;
         cache_t *ghost;
-        uint64_t front_limit;
+        uint64_t filter_limit;
         uint64_t main_limit;
-        uint64_t small_limit;
+        uint64_t sus_limit;
         uint64_t ghost_limit;
-        double front_size_ratio;
+        double filter_size_ratio;
         double suspected_size_ratio;
         double ghost_size_ratio;
         struct minimalIncrementCBF *CBF;
         //
-        int32_t gurad_freq;
-        std::vector<int32_t> popularity;
+        int32_t guard_freq;
+        std::vector<int32_t> hotdistribution;
         int32_t phase;
         int32_t evictobj_num;
+        int32_t seq_miss;
         int32_t ghost_freq;
         int32_t hit_on_ghost;
         int32_t move_to_main;
         int32_t prefetch;
         int32_t prefetch_freq;
-        int32_t warmup;
         request_t *req_prefetch;
-        request_t *req_small;
+        request_t *req_sus;
         //
-        int32_t front_hitnum;
-        int32_t small_hitnum;
+        int32_t filter_hitnum;
+        int32_t sus_hitnum;
         int32_t main_hitnum;
         int32_t ghost_hitnum;
-        int32_t duelwin;
+        int32_t compareguard;
 
         int32_t ghost2main;
-        int32_t ghost2small;
-        int32_t front2small;
-        int32_t front2main;
-        int32_t front2ghost;
-        int32_t small2main;
-        int32_t evict_small_ghost;
-
+        int32_t ghost2sus;
+        int32_t filter2sus;
+        int32_t filter2main;
+        int32_t filter2ghost;
+        int32_t sus2main;
+        int32_t evict_sus_ghost;
     } flex_params_t;
 } // namespace eviction
 
@@ -63,7 +62,7 @@ extern "C"
 #endif
 
     static const char *DEFAULT_CACHE_PARAMS =
-        "front-size-ratio=0.10,suspected-size-ratio=0.05,ghost-size-ratio=1.00";
+        "filter-size-ratio=0.10,suspected-size-ratio=0.05,ghost-size-ratio=1.00";
 
     cache_t *flex_init(const common_cache_params_t ccache_params,
                         const char *cache_specific_params);
@@ -107,7 +106,7 @@ extern "C"
 
         params->req_local = new_request();
         params->req_prefetch = new_request();
-        params->req_small = new_request();
+        params->req_sus = new_request();
 
         flex_parse_params(cache, DEFAULT_CACHE_PARAMS);
         if (cache_specific_params != NULL)
@@ -115,27 +114,29 @@ extern "C"
             flex_parse_params(cache, cache_specific_params);
         }
 
-        params->front_limit = MAX(1, (uint64_t)(params->front_size_ratio * ccache_params.cache_size));
-        params->small_limit = MAX(1, (uint64_t)(params->suspected_size_ratio * ccache_params.cache_size));
-        params->main_limit = ccache_params.cache_size - params->front_limit - params->small_limit;
+        params->filter_limit = MAX(1, (uint64_t)(params->filter_size_ratio * ccache_params.cache_size));
+        params->sus_limit = MAX(1, (uint64_t)(params->suspected_size_ratio * ccache_params.cache_size));
+        params->main_limit = ccache_params.cache_size - params->filter_limit - params->sus_limit;
         params->ghost_limit = ccache_params.cache_size * params->ghost_size_ratio;
-        common_cache_params_t ccache_params_front = ccache_params;
-        ccache_params_front.cache_size = params->front_limit;
-        common_cache_params_t ccache_params_small = ccache_params;
-        ccache_params_small.cache_size = params->small_limit;
+        common_cache_params_t ccache_params_filter = ccache_params;
+        ccache_params_filter.cache_size = params->filter_limit;
+        common_cache_params_t ccache_params_sus = ccache_params;
+        ccache_params_sus.cache_size = params->sus_limit;
         common_cache_params_t ccache_params_main = ccache_params;
         ccache_params_main.cache_size = params->main_limit;
         common_cache_params_t ccache_params_ghost = ccache_params;
         ccache_params_ghost.cache_size = params->ghost_limit;
-        params->front = FIFO_init(ccache_params_front, cache_specific_params);
-        params->small = FIFO_init(ccache_params_small, cache_specific_params);
+        params->filter = FIFO_init(ccache_params_filter, cache_specific_params);
+        params->sus = FIFO_init(ccache_params_sus, cache_specific_params);
         params->main = FIFO_init(ccache_params_main, cache_specific_params);
         params->ghost = FIFO_init(ccache_params_ghost, cache_specific_params);
-        params->popularity = std::vector<int32_t>(MAXFREQ + 1, 0);
+        params->hotdistribution = std::vector<int32_t>(MAXFREQ + 1, 0);
         params->phase = 0;
         params->evictobj_num = 0;
         params->timer = 0;
-        params->gurad_freq = 2;
+        params->guard_freq = 2;
+        params->compareguard = 0;
+        params->seq_miss = 0;
         params->CBF =
             (struct minimalIncrementCBF *)malloc(sizeof(struct minimalIncrementCBF));
         params->CBF->ready = 0;
@@ -147,30 +148,30 @@ extern "C"
         }
         params->hit_on_ghost = 0;
         params->move_to_main = 0;
-        params->front_hitnum = 0;
-        params->small_hitnum = 0;
+        params->filter_hitnum = 0;
+        params->sus_hitnum = 0;
         params->main_hitnum = 0;
         params->ghost_hitnum = 0;
 
         params->ghost2main = 0;
-        params->ghost2small = 0;
-        params->front2small = 0;
-        params->front2main = 0;
-        params->front2ghost = 0;
-        params->small2main = 0;
-        params->evict_small_ghost = 0;
+        params->ghost2sus = 0;
+        params->filter2sus = 0;
+        params->filter2main = 0;
+        params->filter2ghost = 0;
+        params->sus2main = 0;
+        params->evict_sus_ghost = 0;
         params->prefetch = 0;
 
         snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "flex-%.2lf-%.2lf-%.2lf",
-                 params->front_size_ratio, params->suspected_size_ratio,params->ghost_size_ratio);
+                 params->filter_size_ratio, params->suspected_size_ratio,params->ghost_size_ratio);
         return cache;
     }
 
     static void flex_free(cache_t *cache)
     {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        params->front->cache_free(params->front);
-        params->small->cache_free(params->small);
+        params->filter->cache_free(params->filter);
+        params->sus->cache_free(params->sus);
         params->main->cache_free(params->main);
         params->ghost->cache_free(params->ghost);
         minimalIncrementCBF_free(params->CBF);
@@ -195,12 +196,12 @@ extern "C"
         cache_obj_t *obj = NULL;
         if (!update_cache)
         {
-            obj = params->front->find(params->front, req, update_cache);
+            obj = params->filter->find(params->filter, req, update_cache);
             if (obj != NULL)
             {
                 return obj;
             }
-            obj = params->small->find(params->small, req, update_cache);
+            obj = params->sus->find(params->sus, req, update_cache);
             if (obj != NULL)
             {
                 return obj;
@@ -214,27 +215,29 @@ extern "C"
         }
         params->timer += 1;
 
-        obj = params->front->find(params->front, req, update_cache);
+        obj = params->filter->find(params->filter, req, update_cache);
         if (obj != NULL)
         {
-            params->front_hitnum++;
+            params->filter_hitnum++;
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;
-                params->popularity[obj->FLEX.freq] += 1;
+                params->hotdistribution[obj->FLEX.freq] += 1;
             }
+            params->seq_miss = 0;
             return obj;
         }
-        obj = params->small->find(params->small, req, update_cache);
+        obj = params->sus->find(params->sus, req, update_cache);
         if (obj != NULL)
         {
-            params->small_hitnum++;
-            obj->FLEX.smallhit = 1;
+            params->sus_hitnum++;
+            obj->FLEX.sushit = 1;
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;
-                params->popularity[obj->FLEX.freq] += 1;
+                params->hotdistribution[obj->FLEX.freq] += 1;
             }
+            params->seq_miss = 0;
             return obj;
         }
         obj = params->main->find(params->main, req, update_cache);
@@ -244,8 +247,9 @@ extern "C"
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;
-                params->popularity[obj->FLEX.freq] += 1;
+                params->hotdistribution[obj->FLEX.freq] += 1;
             }
+            params->seq_miss = 0;
             return obj;
         }
         obj = params->ghost->find(params->ghost, req, false);
@@ -255,23 +259,24 @@ extern "C"
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;
-                params->popularity[obj->FLEX.freq] += 1;
+                params->hotdistribution[obj->FLEX.freq] += 1;
             }
             params->hit_on_ghost = true;
             params->ghost_freq = obj->FLEX.freq;
-            if (obj->FLEX.freq >= params->gurad_freq)
+            if (obj->FLEX.freq >= params->guard_freq)
             {
                 params->move_to_main = true;
             }
         }
+        params->seq_miss ++;
         return NULL;
     }
     
-    static void decreasepop(std::vector<int32_t> &popularity, int32_t ori_freq, int32_t dest_freq)
+    static void decreasepop(std::vector<int32_t> &hotdistribution, int32_t ori_freq, int32_t dest_freq)
     {
         for (int i = ori_freq; i > dest_freq; i--)
         {
-            popularity[i]--;
+            hotdistribution[i]--;
         }
     }
 
@@ -279,14 +284,12 @@ extern "C"
     {
         auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = NULL;
-        // if(params->main->get_occupied_byte(params->main) < params->main_limit){
-        if (params->small->get_occupied_byte(params->small) == 0 && params->front->get_occupied_byte(params->front) == 0)
+        if (params->sus->get_occupied_byte(params->sus) == 0 && params->filter->get_occupied_byte(params->filter) == 0)
         {
             // warmup
             obj = params->main->insert(params->main, req);
             obj->FLEX.freq = 0;
-            params->popularity[0]++;
-            // addtoghost(cache, req);
+            params->hotdistribution[0]++;
         }
         else
         {
@@ -303,23 +306,21 @@ extern "C"
                 }
                 else
                 {
-                    params->ghost2small++;
+                    params->ghost2sus++;
                     minimalIncrementCBF_add(params->CBF, (void *)&req->obj_id, sizeof(obj_id_t));
-                    obj = params->small->insert(params->small, req);
+                    obj = params->sus->insert(params->sus, req);
                     obj->FLEX.freq = 0;
-                    // decreasepop(params->popularity, obj->FLEX.freq, 0);
-                    //?? inghost?
+                    //inghost suspect
                     obj->FLEX.inghost = 1;
-                    params->popularity[0]++;
+                    params->hotdistribution[0]++;
                 }
-                //obj->FLEX.freq = params->ghost_freq;
             }
             else
             {
                 // new obj
-                obj = params->front->insert(params->front, req);
+                obj = params->filter->insert(params->filter, req);
                 obj->FLEX.freq = 0;
-                params->popularity[0]++;
+                params->hotdistribution[0]++;
             }
         }
         return obj;
@@ -342,14 +343,14 @@ extern "C"
         return object;
     }
 
-    static int movefromghost(cache_t *cache, const request_t *req)
+    static int removefromghost(cache_t *cache, const request_t *req)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         cache_obj_t *obj = params->ghost->find(params->ghost, req, false);
         if (obj != NULL)
         {
             int ori_freq = obj->FLEX.freq;
-            decreasepop(params->popularity, ori_freq, -1);
+            decreasepop(params->hotdistribution, ori_freq, -1);
             params->ghost->remove(params->ghost, obj->obj_id);
             return ori_freq;
         }
@@ -366,127 +367,121 @@ extern "C"
             assert(ori_freq >= 0 && ori_freq <= MAXFREQ);
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             params->main->remove(params->main, obj_to_evict->obj_id);
-            cache_obj_t *new_obj = params->small->insert(params->small, params->req_local);
+            cache_obj_t *new_obj = params->sus->insert(params->sus, params->req_local);
             new_obj->FLEX.freq = ori_freq;
         }
         return;
     }
 
-    static void evict_small(cache_t *cache)
+    static void evict_sus(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        cache_obj_t *small_to_evict = params->small->to_evict(params->small, NULL);
-        int ori_freq = small_to_evict->FLEX.freq;
-        decreasepop(params->popularity, ori_freq, -1);
-        params->small->remove(params->small, small_to_evict->obj_id);
+        cache_obj_t *sus_to_evict = params->sus->to_evict(params->sus, NULL);
+        int ori_freq = sus_to_evict->FLEX.freq;
+        decreasepop(params->hotdistribution, ori_freq, -1);
+        params->sus->remove(params->sus, sus_to_evict->obj_id);
     }
 
-    static int duel(cache_t *cache){
+    static int compare(cache_t *cache){
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        cache_obj_t *front_to_evict = params->front->to_evict(params->front, NULL);
-        cache_obj_t *small_to_evict = params->small->to_evict(params->small, NULL);
-        if(front_to_evict==NULL||small_to_evict==NULL){
+        cache_obj_t *filter_to_evict = params->filter->to_evict(params->filter, NULL);
+        cache_obj_t *sus_to_evict = params->sus->to_evict(params->sus, NULL);
+        if(filter_to_evict==NULL||sus_to_evict==NULL){
             return 0;
         }
-        if(small_to_evict->FLEX.freq > 0){
+        if(sus_to_evict->FLEX.freq > 0){
             return 0;
         }
-        int front_value = minimalIncrementCBF_estimate(params->CBF, (void *)&front_to_evict->obj_id,
-                                                          sizeof(front_to_evict->obj_id));
-        if(front_value > 0x3f){
+        int filter_value = minimalIncrementCBF_estimate(params->CBF, (void *)&filter_to_evict->obj_id,
+                                                          sizeof(filter_to_evict->obj_id));
+        if(filter_value > 0x3f){
             return 0;
         }
-        int small_value = minimalIncrementCBF_estimate(params->CBF, (void *)&small_to_evict->obj_id,
-                                                          sizeof(small_to_evict->obj_id));
-        if ( front_value > small_value){
-            //add front to small and ghost (?)
-            params->duelwin++;
-            minimalIncrementCBF_add(params->CBF, (void *)&front_to_evict->obj_id, sizeof(obj_id_t));
-            copy_cache_obj_to_request(params->req_small, front_to_evict);
-            cache_obj_t *new_obj = params->small->insert(params->small, params->req_small);
+        int sus_value = minimalIncrementCBF_estimate(params->CBF, (void *)&sus_to_evict->obj_id,
+                                                          sizeof(sus_to_evict->obj_id));
+        if ( filter_value > sus_value){
+            //add filter to sus and ghost (?)
+            params->compareguard++;
+            minimalIncrementCBF_add(params->CBF, (void *)&filter_to_evict->obj_id, sizeof(obj_id_t));
+            copy_cache_obj_to_request(params->req_sus, filter_to_evict);
+            cache_obj_t *new_obj = params->sus->insert(params->sus, params->req_sus);
             new_obj->FLEX.freq = 0;
             new_obj->FLEX.inghost = 1;
-            params->popularity[new_obj->FLEX.freq]++;
-            cache_obj_t *new_obj_ghost = addtoghost(cache, params->req_small, front_to_evict->FLEX.freq);
-            new_obj_ghost->FLEX.freq = front_to_evict->FLEX.freq;
-            params->front->remove(params->front, front_to_evict->obj_id);
+            params->hotdistribution[new_obj->FLEX.freq]++;
+            cache_obj_t *new_obj_ghost = addtoghost(cache, params->req_sus, filter_to_evict->FLEX.freq);
+            new_obj_ghost->FLEX.freq = filter_to_evict->FLEX.freq;
+            params->filter->remove(params->filter, filter_to_evict->obj_id);
             return 1;
         }
         return 2;
     }
 
-    static int adjust_small(cache_t *cache){
+    static int adjust_sus(cache_t *cache){
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        while (params->small->get_occupied_byte(params->small) > 0)
+        while (params->sus->get_occupied_byte(params->sus) > 0)
         {
-            cache_obj_t *obj_to_evict = params->small->to_evict(params->small, NULL);
+            cache_obj_t *obj_to_evict = params->sus->to_evict(params->sus, NULL);
             if(obj_to_evict->FLEX.freq==0){
                 return 1;
                 break;
             }
-            // move object from small to main
+            // move object from sus to main
             int ori_freq = obj_to_evict->FLEX.freq;
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             if(obj_to_evict->FLEX.inghost){
-                params->evict_small_ghost++;
-                movefromghost(cache, params->req_local);
+                params->evict_sus_ghost++;
+                removefromghost(cache, params->req_local);
             }
-            params->small2main ++;
-            params->small->remove(params->small, obj_to_evict->obj_id);
-            // decreasepop(params->popularity, ori_freq, 0);
+            params->sus2main ++;
+            params->sus->remove(params->sus, obj_to_evict->obj_id);
+            // decreasepop(params->hotdistribution, ori_freq, 0);
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
             cache_obj_t *new_obj = params->main->insert(params->main, params->req_local);
             new_obj->FLEX.freq = ori_freq-1;
-            decreasepop(params->popularity, ori_freq, ori_freq-1);
+            decreasepop(params->hotdistribution, ori_freq, ori_freq-1);
         }
         return 0;
     }
 
-    static int adjust_front(cache_t *cache)
+    static int adjust_filter(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         int has_evicted = 0;
 
-        while (!has_evicted && params->front->get_occupied_byte(params->front) > 0)
+        while (!has_evicted && params->filter->get_occupied_byte(params->filter) > 0)
         {
-            cache_obj_t *obj_to_evict = params->front->to_evict(params->front, NULL);
-
+            cache_obj_t *obj_to_evict = params->filter->to_evict(params->filter, NULL);
             int ori_freq = obj_to_evict->FLEX.freq;
-
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             // add to cbf
-
-            if (ori_freq >= params->gurad_freq)
+            if (ori_freq >= params->guard_freq)
             {
                 // move to main
-                // decreasepop(params->popularity, ori_freq, 0);
-                params->front2main++;
+                // decreasepop(params->hotdistribution, ori_freq, 0);
+                params->filter2main++;
                 cache_obj_t *new_obj = params->main->insert(params->main, params->req_local);
                 new_obj->FLEX.freq = 0;
-                decreasepop(params->popularity, ori_freq, 0);
+                decreasepop(params->hotdistribution, ori_freq, 0);
             }
             else
             {
                 has_evicted = 1;
-                int ret = duel(cache);
+                int ret = compare(cache);
                 if(ret == 1){
-                    //front wins duel, evict small
-                    //object movement done in duel
-                    params->front2small++;
-                    evict_small(cache);
+                    //filter wins compare, evict sus
+                    //object movement done in compare
+                    params->filter2sus++;
+                    evict_sus(cache);
                     return has_evicted;
                 }else{
-                    //evict front
-                    params->front2ghost++;
+                    //evict filter
+                    params->filter2ghost++;
                     cache_obj_t *new_obj = addtoghost(cache, params->req_local, ori_freq);
-                    //new_obj->FLEX.freq = ori_freq;
                 }
-
             }
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
-            params->front->remove(params->front, obj_to_evict->obj_id);
+            params->filter->remove(params->filter, obj_to_evict->obj_id);
         }
-
         return has_evicted;
     }
 
@@ -498,7 +493,7 @@ extern "C"
             cache_obj_t *obj_to_evict = params->ghost->to_evict(params->ghost, NULL);
             int ori_freq = obj_to_evict->FLEX.freq;
             params->ghost->remove(params->ghost, obj_to_evict->obj_id);
-            decreasepop(params->popularity, ori_freq, -1);
+            decreasepop(params->hotdistribution, ori_freq, -1);
         }
         return;
     }
@@ -506,48 +501,48 @@ extern "C"
     static void flex_adjustguard(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        // todo adjust gurad_freq
-        int guradfreq = params->gurad_freq;
+        // todo adjust guard_freq
+        int guradfreq = params->guard_freq;
         // int guardthreshold = params->main_limit;
         int guardthreshold = params->main->get_n_obj(params->main);
-        if (params->popularity[guradfreq] > guardthreshold)
+        if (params->hotdistribution[guradfreq] > guardthreshold)
         {
-            while (params->popularity[guradfreq] > guardthreshold)
+            while (params->hotdistribution[guradfreq] > guardthreshold)
             {
                 guradfreq++;
             }
         }
         else
         {
-            while (guradfreq > 1 && params->popularity[guradfreq - 1] < guardthreshold)
+            while (guradfreq > 1 && params->hotdistribution[guradfreq - 1] < guardthreshold)
             {
                 guradfreq--;
             }
         }
-        params->gurad_freq = guradfreq;
+        params->guard_freq = guradfreq;
         return;
     }
 
     static void printstatus(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        printf("front: %ld small: %ld main: %ld ghost: %ld\n",
-               params->front->get_occupied_byte(params->front),
-               params->small->get_occupied_byte(params->small),
+        printf("filter: %ld sus: %ld main: %ld ghost: %ld\n",
+               params->filter->get_occupied_byte(params->filter),
+               params->sus->get_occupied_byte(params->sus),
                params->main->get_occupied_byte(params->main),
                params->ghost->get_occupied_byte(params->ghost));
-        printf("phase %d gurad: %d ", params->phase, params->gurad_freq);
-        printf("popularity: %d\n", params->gurad_freq);
-        for (auto &pop : params->popularity)
+        printf("phase %d gurad: %d ", params->phase, params->guard_freq);
+        printf("hotdistribution: %d\n", params->guard_freq);
+        for (auto &pop : params->hotdistribution)
         {
             printf("%d ", pop);
         }
         printf("\n");
-        printf("front_hitnum: %d small_hitnum: %d main_hitnum: %d ghost_hitnum: %d\n",
-               params->front_hitnum, params->small_hitnum, params->main_hitnum, params->ghost_hitnum);
-        printf("ghost2main: %d ghost2small: %d front2small: %d front2main: %d front2ghost: %d small2main: %d evict_small_ghost: %d\n",
-               params->ghost2main, params->ghost2small, params->front2small, params->front2main, params->front2ghost, params->small2main, params->evict_small_ghost);
-        printf("duelwin: %d\n\n", params->duelwin);
+        printf("filter_hitnum: %d sus_hitnum: %d main_hitnum: %d ghost_hitnum: %d\n",
+               params->filter_hitnum, params->sus_hitnum, params->main_hitnum, params->ghost_hitnum);
+        printf("ghost2main: %d ghost2sus: %d filter2sus: %d filter2main: %d filter2ghost: %d sus2main: %d evict_sus_ghost: %d\n",
+               params->ghost2main, params->ghost2sus, params->filter2sus, params->filter2main, params->filter2ghost, params->sus2main, params->evict_sus_ghost);
+        printf("compareguard: %d\n\n", params->compareguard);
         return;
     }
 
@@ -561,35 +556,32 @@ extern "C"
 
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         params->evictobj_num += 1;
-
         if (params->evictobj_num == cache->get_n_obj(cache))
         {
             params->evictobj_num = 0;
             params->phase += 1;
-
             if ((params->phase & 0x1f) == 0)
             { // every 64 phase
                 minimalIncrementCBF_decay(params->CBF);
                 //printstatus(cache);
             }
-
         }
 
         flex_adjustguard(cache);
 
-        if(params->front->get_occupied_byte(params->front) + req->obj_size > params->front_limit){
-            //evict front
-            adjust_front(cache);
+        if(params->filter->get_occupied_byte(params->filter) + req->obj_size > params->filter_limit){
+            //evict filter
+            adjust_filter(cache);
         }else{
-            //evict small
+            //evict sus
             int ret = 0;
             while(ret == 0){
                 adjust_main(cache);
-                ret = adjust_small(cache);
+                ret = adjust_sus(cache);
             }
-            // is dueling needed?
-            duel(cache);
-            evict_small(cache);
+            // is compareing needed?
+            compare(cache);
+            evict_sus(cache);
         }
         adjust_ghost(cache);
         return;
@@ -599,8 +591,8 @@ extern "C"
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
         bool removed = false;
-        removed = removed || params->front->remove(params->front, obj_id);
-        removed = removed || params->small->remove(params->small, obj_id);
+        removed = removed || params->filter->remove(params->filter, obj_id);
+        removed = removed || params->sus->remove(params->sus, obj_id);
         removed = removed || params->main->remove(params->main, obj_id);
         removed = removed || params->ghost->remove(params->ghost, obj_id);
         return removed;
@@ -610,8 +602,8 @@ extern "C"
     static inline int64_t flex_get_occupied_byte(const cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        return params->front->get_occupied_byte(params->front) +
-               params->small->get_occupied_byte(params->small) +
+        return params->filter->get_occupied_byte(params->filter) +
+               params->sus->get_occupied_byte(params->sus) +
                params->main->get_occupied_byte(params->main);
         return cache_get_occupied_byte_default(cache);
     }
@@ -619,8 +611,8 @@ extern "C"
     static inline int64_t flex_get_n_obj(const cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        return params->front->get_n_obj(params->front) +
-               params->small->get_n_obj(params->small) +
+        return params->filter->get_n_obj(params->filter) +
+               params->sus->get_n_obj(params->sus) +
                params->main->get_n_obj(params->main);
         return cache_get_n_obj_default(cache);
     }
@@ -628,7 +620,7 @@ extern "C"
     static inline bool flex_can_insert(cache_t *cache, const request_t *req)
     {
         auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        return req->obj_size <= params->front->cache_size;
+        return req->obj_size <= params->filter->cache_size;
         return cache_can_insert_default(cache, req);
     }
 
@@ -654,9 +646,9 @@ extern "C"
                 params_str++;
             }
 
-            if (strcasecmp(key, "front-size-ratio") == 0)
+            if (strcasecmp(key, "filter-size-ratio") == 0)
             {
-                params->front_size_ratio = strtod(value, NULL);
+                params->filter_size_ratio = strtod(value, NULL);
             }
             else if (strcasecmp(key, "suspected-size-ratio") == 0)
             {

@@ -299,7 +299,7 @@ extern "C"
         if (obj != NULL)
         {
             params->small_hitnum++;
-            obj->FLEX.smallhit = 1;
+            obj->FLEX.sushit = 1;
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;

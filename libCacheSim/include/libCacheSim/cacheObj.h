@@ -136,7 +136,7 @@ typedef struct
     int prefetch;
     int seqaccess;
     int prefetchhit;
-    int smallhit;
+    int sushit;
     int inghost;
 } FLEX_obj_metadata_t;
 

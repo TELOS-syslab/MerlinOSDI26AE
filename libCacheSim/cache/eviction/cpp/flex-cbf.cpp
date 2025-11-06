@@ -279,7 +279,7 @@ static void printstatus(cache_t *cache);
         if (obj != NULL)
         {
             params->small_hitnum++;
-            obj->FLEX.smallhit = 1;
+            obj->FLEX.sushit = 1;
             if (obj->FLEX.freq < MAXFREQ)
             {
                 obj->FLEX.freq++;
@@ -460,7 +460,7 @@ static void printstatus(cache_t *cache);
         while (params->small->get_occupied_byte(params->small) > 0)
         {
             cache_obj_t *obj_to_evict = params->small->to_evict(params->small, NULL);
-            if (obj_to_evict->FLEX.smallhit == 0)
+            if (obj_to_evict->FLEX.sushit == 0)
             {
                 break;
             }
