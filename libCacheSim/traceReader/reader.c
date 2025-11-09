@@ -196,16 +196,6 @@ reader_t *setup_reader(const char *const trace_path,
       break;
     case ORACLE_GENERAL_TRACE:
       oracleGeneralBin_setup(reader);
-      // modify
-      char converted_path[1024];
-      snprintf(converted_path, sizeof(converted_path), "%s_converted", reader->trace_path);
-      if (access(converted_path, F_OK) == 0) {
-          if (remove(converted_path) == 0) {
-              fprintf(stderr, "[INFO] Removed old converted file: %s\n", converted_path);
-          } else {
-              perror("Failed to remove old converted file");
-          }
-      }
       break;
     case ORACLE_GENERALOPNS_TRACE:
       oracleGeneralOpNS_setup(reader);
@@ -359,39 +349,6 @@ int read_one_req(reader_t *const reader, request_t *const req) {
         break;
       case ORACLE_GENERAL_TRACE:
         status = oracleGeneralBin_read_one_req(reader, req);
-        // modify
-        if (status == 0 && req->valid) {
-          static FILE *converted_fp = NULL;
-          static char converted_path[1024] = {0};
-
-          if (converted_fp == NULL) {
-            snprintf(converted_path, sizeof(converted_path), "%s_converted", reader->trace_path);
-            converted_fp = fopen(converted_path, "a");
-            if (!converted_fp) {
-              perror("Failed to open converted trace file");
-              exit(1);
-            }
-            fprintf(stderr, "[INFO] Writing converted trace to %s\n", converted_path);
-          }
-
-          struct old_oracle_general_out {
-              uint32_t timestamp;   /* 4 bytes */
-              uint64_t obj_id;      /* 8 bytes */
-              uint64_t val_len;     /* 8 bytes */
-              uint32_t pad;         /* 4 bytes padding -> total 24 bytes */
-          };
-
-          struct old_oracle_general_out out;
-          out.timestamp = (uint32_t)req->clock_time;            
-          out.obj_id = (uint64_t)req->obj_id;                   
-          out.val_len = (uint64_t)(uint32_t)req->obj_size;      
-          out.pad = 0u;                                         
-
-          size_t wrote = fwrite(&out, sizeof(out), 1, converted_fp);
-          if (wrote != 1) {
-              perror("fwrite to converted file failed");
-          }
-        }
         break;
       case ORACLE_GENERALOPNS_TRACE:
         status = oracleGeneralOpNS_read_one_req(reader, req);
