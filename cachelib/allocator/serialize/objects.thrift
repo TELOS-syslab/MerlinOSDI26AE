@@ -169,6 +169,45 @@ struct MMFLEXCollection {
   1: required map<i32, map<i32, MMFLEXObject>> pools,
 }
 
+// MMARC serialization support
+struct MMARCConfig {
+  1: i32 lruRefreshTime;
+  2: bool updateOnWrite;
+  3: bool updateOnRead;
+  4: bool tryLockUpdate;
+  5: double ghostMultiplier;
+}
+
+struct MMARCObject {
+  1: MMARCConfig config;
+  2: MultiDListObject lrus;
+  3: i32 partitionSize;
+}
+
+struct MMARCCollection {
+  1: map<i32, map<i32, MMARCObject>> pools;
+}
+
+// MMCAR Config serialization
+struct MMCARConfig {
+  1: i32 lruRefreshTime;
+  2: bool updateOnWrite;
+  3: bool updateOnRead;
+  4: bool tryLockUpdate;
+  5: double ghostMultiplier;
+}
+
+// MMCAR Container serialization
+struct MMCARObject {
+  1: MMCARConfig config;
+  2: CARListObject carList;
+}
+
+// MMCAR Collection (for all pools)
+struct MMCARCollection {
+  1: map<i32, map<i32, MMCARObject>> pools;
+}
+
 struct ChainedHashTableObject {
   // fields in ChainedHashTable::Config
   1: required i32 bucketsPower;

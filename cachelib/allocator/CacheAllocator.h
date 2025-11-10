@@ -6102,6 +6102,8 @@ extern template class CacheAllocator<WTinyLFUCacheTrait>;
 extern template class CacheAllocator<S3FIFOCacheTrait>;
 extern template class CacheAllocator<FLEXCacheTrait>;
 extern template class CacheAllocator<FLEXCachedumpTrait>;
+extern template class CacheAllocator<ARCCacheTrait>;
+extern template class CacheAllocator<CARCacheTrait>;
 
 // CacheAllocator with an LRU eviction policy
 // LRU policy can be configured to act as a segmented LRU as well
@@ -6140,4 +6142,6 @@ using WTinyLFUAllocator = CacheAllocator<WTinyLFUCacheTrait>;
 using S3FIFOAllocator = CacheAllocator<S3FIFOCacheTrait>;
 using FLEXAllocator = CacheAllocator<FLEXCacheTrait>;
 using FLEXdumpAllocator = CacheAllocator<FLEXCachedumpTrait>;
+using ARCAllocator = CacheAllocator<ARCCacheTrait>;
+using CARAllocator = CacheAllocator<CARCacheTrait>;
 } // namespace facebook::cachelib

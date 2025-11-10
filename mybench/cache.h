@@ -18,6 +18,10 @@ using Cache = TinyLFUAllocator;
 using Cache = FLEXAllocator;
 #elif defined(USE_FLEXDUMP)
 using Cache = FLEXdumpAllocator;
+#elif defined(USE_ARC)
+using Cache = ARCAllocator;
+#elif defined(USE_CAR)
+using Cache = CARAllocator;
 #define DUMP_TIME
 #endif
 

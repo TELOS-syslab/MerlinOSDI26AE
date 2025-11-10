@@ -314,8 +314,9 @@ if test "$source" ; then
     # This is an external (non-facebook) project, clone/pull it.
     if test -d "$SRCDIR" ; then
       # cloned repository already exists, update it, unless we're on a specific tag
-      ( cd "$SRCDIR" && git fetch --all ) \
-        || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
+      :
+      #( cd "$SRCDIR" && git fetch --all ) \
+      #  || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
     else
       # Clone new repository directory
       git clone "$REPO" "$REPODIR" \
@@ -326,18 +327,18 @@ if test "$source" ; then
     # switch to specific branch/tag if needed
     if test "$external_git_branch" ; then
         ( cd "$REPODIR" \
-           && git checkout --force "origin/$external_git_branch" ) \
-           || die "failed to checkout branch $external_git_branch in $REPODIR"
+           && git checkout --force "origin/$external_git_branch" ) #\
+           #|| die "failed to checkout branch $external_git_branch in $REPODIR"
     elif test "$external_git_tag" ; then
         ( cd "$REPODIR" \
-           && git checkout --force "$external_git_tag" ) \
-           || die "failed to checkout tag $external_git_tag in $REPODIR"
+           && git checkout --force "$external_git_tag" ) #\
+           #|| die "failed to checkout tag $external_git_tag in $REPODIR"
     fi
 
   fi
 
   if test "$update_submodules" ; then
-    ./contrib/update-submodules.sh || die "failed to update git-submodules"
+    : #./contrib/update-submodules.sh || die "failed to update git-submodules"
   fi
 fi
 

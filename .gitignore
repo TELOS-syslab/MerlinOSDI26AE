@@ -13,6 +13,11 @@ build-glog/
 build-googletest/
 build-sparsemap/
 build-wangle/
+build-mvfst/
+build-zstd/
+
+mybench/_build/
+mybench/data/
 
 # Required source-code dependencies, fetched by ./contrib/ scripts.
 cachelib/external/fmt/
@@ -20,3 +25,9 @@ cachelib/external/gflags/
 cachelib/external/glog/
 cachelib/external/googletest/
 cachelib/external/sparsemap/
+
+opt/
+
+
+.github/
+.vscode/

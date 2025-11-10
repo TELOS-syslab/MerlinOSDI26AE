@@ -24,6 +24,8 @@
 #include "cachelib/allocator/MMS3FIFO.h"
 #include "cachelib/allocator/MMFLEX.h"
 #include "cachelib/allocator/MMFLEXdump.h"
+#include "cachelib/allocator/MMARC.h"
+#include "cachelib/allocator/MMCAR.h"
 #include "cachelib/common/Mutex.h"
 
 namespace facebook {
@@ -122,6 +124,20 @@ struct FLEXCacheTrait {
 
 struct FLEXCachedumpTrait {
   using MMType = MMFLEXdump;
+  using AccessType = ChainedHashTable;
+  using AccessTypeLocks = SharedMutexBuckets;
+  using CompressedPtrType = CompressedPtr5B;
+};
+
+struct ARCCacheTrait {
+  using MMType = MMARC;
+  using AccessType = ChainedHashTable;
+  using AccessTypeLocks = SharedMutexBuckets;
+  using CompressedPtrType = CompressedPtr5B;
+};
+
+struct CARCacheTrait {
+  using MMType = MMCAR;
   using AccessType = ChainedHashTable;
   using AccessTypeLocks = SharedMutexBuckets;
   using CompressedPtrType = CompressedPtr5B;

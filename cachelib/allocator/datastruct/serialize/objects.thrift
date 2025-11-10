@@ -57,3 +57,17 @@ struct FLEXListObject {
   4: required i32 guard_freq;
   5: required list<i32> freq_distribution;
 }
+
+struct GhostEntry {
+  1: i32 hash;
+  2: i32 time;
+}
+
+struct CARListObject {
+  1: DListObject listT1;
+  2: DListObject listT2;
+  3: i32 partitionSize;
+  4: i32 capacity;
+  5: list<GhostEntry> ghostB1;
+  6: list<GhostEntry> ghostB2;
+}

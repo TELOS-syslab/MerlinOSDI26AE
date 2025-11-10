@@ -71,3 +71,11 @@ target_link_libraries(flex cachelib fmt::fmt atomic)
 add_executable(flexdump main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(flexdump PRIVATE USE_FLEXDUMP)
 target_link_libraries(flexdump cachelib fmt::fmt atomic)
+
+add_executable(arc main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+target_compile_definitions(arc PRIVATE USE_ARC)
+target_link_libraries(arc cachelib fmt::fmt atomic)
+
+add_executable(car main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+target_compile_definitions(car PRIVATE USE_CAR)
+target_link_libraries(car cachelib fmt::fmt atomic)

@@ -13,3 +13,6 @@
 [submodule "mvfst"]
        path = cachelib/external/mvfst
        url = https://github.com/facebook/mvfst
+[submodule "cachelib/external/fast_float"]
+	path = cachelib/external/fast_float
+	url = https://github.com/fastfloat/fast_float
