@@ -28,6 +28,7 @@ namespace eviction
         struct minimalIncrementCBF *CBF;
         //
         int32_t guard_freq;
+        int32_t track_freq;
         std::vector<int32_t> hotdistribution;
         int32_t phase;
         int32_t evictobj_num;
@@ -135,6 +136,7 @@ extern "C"
         params->evictobj_num = 0;
         params->timer = 0;
         params->guard_freq = 2;
+        params->track_freq = 2;
         params->compareguard = 0;
         params->seq_miss = 0;
         params->CBF =
@@ -184,6 +186,13 @@ extern "C"
 
     static bool flex_get(cache_t *cache, const request_t *req)
     {
+        #ifdef TRACK_PARAMETERS
+        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        if(params->guard_freq != params->track_freq || (cache->n_req%1000000)==0){
+            params->track_freq = params->guard_freq;
+            printf("%ld flex guard_freq: %d epoch guess: %d\n", cache->n_req, params->guard_freq, params->filter2sus);
+        }
+        #endif
         return cache_get_base(cache, req);
     }
     static void printstatus(cache_t *cache);

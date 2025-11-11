@@ -21,6 +21,7 @@ typedef struct Cacheus_params {
   double w_lfu;        // Weight for LFU
   double lr;           // learning rate
   double lr_previous;  // previous learning rate
+  double track_wlru;
 
   double ghost_list_factor;  // size(ghost_list)/size(cache), default 1
   int64_t unlearn_count;
@@ -104,6 +105,7 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
   params->lr_previous = 0;
 
   params->w_lru = params->w_lfu = 0.50;  // weights for LRU and LFU
+  params->track_wlru = 0.5;
   params->num_hit = 0;
   params->hit_rate_prev = 0;
   params->req_local = new_request();
@@ -169,6 +171,15 @@ static bool Cacheus_get(cache_t *cache, const request_t *req) {
   if (cache->n_req % params->update_interval == 0) {
     update_lr(cache, req);
   }
+
+    #ifdef TRACK_PARAMETERS
+  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%1000000)==0) {
+    if(abs(params->track_wlru - params->w_lru) > 0.02){
+        params->track_wlru = params->w_lru;
+    }
+    printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+  }
+  #endif
 
   DEBUG_ASSERT(lru->get_occupied_byte(lru) == lfu->get_occupied_byte(lfu));
   DEBUG_ASSERT(lru->get_n_obj(lru) == lfu->get_n_obj(lfu));
@@ -360,6 +371,7 @@ static void update_weight(cache_t *cache, const request_t *req) {
   // normalize
   params->w_lru = params->w_lru / (params->w_lru + params->w_lfu);
   params->w_lfu = 1 - params->w_lru;
+  //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
 }
 
 static void update_lr(cache_t *cache, const request_t *req) {

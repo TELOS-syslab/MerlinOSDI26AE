@@ -46,6 +46,7 @@ typedef struct ARC_params {
   cache_obj_t *L2_ghost_tail;
 
   double p;
+  double track_p;
   bool curr_obj_in_L1_ghost;
   bool curr_obj_in_L2_ghost;
   int64_t vtime_last_req_in_ghost;
@@ -122,6 +123,7 @@ cache_t *ARC_init(const common_cache_params_t ccache_params,
   cache->eviction_params = my_malloc_n(ARC_params_t, 1);
   ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
   params->p = 0;
+  params->track_p = 0;
 
   params->L1_data_size = 0;
   params->L2_data_size = 0;
@@ -180,6 +182,13 @@ static void ARC_free(cache_t *cache) {
  * @return true if cache hit, false if cache miss
  */
 static bool ARC_get(cache_t *cache, const request_t *req) {
+        #ifdef TRACK_PARAMETERS
+        ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
+    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%1000000)==0){
+        params->track_p = params->p;
+        printf("%ld ARC p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
+    }
+    #endif
 #ifdef DEBUG_MODE
   return ARC_get_debug(cache, req);
 #else
@@ -195,7 +204,6 @@ static bool ARC_get(cache_t *cache, const request_t *req) {
         params->L1_ghost_size, params->L2_data_size, params->L2_ghost_size);
   }
 #endif
-
   return cache_get_base(cache, req);
 #endif
 }

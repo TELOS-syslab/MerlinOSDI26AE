@@ -46,6 +46,7 @@ typedef struct LeCaR_params {
   double w_lfu;
   double lr;  // learning rate
   double dr;  // discount rate
+  double track_wlru;
   int64_t n_hit_lru_history;
   int64_t n_hit_lfu_history;
   bool update_weight;
@@ -197,6 +198,15 @@ static void LeCaR_free(cache_t *cache) {
  */
 bool LeCaR_get(cache_t *cache, const request_t *req) {
   // LeCaR_params_t *params = (LeCaR_params_t *)(cache->eviction_params);
+        #ifdef TRACK_PARAMETERS
+        LeCaR_params_t *params = (LeCaR_params_t *)(cache->eviction_params);
+      if(abs(params->track_wlru - params->w_lru) > 0.02|| (cache->n_req%1000000)==0){
+        if(abs(params->track_wlru - params->w_lru) > 0.02){
+          params->track_wlru = params->w_lru;
+        }
+          printf("%ld LeCaR w_lru: %.4lf w_lfu: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu);
+      }
+      #endif
   bool ck = cache_get_base(cache, req);
   return ck;
 }
