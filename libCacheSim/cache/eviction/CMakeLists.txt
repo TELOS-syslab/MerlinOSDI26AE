@@ -5,6 +5,7 @@ set(sourceC
         LFU.c
         LFUDA.c
         ARC.c
+        ARCfix.c
         CAR.c
         FIFO.c
         LRU.c
@@ -18,6 +19,7 @@ set(sourceC
         Hyperbolic.c
         LeCaR.c
         Cacheus.c
+        Cacheusfix.c
         TwoQ.c
         ARCv0.c
         LRUv0.c
@@ -79,6 +81,7 @@ set(sourceCPP
         cpp/LFU.cpp
         cpp/GDSF.cpp
         cpp/flex.cpp
+        cpp/flexs.cpp
         cpp/flex-cbf.cpp
         cpp/flexP.cpp
         cpp/flex-pp.cpp
