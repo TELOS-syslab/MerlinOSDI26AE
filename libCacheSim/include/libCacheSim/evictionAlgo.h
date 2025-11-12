@@ -181,6 +181,9 @@ cache_t *RandomLRU_init(const common_cache_params_t ccache_params,
 cache_t *flex_init(const common_cache_params_t ccache_params,
                          const char *cache_specific_params);
 
+cache_t *flexs_init(const common_cache_params_t ccache_params,
+                         const char *cache_specific_params);
+
 cache_t *flexP_init(const common_cache_params_t ccache_params,
                          const char *cache_specific_params);
 
@@ -193,7 +196,7 @@ cache_t *flexpp_init(const common_cache_params_t ccache_params,
 cache_t *LRB_init(const common_cache_params_t ccache_params,
                   const char *cache_specific_params);
 #endif
-
+cache_t *ThreeLCache_init(const common_cache_params_t ccache_params, const char *cache_specific_params);
 #ifdef INCLUDE_PRIV
 cache_t *LP_SFIFO_init(const common_cache_params_t ccache_params,
                        const char *cache_specific_params);

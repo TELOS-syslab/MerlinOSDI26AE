@@ -382,7 +382,7 @@ static cache_obj_t *ARCfix_to_evict(cache_t *cache, const request_t *req) {
 static void ARCfix_evict(cache_t *cache, const request_t *req) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
   if(params->p < 1){
-        params->p *= cache->n_occupied_byte;
+        params->p *= cache->occupied_byte;
   }
   if (params->vtime_last_req_in_ghost == cache->n_req &&
       (params->curr_obj_in_L1_ghost || params->curr_obj_in_L2_ghost)) {
@@ -638,7 +638,7 @@ static void ARCfix_parse_params(cache_t *cache,
     /* different parameters are separated by comma,
      * key and value are separated by = */
     char *key = strsep((char **)&params_str, "=");
-    // char *value = strsep((char **)&params_str, ",");
+    char *value = strsep((char **)&params_str, ",");
 
     // skip the white space
     while (params_str != NULL && *params_str == ' ') {
