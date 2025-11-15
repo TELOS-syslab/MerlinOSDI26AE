@@ -70,8 +70,10 @@ cache_t *SR_LRU_init(const common_cache_params_t ccache_params,
   params->H_list = LRU_init(ccache_params, NULL);
 
   common_cache_params_t ccache_params_local = ccache_params;
-  ccache_params_local.cache_size /= 2;
+  uint64_t half_size = ccache_params.cache_size / 2;
+  ccache_params_local.cache_size -= half_size;
   params->SR_list = LRU_init(ccache_params_local, NULL);
+    ccache_params_local.cache_size = half_size;
   params->R_list = LRU_init(ccache_params_local, NULL);
   params->C_demoted = 0;
   params->C_new = 0;
