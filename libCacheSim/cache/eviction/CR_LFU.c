@@ -96,6 +96,7 @@ static void CR_LFU_free(cache_t *cache) {
   g_hash_table_destroy(params->freq_map);
   my_free(sizeof(CR_LFU_params_t), params);
   cache_struct_free(cache);
+  return;
 }
 
 /**
@@ -140,6 +141,29 @@ static bool CR_LFU_get(cache_t *cache, const request_t *req) {
 static cache_obj_t *CR_LFU_find(cache_t *cache, const request_t *req,
                                 const bool update_cache) {
   cache_obj_t *cache_obj = cache_find_base(cache, req, update_cache);
+
+    #ifdef TRACK_PARAMETERS
+  if ((cache->n_req%1000000)==0) {
+    CR_LFU_params_t *params = (CR_LFU_params_t *)(cache->eviction_params);
+          printf("req %ld freq distribution: ", cache->n_req);
+          int threshold = 9;
+          if(params->max_freq < threshold){
+              threshold = params->max_freq;
+          }
+          //threshold = params->max_freq;
+      for (uint64_t freq = params->min_freq; freq <= threshold;
+         freq++) {
+      freq_node_t *node =
+          g_hash_table_lookup(params->freq_map, GSIZE_TO_POINTER(freq));
+      if (node != NULL && node->n_obj > 0) {
+        printf("freq %ld numobj %u ", freq, node->n_obj);
+      }
+    }
+    printf("\n");
+  }
+  #endif
+
+
 
   if (cache_obj && likely(update_cache)) {
     CR_LFU_params_t *params = (CR_LFU_params_t *)(cache->eviction_params);
@@ -380,6 +404,7 @@ static void CR_LFU_evict(cache_t *cache, const request_t *req) {
     DEBUG_ASSERT(min_freq_node->last_obj != NULL);
     DEBUG_ASSERT(min_freq_node->n_obj > 0);
   }
+  return;
 }
 
 static bool CR_LFU_remove(cache_t *cache, const obj_id_t obj_id) {

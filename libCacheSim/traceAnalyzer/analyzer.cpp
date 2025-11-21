@@ -8,6 +8,47 @@
 #include "analyzer.h"
 #include "utils/include/utils.h"
 
+void cal_working_set_size(reader_t *reader, int64_t *wss_obj,
+                          int64_t *wss_byte) {
+  reset_reader(reader);
+  request_t *req = new_request();
+  GHashTable *obj_table = g_hash_table_new(g_direct_hash, g_direct_equal);
+  *wss_obj = 0;
+  *wss_byte = 0;
+
+  // sample the object space in case there are too many objects
+  // which can cause a crash
+  int scaling_factor = 1;
+  if (reader->file_size > 5 * GiB) {
+    scaling_factor = 101;
+  } else if (reader->file_size > 1 * GiB) {
+    scaling_factor = 11;
+  }
+
+  INFO("calculating working set size...\n");
+  while (read_one_req(reader, req) == 0) {
+    if (scaling_factor > 1 && req->obj_id % scaling_factor != 0) {
+      continue;
+    }
+
+    if (g_hash_table_contains(obj_table, (gconstpointer)req->obj_id)) {
+      continue;
+    }
+
+    g_hash_table_add(obj_table, (gpointer)req->obj_id);
+
+    *wss_obj += 1;
+    *wss_byte += req->obj_size;
+  }
+  *wss_obj *= scaling_factor;
+  *wss_byte *= scaling_factor;
+  INFO("working set size: %ld object %ld byte\n", (long)*wss_obj,
+       (long)*wss_byte);
+
+  free_request(req);
+  reset_reader(reader);
+}
+
 void traceAnalyzer::TraceAnalyzer::initialize() {
   obj_map_.reserve(DEFAULT_PREALLOC_N_OBJ);
 
@@ -22,7 +63,14 @@ void traceAnalyzer::TraceAnalyzer::initialize() {
   }
 
   if (option_.access_pattern) {
-    access_stat_ = new AccessPattern(access_pattern_sample_ratio_inv_);
+    int64_t epsize = (int64_t)(epoch_size_);
+    if(epoch_size_>0&&epoch_size_ < 1){
+        int64_t wss_obj = 0, wss_byte = 0;
+        cal_working_set_size(reader_, &wss_obj, &wss_byte);
+        epsize = (int64_t)(epoch_size_ * (double)wss_obj);
+        reset_reader(reader_);
+    }
+    access_stat_ = new AccessPattern(access_pattern_sample_ratio_inv_, alg_, epsize, eviction_params_);
   }
 
   if (option_.size) {
@@ -54,6 +102,19 @@ void traceAnalyzer::TraceAnalyzer::initialize() {
     size_change_distribution_ = new SizeChangeDistribution();
   }
 
+    if (option_.hotness_distribution) {
+        if(epoch_size_ > 0 && max_hotness_freq_ > 0){
+            int64_t epsize = (int64_t)(epoch_size_);
+            if(epoch_size_ < 1){
+                int64_t wss_obj = 0, wss_byte = 0;
+                cal_working_set_size(reader_, &wss_obj, &wss_byte);
+                epsize = (int64_t)(epoch_size_ * (double)wss_obj);
+                reset_reader(reader_);
+            }
+            hotness_distribution_stat_ = new HotnessDistribution(output_path_, (int)epsize, max_hotness_freq_);
+        }
+        
+    }
   // scan_detector_ = new ScanDetector(reader_, output_path, 100);
 }
 
@@ -66,6 +127,7 @@ void traceAnalyzer::TraceAnalyzer::cleanup() {
   delete access_stat_;
   delete popularity_stat_;
   delete popularity_decay_stat_;
+  delete hotness_distribution_stat_;
 
   delete prob_at_age_;
   delete lifetime_stat_;
@@ -204,6 +266,10 @@ void traceAnalyzer::TraceAnalyzer::run() {
       lifetime_stat_->add_req(req);
     }
 
+    if(hotness_distribution_stat_ != nullptr){
+        hotness_distribution_stat_->add_req(req);
+    }
+
     if (create_future_reuse_ != nullptr) {
       create_future_reuse_->add_req(req);
     }
@@ -262,6 +328,10 @@ void traceAnalyzer::TraceAnalyzer::run() {
 
   if (lifetime_stat_ != nullptr) {
     lifetime_stat_->dump(output_path_);
+  }
+
+  if(hotness_distribution_stat_ != nullptr){
+      hotness_distribution_stat_->dump(output_path_);
   }
 
   if (create_future_reuse_ != nullptr) {

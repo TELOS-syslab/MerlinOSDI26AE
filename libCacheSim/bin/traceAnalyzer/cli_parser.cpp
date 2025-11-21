@@ -30,6 +30,10 @@ enum argp_option_short {
   OPTION_ACCESS_PATTERN_SAMPLE_RATIO = 0x102,
   OPTION_TRACK_N_HIT = 0x103,
   OPTION_TRACK_N_POPULAR = 0x104,
+  OPTION_EPOCH_SIZE = 0x105,
+  OPTION_MAX_HOTNESS_FREQ = 0x106,
+  OPTION_EVICTION_PARAMS = 0x107,
+  OPTION_ALG = 0x108,
 
   OPTION_ENABLE_ALL = 0x200,
   OPTION_ENABLE_COMMON = 0x201,
@@ -52,6 +56,7 @@ enum argp_option_short {
   OPTION_ENABLE_WRITE_REUSE_CCDF = 0x210,
   OPTION_ENABLE_WRITE_REUSE_CCDF2 = 0x211,
   OPTION_ENABLE_WRITE_REUSE_CCDF3 = 0x212,
+  OPTION_ENABLE_HOTNESS_DISTRIBUTION = 0x213,
 };
 
 /*
@@ -96,6 +101,10 @@ static struct argp_option options[] = {
      "the workload, this is an expensive analysis and often needs manual "
      "tuning the access-pattern-sample-ratio parameter",
      3},
+     {
+    "hotnessDistribution", OPTION_ENABLE_HOTNESS_DISTRIBUTION, NULL, OPTION_ARG_OPTIONAL,
+    "hotness distribution analysis, output hotness distribution", 3
+     },
     {"ttl", OPTION_ENABLE_TTL, NULL, OPTION_ARG_OPTIONAL,
      "ttl analysis, output a ttl distribution in dataname.ttl file", 2},
 
@@ -109,12 +118,20 @@ static struct argp_option options[] = {
      "track one-hit-wonder, two-hit-wonder, etc.", 4},
     {"track-n-popular", OPTION_TRACK_N_POPULAR, "8", 0,
      "track how many requests the n most popular objects get", 4},
+     {"epoch-size", OPTION_EPOCH_SIZE, "0", 0,
+      "epoch size in seconds for hotness distribution analysis", 4},
+     {"max-hotness-freq", OPTION_MAX_HOTNESS_FREQ, "7", 0,
+      "maximum frequency for hotness distribution analysis", 4},
 
     {NULL, 0, NULL, 0, "common parameters:", 0},
 
     {"output", OPTION_OUTPUT_PATH, "", OPTION_ARG_OPTIONAL, "Output path", 8},
     {"verbose", OPTION_VERBOSE, NULL, OPTION_ARG_OPTIONAL,
      "Produce verbose output", 8},
+     {"eviction-params", OPTION_EVICTION_PARAMS, "\"n-seg=4\"", 0,
+     "optional params for each eviction algorithm, e.g., n-seg=4", 4},
+    {"alg", OPTION_ALG, "", 0,
+     "eviction algorithm to use, e.g., lru, fifo, arc", 4},
     {0}};
 
 /*
@@ -150,6 +167,20 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case OPTION_TRACK_N_HIT:
       arguments->analysis_param.track_n_hit = atoi(arg);
       break;
+    case OPTION_EPOCH_SIZE:
+        arguments->analysis_param.epoch_size = atof(arg);
+        break;
+    case OPTION_MAX_HOTNESS_FREQ:
+        arguments->analysis_param.max_hotness_freq = atoi(arg);
+        break;
+    case OPTION_EVICTION_PARAMS:
+      arguments->analysis_param.eviction_params = strdup(arg);
+      //replace_char(arguments->analysis_param.eviction_params, ';', ',');
+      //replace_char(arguments->analysis_param.eviction_params, '_', '-');
+      break;
+    case OPTION_ALG:
+        arguments->analysis_param.alg = strdup(arg);
+      break;
     case OPTION_ENABLE_ALL:
       arguments->analysis_option.req_rate = true;
       arguments->analysis_option.access_pattern = true;
@@ -180,6 +211,9 @@ static error_t parse_opt(int key, char *arg, struct argp_state *state) {
     case OPTION_ENABLE_REQ_RATE:
       arguments->analysis_option.req_rate = true;
       break;
+    case OPTION_ENABLE_HOTNESS_DISTRIBUTION:
+        arguments->analysis_option.hotness_distribution = true;
+        break;
     case OPTION_ENABLE_ACCESS_PATTERN:
       arguments->analysis_option.access_pattern = true;
       break;
@@ -271,7 +305,7 @@ void parse_cmd(int argc, char *argv[], struct arguments *args) {
   }
 
   args->reader = create_reader(trace_type_str, args->trace_path,
-                               args->trace_type_params, args->n_req, false, 1);
+                               args->trace_type_params, args->n_req, true, 1);
 }
 
 void free_arg(struct arguments *args) { close_reader(args->reader); }

@@ -15,6 +15,8 @@
 
 #include "../include/libCacheSim/logging.h"
 #include "../include/libCacheSim/request.h"
+#include "../include/libCacheSim/cache.h"
+#include "cache_init.h"
 #include "struct.h"
 
 using namespace std;
@@ -27,8 +29,12 @@ class AccessPattern {
    * @param n_req the total number of requests in the trace
    * @param n_obj the number of objects we would like to sample
    */
-  explicit AccessPattern(int sample_ratio = 1001)
+  explicit AccessPattern(int sample_ratio = 1001, char* cache_name=nullptr, size_t cache_size=0, char* eviction_params = nullptr)
       : sample_ratio_(sample_ratio) {
+        if(cache_name != nullptr && strlen(cache_name) > 0){
+            printf("create cache %s for access pattern analysis size %d\n", cache_name,cache_size);
+            cache = create_cache(cache_name, cache_size, eviction_params, false);
+        }
 
     if (sample_ratio_ < 1) {
       ERROR(
@@ -53,6 +59,7 @@ class AccessPattern {
   int64_t n_obj_ = 0;
   int64_t n_seen_req_ = 0;
   int sample_ratio_ = 1001;
+  cache_t *cache= nullptr;
 
   int64_t start_rtime_ = -1;
   unordered_map<obj_id_t, vector<uint32_t>> access_rtime_map_;

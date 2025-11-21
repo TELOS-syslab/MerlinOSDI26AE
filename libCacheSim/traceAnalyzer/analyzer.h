@@ -28,6 +28,7 @@
 #include "size.h"
 #include "struct.h"
 #include "ttl.h"
+#include "hotnessDistribution.h"
 
 /* experimental module */
 #include "experimental/createFutureReuseCCDF.h"
@@ -48,6 +49,7 @@ typedef struct analysis_option {
   bool reuse;
   bool popularity;
   bool ttl;
+  bool hotness_distribution;
 
   bool popularity_decay;
   bool lifetime;
@@ -66,6 +68,10 @@ typedef struct analysis_param {
   int warmup_time;
   double access_pattern_sample_ratio;
   int access_pattern_sample_ratio_inv;
+  double epoch_size;
+  int max_hotness_freq;
+  char* alg;
+  char* eviction_params;
 } analysis_param_t;
 
 static analysis_param_t default_param() {
@@ -76,7 +82,10 @@ static analysis_param_t default_param() {
   param.warmup_time = 86400;
   param.access_pattern_sample_ratio = 0.01;
   param.access_pattern_sample_ratio_inv = 101;
-
+    param.epoch_size = 0;
+    param.max_hotness_freq = 7;
+    param.alg = nullptr;    
+    param.eviction_params = nullptr;
   return param;
 };
 
@@ -85,6 +94,7 @@ static struct analysis_option default_option() {
   option.req_rate = false;
   option.access_pattern = false;
   option.ttl = false;
+  option.hotness_distribution = false;
   option.size = false;
   option.reuse = false;
   option.popularity = false;
@@ -109,6 +119,10 @@ class TraceAnalyzer {
         option_(option),
         access_pattern_sample_ratio_inv_(
             params.access_pattern_sample_ratio_inv),
+            epoch_size_(params.epoch_size),
+        max_hotness_freq_(params.max_hotness_freq),
+        alg_(params.alg),
+        eviction_params_(params.eviction_params),
         track_n_popular_(params.track_n_popular),
         track_n_hit_(params.track_n_hit),
         time_window_(params.time_window),
@@ -119,7 +133,7 @@ class TraceAnalyzer {
       ERROR("warmup time needs to be multiple of time_window\n");
       exit(1);
     }
-
+    
     initialize();
   };
 
@@ -150,6 +164,11 @@ class TraceAnalyzer {
   int track_n_hit_;
   // the sampling ratio used in access pattern analysis
   int access_pattern_sample_ratio_inv_;
+  double epoch_size_;
+    int max_hotness_freq_;
+    char* alg_;
+    char* eviction_params_;
+    
 
   /* stat */
   int64_t n_req_ = 0;
@@ -182,6 +201,7 @@ class TraceAnalyzer {
   AccessPattern *access_stat_ = nullptr;
   Popularity *popularity_stat_ = nullptr;
   PopularityDecay *popularity_decay_stat_ = nullptr;
+  HotnessDistribution *hotness_distribution_stat_ = nullptr;
 
   ProbAtAge *prob_at_age_ = nullptr;
   LifetimeDistribution *lifetime_stat_ = nullptr;

@@ -119,6 +119,17 @@ static inline void print_request(request_t *req, int log_level) {
 #endif
 }
 
+static inline void print_const_request(const request_t *req, const int log_level,int test) {
+#ifdef SUPPORT_TTL
+  LOGGING(log_level, "req clcok_time %lu, id %llu, size %ld, ttl %ld, op %s, valid %d\n",
+          (unsigned long)req->clock_time, (unsigned long long)req->obj_id, (long)req->obj_size, (long)req->ttl,
+          req_op_str[req->op], req->valid);
+#else
+  LOGGING(log_level, "req clcok_time %lu, id %llu, size %ld, op %s, valid %d\n", (unsigned long)req->clock_time,
+          (unsigned long long)req->obj_id, (long)req->obj_size, req_op_str[req->op], req->valid);
+#endif
+}
+
 #ifdef __cplusplus
 }
 #endif

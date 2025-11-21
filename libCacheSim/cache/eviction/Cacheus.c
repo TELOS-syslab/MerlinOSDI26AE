@@ -7,6 +7,7 @@
 
 #include "../../dataStructure/hashtable/hashtable.h"
 #include "../../include/libCacheSim/evictionAlgo.h"
+#include "../../include/libCacheSim/cache.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -104,8 +105,9 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
   params->lr = 0.001 + ((double)(next_rand() % 1000)) / 1000;
   params->lr_previous = 0;
 
-  params->w_lru = params->w_lfu = 0.50;  // weights for LRU and LFU
-  params->track_wlru = 0.5;
+  params->w_lru = 0.5;
+  params->w_lfu = 1 - params->w_lru;  // weights for LRU and LFU
+  params->track_wlru = params->w_lru;
   params->num_hit = 0;
   params->hit_rate_prev = 0;
   params->req_local = new_request();
@@ -139,6 +141,7 @@ static void Cacheus_free(cache_t *cache) {
   params->LFU_g->cache_free(params->LFU_g);
   my_free(sizeof(Cacheus_params_t), params);
   cache_struct_free(cache);
+  return ;
 }
 
 /**
@@ -173,8 +176,9 @@ static bool Cacheus_get(cache_t *cache, const request_t *req) {
   }
 
     #ifdef TRACK_PARAMETERS
-  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%1000000)==0) {
-    if(abs(params->track_wlru - params->w_lru) > 0.02){
+    bool track = params->track_wlru - params->w_lru > 0.02 || params->track_wlru - params->w_lru < -0.02;
+  if (track || (cache->n_req%1000000)==0) {
+    if(track){
         params->track_wlru = params->w_lru;
     }
     printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
@@ -245,6 +249,7 @@ static cache_obj_t *Cacheus_insert(cache_t *cache, const request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
 
   // LFU must be first because it may load frequency stored in LRU history
+  //printf("Cacheus_insert called at req %ld size %ld lru %ld lfu %d, limit %ld %ld %ld\n", cache->n_req, cache->get_occupied_byte(cache), params->LRU->get_occupied_byte(params->LRU), params->LFU->get_occupied_byte(params->LFU),cache->cache_size, params->LRU->cache_size, params->LFU->cache_size);
   if (!params->LRU->can_insert(params->LRU, req)) {
     return NULL;
   }
@@ -260,11 +265,13 @@ static cache_obj_t *Cacheus_to_evict(cache_t *cache, const request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
   // update the candidate gen time
   cache->to_evict_candidate_gen_vtime = cache->n_req;
-
+//printf("cacheus to_evict called at req %ld\n", cache->n_req);
   double r = ((double)(next_rand() % 100)) / 100.0;
   if (r < params->w_lru) {
+    //printf("Cacheus_to_evict chose LRU at req %ld\n", cache->n_req);
     cache->to_evict_candidate = params->LRU->to_evict(params->LRU, req);
   } else {
+    //printf("Cacheus_to_evict chose LFU at req %ld\n", cache->n_req);
     cache->to_evict_candidate = params->LFU->to_evict(params->LFU, req);
   }
   return cache->to_evict_candidate;
@@ -323,6 +330,7 @@ static void Cacheus_evict(cache_t *cache, const request_t *req) {
   }
 
   cache->to_evict_candidate_gen_vtime = -1;
+  return;
 }
 
 static bool Cacheus_remove(cache_t *cache, const obj_id_t obj_id) {
@@ -364,6 +372,7 @@ static void update_weight(cache_t *cache, const request_t *req) {
   DEBUG_ASSERT((cache_hit_lru_g ? 1 : 0) + (cache_hit_lfu_g ? 1 : 0) <= 1);
 
   if (cache_hit_lru_g) {
+
     params->w_lru = params->w_lru * exp(-params->lr);  // decrease weight_LRU
   } else if (cache_hit_lfu_g) {
     params->w_lfu = params->w_lfu * exp(-params->lr);  // decrease weight_LFU
@@ -371,7 +380,19 @@ static void update_weight(cache_t *cache, const request_t *req) {
   // normalize
   params->w_lru = params->w_lru / (params->w_lru + params->w_lfu);
   params->w_lfu = 1 - params->w_lru;
+          #ifdef TRACK_PARAMETERS
+
+    if(params->track_wlru - params->w_lru > 0.02|| params->w_lru - params->track_wlru > 0.02){
+        params->track_wlru = params->w_lru;
+        printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+    }
+    if(params->w_lru -0.5>0.1||0.5 - params->w_lru >0.1){
+        //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+    }
+  
+  #endif
   //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+  return;
 }
 
 static void update_lr(cache_t *cache, const request_t *req) {
@@ -417,6 +438,7 @@ static void update_lr(cache_t *cache, const request_t *req) {
     }
   }
   params->num_hit = 0;
+  return;
 }
 
 // Update weight and history, only called in cache miss.
@@ -431,6 +453,7 @@ static void check_and_update_history(cache_t *cache, const request_t *req) {
 
   params->LRU_g->remove(params->LRU_g, req->obj_id);
   params->LFU_g->remove(params->LFU_g, req->obj_id);
+  return;
 }
 
 #ifdef __cplusplus

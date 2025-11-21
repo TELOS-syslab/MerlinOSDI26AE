@@ -11,6 +11,7 @@
  */
 
 #include "accessPattern.h"
+#include "../include/libCacheSim/request.h"
 
 #include <algorithm>
 #include <cmath>
@@ -33,15 +34,23 @@ void AccessPattern::add_req(const request_t *req) {
     return;
   }
   n_seen_req_ += 1;
+  if(cache != nullptr){
+    if(n_seen_req_ < 10){
+        print_const_request(req, 0,0);
+    }
+      if(cache->get(cache, req)==true){
+        return;
+      }
+  }
 
   if (start_rtime_ == -1) {
     start_rtime_ = req->clock_time;
   }
 
-  if (req->obj_id % sample_ratio_ != 0) {
+  //if (req->obj_id % sample_ratio_ != 0) {
     /* skip this object */
-    return;
-  }
+  //  return;
+  //}
 
   if (access_rtime_map_.find(req->obj_id) == access_rtime_map_.end()) {
     access_rtime_map_[req->obj_id] = vector<uint32_t>();
@@ -52,11 +61,12 @@ void AccessPattern::add_req(const request_t *req) {
 }
 
 void AccessPattern::dump(string &path_base) {
+
   string ofile_path = path_base + ".accessRtime";
   ofstream ofs(ofile_path, ios::out | ios::trunc);
-  ofs << "# " << path_base << "\n";
-  ofs << "# access pattern real time, each line stores all the real time of "
-         "requests to an object\n";
+  //ofs << "# " << path_base << "\n";
+  //ofs << "# access pattern real time, each line stores all the real time of "
+  //     "requests to an object\n";
 
   // sort the timestamp list by the first timestamp
   vector<vector<uint32_t> *> sorted_rtime_vec;
@@ -77,11 +87,12 @@ void AccessPattern::dump(string &path_base) {
   ofs << "\n" << endl;
   ofs.close();
 
-  ofs << "# " << path_base << "\n";
+  //ofs << "# " << path_base << "\n";
+
   string ofile_path2 = path_base + ".accessVtime";
   ofstream ofs2(ofile_path2, ios::out | ios::trunc);
-  ofs2 << "# access pattern virtual time, each line stores all the virtual "
-          "time of requests to an object\n";
+  //ofs2 << "# access pattern virtual time, each line stores all the virtual "
+  //        "time of requests to an object\n";
   vector<vector<uint32_t> *> sorted_vtime_vec;
   for (auto &p : access_vtime_map_) {
     sorted_vtime_vec.push_back(&(p.second));

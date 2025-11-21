@@ -32,7 +32,7 @@ typedef struct Cacheusfix_params {
 } Cacheusfix_params_t;
 
 static const char *DEFAULT_CACHE_PARAMS =
-    "w-lru=0.5";
+    "w-lru=0";
 
 // ***********************************************************************
 // ****                                                               ****
@@ -138,6 +138,7 @@ cache_t *Cacheusfix_init(const common_cache_params_t ccache_params,
 
   snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "Cacheusfix-%.4lf",
            params->w_lru);
+printf("Initialized Cacheusfix with w_lru: %.4lf w_lfu: %.4lf lr: %.4lf\n", params->w_lru, params->w_lfu, params->lr);
   return cache;
 }
 
@@ -184,7 +185,7 @@ static bool Cacheusfix_get(cache_t *cache, const request_t *req) {
   }
 
     #ifdef TRACK_PARAMETERS
-  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%1000000)==0) {
+  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%100000)==0) {
     if(abs(params->track_wlru - params->w_lru) > 0.02){
         params->track_wlru = params->w_lru;
     }
