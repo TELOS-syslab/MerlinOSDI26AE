@@ -39,6 +39,7 @@ void AccessPattern::add_req(const request_t *req) {
         print_const_request(req, 0,0);
     }
       if(cache->get(cache, req)==true){
+        cache_contents.insert(req);
         return;
       }
   }
@@ -46,11 +47,26 @@ void AccessPattern::add_req(const request_t *req) {
   if (start_rtime_ == -1) {
     start_rtime_ = req->clock_time;
   }
-
+  
   //if (req->obj_id % sample_ratio_ != 0) {
     /* skip this object */
   //  return;
   //}
+
+  for (set<const request_t *>::iterator it=cache_contents.begin(); it!=cache_contents.end(); ++it){
+    const request_t * find_req = *it;
+    if (cache->find(cache, find_req, false) == NULL){
+      if (evict_rtime_map_.find(find_req->obj_id) == evict_rtime_map_.end()) {
+        evict_rtime_map_[find_req->obj_id] = vector<uint32_t>();
+        evict_vtime_map_[find_req->obj_id] = vector<uint32_t>();
+      }
+      evict_rtime_map_[find_req->obj_id].push_back(req->clock_time - start_rtime_);
+      evict_vtime_map_[find_req->obj_id].push_back(n_seen_req_);
+      cache_contents.erase(find_req);
+      break;
+    }
+  }
+  cache_contents.insert(req);
 
   if (access_rtime_map_.find(req->obj_id) == access_rtime_map_.end()) {
     access_rtime_map_[req->obj_id] = vector<uint32_t>();
@@ -111,6 +127,45 @@ void AccessPattern::dump(string &path_base) {
   }
 
   ofs2.close();
+
+
+  string ofile_path3 = path_base + ".evictRtime";
+  ofstream ofs3(ofile_path3, ios::out | ios::trunc);
+  vector<vector<uint32_t> *> sorted_evictrtime_vec;
+  for (auto &p : evict_rtime_map_) {
+    sorted_evictrtime_vec.push_back(&p.second);
+  }
+  sort(sorted_evictrtime_vec.begin(), sorted_evictrtime_vec.end(),
+       [](vector<uint32_t> *p1, vector<uint32_t> *p2) {
+         return (*p1).at(0) < (*p2).at(0);
+       });
+  for (const auto *p : sorted_evictrtime_vec) {
+    for (const uint32_t rtime : *p) {
+      ofs3 << rtime << ",";
+    }
+    ofs3 << "\n";
+  }
+  ofs3 << "\n" << endl;
+  ofs3.close();
+
+
+  string ofile_path4 = path_base + ".evictVtime";
+  ofstream ofs4(ofile_path4, ios::out | ios::trunc);
+  vector<vector<uint32_t> *> sorted_evictvtime_vec;
+  for (auto &p : evict_vtime_map_) {
+    sorted_evictvtime_vec.push_back(&(p.second));
+  }
+  sort(sorted_evictvtime_vec.begin(), sorted_evictvtime_vec.end(),
+       [](vector<uint32_t> *p1, vector<uint32_t> *p2) -> bool {
+         return (*p1).at(0) < (*p2).at(0);
+       });
+  for (const vector<uint32_t> *p : sorted_evictvtime_vec) {
+    for (const uint32_t vtime : *p) {
+      ofs4 << vtime << ",";
+    }
+    ofs4 << "\n";
+  }
+  ofs4.close();
 }
 
 };  // namespace traceAnalyzer

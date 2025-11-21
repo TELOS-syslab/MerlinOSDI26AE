@@ -18,6 +18,7 @@
 #include "../include/libCacheSim/cache.h"
 #include "cache_init.h"
 #include "struct.h"
+#include <set>
 
 using namespace std;
 
@@ -62,7 +63,10 @@ class AccessPattern {
   cache_t *cache= nullptr;
 
   int64_t start_rtime_ = -1;
+  set<const request_t *> cache_contents;
   unordered_map<obj_id_t, vector<uint32_t>> access_rtime_map_;
   unordered_map<obj_id_t, vector<uint32_t>> access_vtime_map_;
+  unordered_map<obj_id_t, vector<uint32_t>> evict_rtime_map_;
+  unordered_map<obj_id_t, vector<uint32_t>> evict_vtime_map_;
 };
 }  // namespace traceAnalyzer
