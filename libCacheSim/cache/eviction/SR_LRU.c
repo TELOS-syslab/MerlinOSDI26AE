@@ -237,7 +237,7 @@ static cache_obj_t *SR_LRU_insert(cache_t *cache, const request_t *req) {
   cache_t *H = params->H_list;
 
   bool ck_hist = H->find(H, req, false) != NULL;
-
+//printf("SR_LRU_insert called at req %ld ck_hist %d size %ld %ld limit %ld %ld\n", cache->n_req, ck_hist, cache->get_occupied_byte(cache), R->get_occupied_byte(R), cache->cache_size, R->cache_size);
   // If history hit
   if (ck_hist) {
     // On a cache miss where x is in H, x is moved to the MRU position of R.
@@ -294,6 +294,7 @@ static cache_obj_t *SR_LRU_insert(cache_t *cache, const request_t *req) {
   }
 
   // If SR is full
+  if(cache->get_occupied_byte(cache) > cache->cache_size){
   while (SR->get_occupied_byte(SR) > SR->cache_size) {
     // The LRU item of SR is evicted to H.
     cache_obj_t *obj_to_evict = SR->to_evict(SR, req);
@@ -315,11 +316,12 @@ static cache_obj_t *SR_LRU_insert(cache_t *cache, const request_t *req) {
     SR->evict(SR, req);
     obj_to_evict = NULL;
   }
+  }
   // If H is full
   while (H->occupied_byte >= H->cache_size) {
     H->evict(H, req);
   }
-
+//printf("SR_LRU_insert finished at req %ld ck_hist %d size %ld %ld %ld limit %ld %ld %d\n", cache->n_req, ck_hist, cache->get_occupied_byte(cache), R->get_occupied_byte(R), SR->get_occupied_byte(SR), cache->cache_size, R->cache_size, SR->cache_size);
   return obj;
 }
 
