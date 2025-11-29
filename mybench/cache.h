@@ -4,6 +4,8 @@
 #include "log.h"
 
 using namespace facebook::cachelib;
+#define BACKEND_LATENCY 0.01
+#define BACKEND_TIME
 #if defined(USE_LRU) || defined(USE_STRICTLRU)
 using Cache = facebook::cachelib::LruAllocator;
 #elif defined(USE_CLOCK)
@@ -22,7 +24,6 @@ using Cache = FLEXdumpAllocator;
 using Cache = ARCAllocator;
 #elif defined(USE_CAR)
 using Cache = CARAllocator;
-#define DUMP_TIME
 #endif
 
 void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,

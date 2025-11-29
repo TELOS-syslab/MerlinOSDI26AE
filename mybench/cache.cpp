@@ -116,6 +116,10 @@ int cache_set(Cache *cache, PoolId pool, struct request *req) {
   std::memcpy(item_handle->getMemory(), req->val, req->val_len);
   cache->insertOrReplace(item_handle);
 
+  #ifdef BACKEND_TIME
+  // sleep(BACKEND_LATENCY);
+  #endif
+
   return 0;
 }
 

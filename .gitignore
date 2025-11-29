@@ -18,6 +18,8 @@ build-zstd/
 
 mybench/_build/
 mybench/data/
+mybench/*.bin
+mybench/results
 
 # Required source-code dependencies, fetched by ./contrib/ scripts.
 cachelib/external/fmt/
