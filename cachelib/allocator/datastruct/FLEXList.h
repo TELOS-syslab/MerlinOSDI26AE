@@ -281,7 +281,8 @@ namespace facebook::cachelib
 
         void adjustGuardFreq() noexcept
         {
-            if ((numInserts_ & 0xcff) != 0)
+            numAdjust_ ++;
+            if ((numAdjust_ & 0xcff) != 0)
             {
                 return;
             }
@@ -295,14 +296,36 @@ namespace facebook::cachelib
             if(freq2 > total_size ){
                 if(guard_freq_!=3){
                     guard_freq_ = 3;
+                    printf("set guard freq 3, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
                 }
             }else if(freq1 > total_size ){
                 if(guard_freq_!=2){
                     guard_freq_ = 2;
+                    printf("set guard freq 2, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
+
+                    printf("size %d %d %d\n",smallfifo_->size(), mainfifo_->size(), susfifo_->size());
                 }
             } else{
                 if(guard_freq_!=1){
                     guard_freq_ = 1;
+                    printf("set guard freq 1, cache size %d, frq2 %d, ghost freq2 %d; freq1 %d, ghost freq1 %d\n",
+                            total_size,
+                           freq_distribution_[2].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[2].load(std::memory_order_relaxed),
+                           freq_distribution_[1].load(std::memory_order_relaxed),
+                           ghost_.freq_distribution_[1].load(std::memory_order_relaxed));
+
+                    printf("size %d %d %d\n",smallfifo_->size(), mainfifo_->size(), susfifo_->size());
                 }
             }
             return;
@@ -369,6 +392,7 @@ namespace facebook::cachelib
                 LockHolder l(*mtx_);
                 if (!ghost_.initialized())
                 {
+                    printf("init ghost sketch, size %zu\n", listSize);
                     ghost_.setFIFOSize(listSize);
                     ghost_.initHashtable();
                 }
@@ -451,20 +475,13 @@ namespace facebook::cachelib
                     {
                         listSize = size();
                         retry = 0;
+                        break;
                     }
                 }
                 // printf("%s %d small size %d main size %d sus size %d\n", __func__, __LINE__, smallfifo_->size(), mainfifo_->size(), susfifo_->size());
-                while(smallfifo_->size() <= ((double)(listSize)*smallRatio_)){
+                while(smallfifo_->size() <= ((double)(listSize)*smallRatio_+1)){
                     T *curr = nullptr;
-                    if(mainfifo_->size() > (double)(listSize)*mainRatio_){
-                        curr = mainfifo_->removeTail();
-                        if (curr != nullptr)
-                        {
-                            unSetMain(*curr);
-                            susfifo_->linkAtHead(*curr);
-                        }
-                    }
-                    if(susfifo_->size() > (double)(listSize)*susRatio_){
+                    if(susfifo_->size() > (50)){//(double)(listSize)*susRatio_
                         curr == nullptr;
                         curr = susfifo_->removeTail();
                         if (curr != nullptr)
@@ -483,11 +500,29 @@ namespace facebook::cachelib
                             sketch_.estimate(hashNode(*curr));
                         }
                     }
+                    if(mainfifo_->size() > (double)(listSize)*mainRatio_){
+                        curr = mainfifo_->removeTail();
+                        if (curr != nullptr)
+                        {
+                            int retval = decFreq(*curr);
+                            if (retval == -1)
+                            {
+                                adjustGuardFreq();
+                                return curr;
+                            }
+                            else
+                            {
+                                mainfifo_->linkAtHead(*curr);
+                            }
+                        }
+                    }
+                    
                     retry++;
                     if (retry > 10)
                     {
                         listSize = size();
                         retry = 0;
+                        break;
                     }
                 }
             }
@@ -581,6 +616,7 @@ namespace facebook::cachelib
         std::vector<std::atomic<uint32_t>> scatter_freq1_{std::vector<std::atomic<uint32_t>>(SCATTER_FREQ1 + 1)};
         int32_t guard_freq_{1};
         std::atomic<int64_t> numInserts_{0};
+        std::atomic<int64_t> numAdjust_{0};
         constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
 
         constexpr static double smallRatio_ = 0.1;
