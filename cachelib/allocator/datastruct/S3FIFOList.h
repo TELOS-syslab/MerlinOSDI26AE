@@ -102,6 +102,7 @@ class S3FIFOList {
       markProbationary(node);
       unmarkMain(node);
     }
+    return;
   }
 
     #define s3FreqMask 0x3

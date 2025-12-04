@@ -30,7 +30,7 @@ T* S3FIFOList<T, HookPtr>::getEvictionCandidate() noexcept {
   if (!hist_.initialized()) {
     LockHolder l(*mtx_);
     if (!hist_.initialized()) {
-      hist_.setFIFOSize(listSize / 2);
+      hist_.setFIFOSize(listSize);
       hist_.initHashtable();
     }
   }

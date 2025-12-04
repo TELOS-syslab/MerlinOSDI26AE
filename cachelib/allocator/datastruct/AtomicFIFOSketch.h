@@ -269,7 +269,7 @@ namespace facebook
             constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
 
         public:
-            std::vector<std::atomic<uint32_t>> freq_distribution_{std::vector<std::atomic<uint32_t>>(GHOST_MAX_FREQ + 1)};
+            std::vector<std::atomic<uint32_t>> freq_distribution_{std::vector<std::atomic<uint32_t>>(GHOST_MAX_FREQ + 5)};
 
         private:
             size_t numElem_{0};

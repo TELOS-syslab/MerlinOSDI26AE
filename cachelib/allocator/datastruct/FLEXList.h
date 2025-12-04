@@ -165,6 +165,38 @@ namespace facebook::cachelib
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
             return (ret >> RefFlags::kMMFlag2) & (MAX_FREQ);
         }
+        FOLLY_ALWAYS_INLINE int clearFreq(T &node) noexcept
+        {
+            // int ret = node.template isFlagSet<RefFlags::kMMFlag2>();
+            // node.template unSetFlag<RefFlags::kMMFlag2>();
+            // return ret - 1;
+            int res = 0;
+            auto predicate = [&res](const Value curValue)
+            {
+                res = curValue & kFreqMask;
+                if (res == 0)
+                {
+                    return false;
+                }
+                return true;
+            };
+
+            auto newValue = [](const Value curValue)
+            {
+                return (curValue & (~kFreqMask));
+            };
+
+            node.ref_.template atomicUpdateValue(predicate, newValue);
+            int retval = (res >> RefFlags::kMMFlag2);
+            if (retval >= 2)
+            {
+                freq_distribution_[2].fetch_sub(1, std::memory_order_relaxed);
+            }
+            if(retval >= 1){
+                freq_distribution_[1].fetch_sub(1, std::memory_order_relaxed);
+            }
+            return retval - 1;
+        }
         void resetFreq(T &node) noexcept
         {
             // node.template unSetFlag<RefFlags::kMMFlag2>();
@@ -176,10 +208,17 @@ namespace facebook::cachelib
         void setFreq(T &node, int freq) noexcept
         {
             // node.template setFlag<RefFlags::kMMFlag2>();
-
+            //assert ori freq = 0;
             resetFreq(node);
             Value bitMask = ((static_cast<Value>(freq) & MAX_FREQ) << RefFlags::kMMFlag2);
             __atomic_or_fetch(&node.ref_.refCount_, bitMask, __ATOMIC_ACQ_REL);
+            if (freq >= 2)
+            {
+                freq_distribution_[2].fetch_add(1, std::memory_order_relaxed);
+            }
+            if(freq >= 1){
+                freq_distribution_[1].fetch_add(1, std::memory_order_relaxed);
+            }
             return;
         }
 
@@ -253,11 +292,11 @@ namespace facebook::cachelib
             int freq2 = freq_distribution_[2].load(std::memory_order_relaxed);
             freq2 += ghost_.freq_distribution_[2].load(std::memory_order_relaxed);
             
-            if(freq2 > total_size * 0.8){
+            if(freq2 > total_size ){
                 if(guard_freq_!=3){
                     guard_freq_ = 3;
                 }
-            }else if(freq1 > total_size * 0.8){
+            }else if(freq1 > total_size ){
                 if(guard_freq_!=2){
                     guard_freq_ = 2;
                 }
@@ -321,7 +360,7 @@ namespace facebook::cachelib
                 LockHolder l(*mtx_);
                 if (!sketch_.initialized())
                 {
-                    sketch_.setFIFOSize(listSize / 2);
+                    sketch_.setFIFOSize(listSize*2);
                     sketch_.initHashtable();
                 }
             }
@@ -330,7 +369,7 @@ namespace facebook::cachelib
                 LockHolder l(*mtx_);
                 if (!ghost_.initialized())
                 {
-                    ghost_.setFIFOSize(listSize / 2);
+                    ghost_.setFIFOSize(listSize);
                     ghost_.initHashtable();
                 }
             }
@@ -353,19 +392,20 @@ namespace facebook::cachelib
                         unSetSmall(*curr);
                         mainfifo_->linkAtHead(*curr);
                         setMain(*curr);
-                        // sketch_.estimate(hashNode(*curr));
+                        clearFreq(*curr);
                     }
                     else
                     {
                         T *tailptr = nullptr;
-                        if(susfifo_->size()>((double)(listSize)*0.01)){
+                        if(susfifo_->size()>(100)){
                            tailptr = susfifo_->removeTail();
                         }
                         int tail_freq = MAX_FREQ + 1;
                         if (tailptr != nullptr)
                         {
-                            tail_freq = decFreq(*tailptr);
-                            if (tail_freq == -1)
+                            //tail_freq = decFreq(*tailptr);
+                            tail_freq = getFreq(*tailptr);
+                            if (tail_freq == 0)
                             {
                                 // duel
                                 int est_curr = sketch_.getEstimate(hashNode(*curr));
@@ -385,12 +425,13 @@ namespace facebook::cachelib
                             else
                             {
                                 // sus wins
-                                mainfifo_->linkAtHead(*tailptr);
-                                setMain(*tailptr);
-                                if (tail_freq < 2)
-                                {
-                                    sketch_.estimate(hashNode(*tailptr));
-                                }
+                                //mainfifo_->linkAtHead(*tailptr);
+                                //setMain(*tailptr);
+                                susfifo_->linkAtHead(*tailptr);
+                                //if (tail_freq < 2)
+                                //{
+                                //    sketch_.estimate(hashNode(*tailptr));
+                                //}
                             }
                         }
                         if (freq >= 2)
@@ -402,7 +443,7 @@ namespace facebook::cachelib
                         }
                         sketch_.estimate(hashNode(*curr));
                         adjustGuardFreq();
-                        ghost_.insert(hashNode(*curr));
+                        ghost_.insert(hashNode(*curr),freq);
                         return curr;
                     }
                     retry++;
@@ -419,20 +460,12 @@ namespace facebook::cachelib
                         curr = mainfifo_->removeTail();
                         if (curr != nullptr)
                         {
-                            int retval = decFreq(*curr);
-                            if (retval == -1)
-                            {
-                                //susfifo_->linkAtHead(*curr);
-                                adjustGuardFreq();
-                                return curr;
-                            }
-                            else
-                            {
-                                mainfifo_->linkAtHead(*curr);
-                            }
+                            unSetMain(*curr);
+                            susfifo_->linkAtHead(*curr);
                         }
-                        
-                    }else{
+                    }
+                    if(susfifo_->size() > (double)(listSize)*susRatio_){
+                        curr == nullptr;
                         curr = susfifo_->removeTail();
                         if (curr != nullptr)
                         {
@@ -447,10 +480,7 @@ namespace facebook::cachelib
                                 mainfifo_->linkAtHead(*curr);
                                 setMain(*curr);
                             }
-                            if (retval < 2)
-                            {
-                                sketch_.estimate(hashNode(*curr));
-                            }
+                            sketch_.estimate(hashNode(*curr));
                         }
                     }
                     retry++;
@@ -477,10 +507,13 @@ namespace facebook::cachelib
                     mainfifo_->linkAtHead(node);
                     setMain(node);
                     unSetSmall(node);
+                    //todo setfreq
+                    setFreq(node, hist_freq);
                 }else{
                     susfifo_->linkAtHead(node);
                     unSetMain(node);
                     unSetSmall(node);
+                    sketch_.estimate(hashNode(node));
                 }
                 
             }
