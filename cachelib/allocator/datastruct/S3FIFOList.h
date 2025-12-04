@@ -135,7 +135,7 @@ class S3FIFOList {
 
             return retval;
         }
-        FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
+    FOLLY_ALWAYS_INLINE int decFreq(T &node) noexcept
         {
             // int ret = node.template isFlagSet<RefFlags::kMMFlag2>();
             // node.template unSetFlag<RefFlags::kMMFlag2>();
@@ -164,6 +164,30 @@ class S3FIFOList {
         {
             int ret = __atomic_load_n(&node.ref_.refCount_, __ATOMIC_RELAXED);
             return (ret >> RefFlags::kMMFlag3) & (s3MAX_FREQ);
+        }
+    FOLLY_ALWAYS_INLINE int clearFreq(T &node) noexcept
+        {
+            // int ret = node.template isFlagSet<RefFlags::kMMFlag2>();
+            // node.template unSetFlag<RefFlags::kMMFlag2>();
+            // return ret - 1;
+            int res = 0;
+            auto predicate = [&res](const Value curValue)
+            {
+                res = curValue & s3kFreqMask;
+                if (res == 0)
+                {
+                    return false;
+                }
+                return true;
+            };
+
+            auto newValue = [](const Value curValue)
+            {
+                return (curValue & (~s3kFreqMask));
+            };
+
+            node.ref_.template atomicUpdateValue(predicate, newValue);
+            return 0;
         }
 
   // Bit MM_BIT_0 is used to record if the item is hot.
@@ -203,6 +227,11 @@ class S3FIFOList {
     decFreq(node);
     return;
     node.template unSetFlag<RefFlags::kMMFlag1>();
+  }
+
+  void resetAccessed(T& node)noexcept {
+    clearFreq(node);
+    return;
   }
 
   bool isAccessed(const T& node) const noexcept {

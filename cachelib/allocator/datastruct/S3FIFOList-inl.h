@@ -46,8 +46,8 @@ T* S3FIFOList<T, HookPtr>::getEvictionCandidate() noexcept {
         }
         continue;
       }
-      if (isAccessed(*curr)) {
-        unmarkAccessed(*curr);
+      if (getFreq(*curr)>1) {
+        resetAccessed(*curr);
         XDCHECK(isProbationary(*curr));
         unmarkProbationary(*curr);
         markMain(*curr);
