@@ -31,6 +31,8 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = FIFO_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arc") == 0) {
     cache = ARC_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "arctest") == 0) {
+    cache = ARCtest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arcfix") == 0) {
     cache = ARCfix_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arcv0") == 0) {
@@ -66,6 +68,8 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = RandomLRU_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "cacheus") == 0) {
     cache = Cacheus_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "cacheustest") == 0) {
+    cache = Cacheustest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "cacheusfix") == 0) {
     cache = Cacheusfix_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "size") == 0) {
@@ -134,6 +138,8 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = S3FIFO_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "s3fifod") == 0) {
     cache = S3FIFOd_init(cc_params, eviction_params);
+  } else if (strcasecmp(eviction_algo, "s3fifotest") == 0) {
+    cache = S3FIFOtest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "qdlp") == 0) {
     cache = QDLP_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "sieve") == 0) {
@@ -176,7 +182,9 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = flexc_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "flexpp") == 0) {
     cache = flexpp_init(cc_params, eviction_params);
-  } else {
+  } else if (strcasecmp(eviction_algo, "flextest") == 0) {
+    cache = flextest_init(cc_params, eviction_params);
+  } else{
     ERROR("do not support algorithm %s\n", eviction_algo);
     abort();
   }

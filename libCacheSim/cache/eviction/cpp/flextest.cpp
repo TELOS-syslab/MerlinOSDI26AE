@@ -54,8 +54,17 @@ namespace eviction
         int32_t filter2ghost;
         int32_t sus2main;
         int32_t evict_sus_ghost;
-    } flex_params_t;
+        //used for analysis
+        int objfromghost;
+        int objfromsketch;
+        int hitfromghost;
+        int hitfromsketch;
+        int objhitfromghost;
+        int objhitfromsketch;
+    } flextest_params_t;
 } // namespace eviction
+
+extern uint64_t track_id;
 
 #ifdef __cplusplus
 extern "C"
@@ -65,54 +74,54 @@ extern "C"
     static const char *DEFAULT_CACHE_PARAMS =
         "filter-size-ratio=0.10,suspected-size-ratio=0.05,ghost-size-ratio=1.00";
 
-    cache_t *flex_init(const common_cache_params_t ccache_params,
+    cache_t *flextest_init(const common_cache_params_t ccache_params,
                         const char *cache_specific_params);
-    static void flex_free(cache_t *cache);
-    static bool flex_get(cache_t *cache, const request_t *req);
+    static void flextest_free(cache_t *cache);
+    static bool flextest_get(cache_t *cache, const request_t *req);
 
-    static cache_obj_t *flex_find(cache_t *cache, const request_t *req,
+    static cache_obj_t *flextest_find(cache_t *cache, const request_t *req,
                                    const bool update_cache);
-    static cache_obj_t *flex_insert(cache_t *cache, const request_t *req);
-    static cache_obj_t *flex_to_evict(cache_t *cache, const request_t *req);
-    static void flex_evict(cache_t *cache, const request_t *req);
-    static bool flex_remove(cache_t *cache, const obj_id_t obj_id);
-    static inline int64_t flex_get_occupied_byte(const cache_t *cache);
-    static inline int64_t flex_get_n_obj(const cache_t *cache);
-    static inline bool flex_can_insert(cache_t *cache, const request_t *req);
-    static void flex_update(cache_t *cache);
-    static void flex_print(cache_t *cache);
-    static void flex_aging(cache_t *cache);
-    static void flex_parse_params(cache_t *cache,
+    static cache_obj_t *flextest_insert(cache_t *cache, const request_t *req);
+    static cache_obj_t *flextest_to_evict(cache_t *cache, const request_t *req);
+    static void flextest_evict(cache_t *cache, const request_t *req);
+    static bool flextest_remove(cache_t *cache, const obj_id_t obj_id);
+    static inline int64_t flextest_get_occupied_byte(const cache_t *cache);
+    static inline int64_t flextest_get_n_obj(const cache_t *cache);
+    static inline bool flextest_can_insert(cache_t *cache, const request_t *req);
+    static void flextest_update(cache_t *cache);
+    static void flextest_print(cache_t *cache);
+    static void flextest_aging(cache_t *cache);
+    static void flextest_parse_params(cache_t *cache,
                                    const char *cache_specific_params);
 
-    cache_t *flex_init(const common_cache_params_t ccache_params,
+    cache_t *flextest_init(const common_cache_params_t ccache_params,
                         const char *cache_specific_params)
     {
         cache_t *cache = cache_struct_init("flex", ccache_params, cache_specific_params);
-        cache->eviction_params = reinterpret_cast<void *>(new eviction::flex_params_t);
+        cache->eviction_params = reinterpret_cast<void *>(new eviction::flextest_params_t);
 
-        cache->cache_init = flex_init;
-        cache->cache_free = flex_free;
-        cache->get = flex_get;
-        cache->find = flex_find;
-        cache->insert = flex_insert;
-        cache->evict = flex_evict;
-        cache->to_evict = flex_to_evict;
-        cache->remove = flex_remove;
-        cache->get_n_obj = flex_get_n_obj;
-        cache->get_occupied_byte = flex_get_occupied_byte;
-        cache->can_insert = flex_can_insert;
+        cache->cache_init = flextest_init;
+        cache->cache_free = flextest_free;
+        cache->get = flextest_get;
+        cache->find = flextest_find;
+        cache->insert = flextest_insert;
+        cache->evict = flextest_evict;
+        cache->to_evict = flextest_to_evict;
+        cache->remove = flextest_remove;
+        cache->get_n_obj = flextest_get_n_obj;
+        cache->get_occupied_byte = flextest_get_occupied_byte;
+        cache->can_insert = flextest_can_insert;
 
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
 
         params->req_local = new_request();
         params->req_prefetch = new_request();
         params->req_sus = new_request();
 
-        flex_parse_params(cache, DEFAULT_CACHE_PARAMS);
+        flextest_parse_params(cache, DEFAULT_CACHE_PARAMS);
         if (cache_specific_params != NULL)
         {
-            flex_parse_params(cache, cache_specific_params);
+            flextest_parse_params(cache, cache_specific_params);
         }
 
         params->filter_limit = MAX(1, (uint64_t)(params->filter_size_ratio * ccache_params.cache_size));
@@ -164,14 +173,21 @@ extern "C"
         params->evict_sus_ghost = 0;
         params->prefetch = 0;
 
+        params->objfromghost = 0;
+        params->objfromsketch = 0;
+        params->hitfromghost = 0;
+        params->hitfromsketch = 0;
+        params->objhitfromghost = 0;
+        params->objhitfromsketch = 0;
+
         snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "flex-%.2lf-%.2lf-%.2lf",
                  params->filter_size_ratio, params->suspected_size_ratio,params->ghost_size_ratio);
         return cache;
     }
 
-    static void flex_free(cache_t *cache)
+    static void flextest_free(cache_t *cache)
     {
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         params->filter->cache_free(params->filter);
         params->sus->cache_free(params->sus);
         params->main->cache_free(params->main);
@@ -180,19 +196,21 @@ extern "C"
         free(params->CBF);
         free_request(params->req_local);
         free_request(params->req_prefetch);
-        delete reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        delete reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_struct_free(cache);
     }
 
-    static bool flex_get(cache_t *cache, const request_t *req)
+    static bool flextest_get(cache_t *cache, const request_t *req)
     {
         #ifdef TRACK_PARAMETERS
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
-        if(params->guard_freq != params->track_freq || (cache->n_req%1000000)==0){
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
+        if(params->guard_freq != params->track_freq || (cache->n_req%10000000)==0){
             params->track_freq = params->guard_freq;
-            printf("%ld flex guard_freq: %d epoch guess: %d ", cache->n_req, params->guard_freq, params->filter2sus);
-            printf("ghost2main: %d ghost2sus: %d filter2sus: %d filter2main: %d filter2ghost: %d sus2main: %d evict_sus_ghost: %d\n",
-               params->ghost2main, params->ghost2sus, params->filter2sus, params->filter2main, params->filter2ghost, params->sus2main, params->evict_sus_ghost);
+            //printf("%ld flex guard_freq: %d epoch guess: %d ", cache->n_req, params->guard_freq, params->filter2sus);
+            //printf("ghost2main: %d ghost2sus: %d filter2sus: %d filter2main: %d filter2ghost: %d sus2main: %d evict_sus_ghost: %d\n",
+            //   params->ghost2main, params->ghost2sus, params->filter2sus, params->filter2main, params->filter2ghost, params->sus2main, params->evict_sus_ghost);
+            printf("reqnum: %d objfromghost: %d objfromsketch: %d hitfromghost: %d hitfromsketch: %d objhitfromghost: %d objhitfromsketch: %d\n",
+               cache->n_req, params->objfromghost, params->objfromsketch, params->hitfromghost, params->hitfromsketch, params->objhitfromghost, params->objhitfromsketch);
         }
         #endif
         return cache_get_base(cache, req);
@@ -200,10 +218,28 @@ extern "C"
     static void printstatus(cache_t *cache);
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq);
 
-    static cache_obj_t *flex_find(cache_t *cache, const request_t *req,
+    static void checkhit(cache_t *cache, cache_obj_t * obj){
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
+        if(obj->FLEX.fromghost){
+            params->hitfromghost++;
+            if(obj->FLEX.accessed==0){
+                params->objhitfromghost++;
+                obj->FLEX.accessed=1;
+            }
+        }
+        if(obj->FLEX.fromsketch){
+            params->hitfromsketch++;
+            if(obj->FLEX.accessed==0){
+                params->objhitfromsketch++;
+                obj->FLEX.accessed=1;
+            }
+        }
+        return;
+    }
+    static cache_obj_t *flextest_find(cache_t *cache, const request_t *req,
                                    const bool update_cache)
     {
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *obj = NULL;
         if (!update_cache)
         {
@@ -249,6 +285,7 @@ extern "C"
                 params->hotdistribution[obj->FLEX.freq] += 1;
             }
             params->seq_miss = 0;
+            checkhit(cache, obj);
             return obj;
         }
         obj = params->main->find(params->main, req, update_cache);
@@ -261,6 +298,8 @@ extern "C"
                 params->hotdistribution[obj->FLEX.freq] += 1;
             }
             params->seq_miss = 0;
+
+            checkhit(cache, obj);
             return obj;
         }
         obj = params->ghost->find(params->ghost, req, false);
@@ -291,9 +330,9 @@ extern "C"
         }
     }
 
-    static cache_obj_t *flex_insert(cache_t *cache, const request_t *req)
+    static cache_obj_t *flextest_insert(cache_t *cache, const request_t *req)
     {
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *obj = NULL;
         if (params->sus->get_occupied_byte(params->sus) == 0 && params->filter->get_occupied_byte(params->filter) == 0)
         {
@@ -314,6 +353,9 @@ extern "C"
                     obj = params->main->insert(params->main, req);
                     obj->FLEX.freq = params->ghost_freq;
                     params->ghost->remove(params->ghost, obj->obj_id);
+
+                    params->objfromghost++;
+                    obj->FLEX.fromghost = 1;
                 }
                 else
                 {
@@ -324,7 +366,11 @@ extern "C"
                     //inghost suspect
                     obj->FLEX.inghost = 1;
                     params->hotdistribution[0]++;
+
+                    params->objfromsketch++;
+                    obj->FLEX.fromsketch = 1;
                 }
+                
             }
             else
             {
@@ -337,9 +383,9 @@ extern "C"
         return obj;
     }
 
-    static cache_obj_t *flex_to_evict(cache_t *cache, const request_t *req)
+    static cache_obj_t *flextest_to_evict(cache_t *cache, const request_t *req)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         assert(0);
         return NULL;
     }
@@ -348,7 +394,7 @@ extern "C"
 
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *object = params->ghost->insert(params->ghost, req);
         object->FLEX.freq = freq;
         return object;
@@ -356,7 +402,7 @@ extern "C"
 
     static int removefromghost(cache_t *cache, const request_t *req)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *obj = params->ghost->find(params->ghost, req, false);
         if (obj != NULL)
         {
@@ -370,23 +416,28 @@ extern "C"
 
     static void adjust_main(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         while (params->main_limit < params->main->get_occupied_byte(params->main))
         {
             cache_obj_t *obj_to_evict = params->main->to_evict(params->main, NULL);
             int ori_freq = obj_to_evict->FLEX.freq;
             assert(ori_freq >= 0 && ori_freq <= MAXFREQ);
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
-            params->main->remove(params->main, obj_to_evict->obj_id);
             cache_obj_t *new_obj = params->sus->insert(params->sus, params->req_local);
             new_obj->FLEX.freq = ori_freq;
+            //heritage state
+            new_obj->FLEX.fromghost = obj_to_evict->FLEX.fromghost;
+            new_obj->FLEX.fromsketch = obj_to_evict->FLEX.fromsketch;
+            new_obj->FLEX.accessed = obj_to_evict->FLEX.accessed;
+
+            params->main->remove(params->main, obj_to_evict->obj_id);
         }
         return;
     }
 
     static void evict_sus(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *sus_to_evict = params->sus->to_evict(params->sus, NULL);
         int ori_freq = sus_to_evict->FLEX.freq;
         decreasepop(params->hotdistribution, ori_freq, -1);
@@ -394,7 +445,7 @@ extern "C"
     }
 
     static int compare(cache_t *cache){
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         cache_obj_t *filter_to_evict = params->filter->to_evict(params->filter, NULL);
         cache_obj_t *sus_to_evict = params->sus->to_evict(params->sus, NULL);
         if(filter_to_evict==NULL||sus_to_evict==NULL){
@@ -422,13 +473,16 @@ extern "C"
             cache_obj_t *new_obj_ghost = addtoghost(cache, params->req_sus, filter_to_evict->FLEX.freq);
             new_obj_ghost->FLEX.freq = filter_to_evict->FLEX.freq;
             params->filter->remove(params->filter, filter_to_evict->obj_id);
+
+            params->objfromsketch++;
+                new_obj->FLEX.fromsketch = 1;
             return 1;
         }
         return 2;
     }
 
     static int adjust_sus(cache_t *cache){
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         while (params->sus->get_occupied_byte(params->sus) > 0)
         {
             cache_obj_t *obj_to_evict = params->sus->to_evict(params->sus, NULL);
@@ -445,19 +499,24 @@ extern "C"
                 obj_to_evict->FLEX.inghost = 0;
             }
             params->sus2main ++;
-            params->sus->remove(params->sus, obj_to_evict->obj_id);
             // decreasepop(params->hotdistribution, ori_freq, 0);
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
             cache_obj_t *new_obj = params->main->insert(params->main, params->req_local);
             new_obj->FLEX.freq = ori_freq-1;
             decreasepop(params->hotdistribution, ori_freq, ori_freq-1);
+            //heritage state
+            new_obj->FLEX.fromghost = obj_to_evict->FLEX.fromghost;
+            new_obj->FLEX.fromsketch = obj_to_evict->FLEX.fromsketch;
+            new_obj->FLEX.accessed = obj_to_evict->FLEX.accessed;
+
+            params->sus->remove(params->sus, obj_to_evict->obj_id);
         }
         return 0;
     }
 
     static int adjust_filter(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         int has_evicted = 0;
 
         while (!has_evicted && params->filter->get_occupied_byte(params->filter) > 0)
@@ -489,6 +548,7 @@ extern "C"
                     //evict filter
                     params->filter2ghost++;
                     cache_obj_t *new_obj = addtoghost(cache, params->req_local, ori_freq);
+                    
                 }
             }
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
@@ -499,7 +559,7 @@ extern "C"
 
     static void adjust_ghost(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         while (params->ghost->get_occupied_byte(params->ghost) > params->ghost_limit)
         {
             cache_obj_t *obj_to_evict = params->ghost->to_evict(params->ghost, NULL);
@@ -510,9 +570,9 @@ extern "C"
         return;
     }
 
-    static void flex_adjustguard(cache_t *cache)
+    static void flextest_adjustguard(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         // todo adjust guard_freq
         int guradfreq = params->guard_freq;
         // int guardthreshold = params->main_limit;
@@ -537,7 +597,7 @@ extern "C"
 
     static void printstatus(cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         printf("filter: %ld sus: %ld main: %ld ghost: %ld\n",
                params->filter->get_occupied_byte(params->filter),
                params->sus->get_occupied_byte(params->sus),
@@ -558,7 +618,7 @@ extern "C"
         return;
     }
 
-    static void flex_evict(cache_t *cache, const request_t *req)
+    static void flextest_evict(cache_t *cache, const request_t *req)
     {
         if (cache == nullptr || cache->eviction_params == nullptr)
         {
@@ -566,7 +626,7 @@ extern "C"
             return;
         }
 
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         params->evictobj_num += 1;
         if (params->evictobj_num == cache->get_n_obj(cache))
         {
@@ -579,7 +639,7 @@ extern "C"
             }
         }
 
-        flex_adjustguard(cache);
+        flextest_adjustguard(cache);
 
         if(params->filter->get_occupied_byte(params->filter) + req->obj_size > params->filter_limit){
             //evict filter
@@ -592,16 +652,16 @@ extern "C"
                 ret = adjust_sus(cache);
             }
             // is compareing needed?
-            compare(cache);
+            //compare(cache);
             evict_sus(cache);
         }
         adjust_ghost(cache);
         return;
     }
 
-    static bool flex_remove(cache_t *cache, const obj_id_t obj_id)
+    static bool flextest_remove(cache_t *cache, const obj_id_t obj_id)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         bool removed = false;
         removed = removed || params->filter->remove(params->filter, obj_id);
         removed = removed || params->sus->remove(params->sus, obj_id);
@@ -611,35 +671,35 @@ extern "C"
         return true;
     }
 
-    static inline int64_t flex_get_occupied_byte(const cache_t *cache)
+    static inline int64_t flextest_get_occupied_byte(const cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         return params->filter->get_occupied_byte(params->filter) +
                params->sus->get_occupied_byte(params->sus) +
                params->main->get_occupied_byte(params->main);
         return cache_get_occupied_byte_default(cache);
     }
 
-    static inline int64_t flex_get_n_obj(const cache_t *cache)
+    static inline int64_t flextest_get_n_obj(const cache_t *cache)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         return params->filter->get_n_obj(params->filter) +
                params->sus->get_n_obj(params->sus) +
                params->main->get_n_obj(params->main);
         return cache_get_n_obj_default(cache);
     }
 
-    static inline bool flex_can_insert(cache_t *cache, const request_t *req)
+    static inline bool flextest_can_insert(cache_t *cache, const request_t *req)
     {
-        auto params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
         return req->obj_size <= params->filter->cache_size;
         return cache_can_insert_default(cache, req);
     }
 
-    static void flex_parse_params(cache_t *cache,
+    static void flextest_parse_params(cache_t *cache,
                                    const char *cache_specific_params)
     {
-        auto *params = reinterpret_cast<eviction::flex_params_t *>(cache->eviction_params);
+        auto *params = reinterpret_cast<eviction::flextest_params_t *>(cache->eviction_params);
 
         char *params_str = strdup(cache_specific_params);
         char *old_params_str = params_str;

@@ -13,7 +13,7 @@
 extern "C" {
 #endif
 
-typedef struct Cacheus_params {
+typedef struct Cacheustest_params {
   cache_t *LRU;        // LRU
   cache_t *LRU_g;      // eviction history of LRU
   cache_t *LFU;        // LFU
@@ -32,7 +32,17 @@ typedef struct Cacheus_params {
 
   uint64_t update_interval;
   request_t *req_local;
-} Cacheus_params_t;
+  //used for analysis
+  obj_id_t lasthitobjid;
+  int hitonlrughost;
+  int hitonlfughost;
+    int objfromlrughost;
+    int hitfromlrughost;
+    int objhitfromlrughost;
+    int objfromlfughost;
+    int hitfromlfughost;
+    int objhitfromlfughost;
+} Cacheustest_params_t;
 
 static const char *DEFAULT_CACHE_PARAMS =
     "w-lru=0.5";
@@ -42,18 +52,18 @@ static const char *DEFAULT_CACHE_PARAMS =
 // ****                                                               ****
 // ***********************************************************************
 
-static void Cacheus_free(cache_t *cache);
-static bool Cacheus_get(cache_t *cache, const request_t *req);
-static cache_obj_t *Cacheus_find(cache_t *cache, const request_t *req,
+static void Cacheustest_free(cache_t *cache);
+static bool Cacheustest_get(cache_t *cache, const request_t *req);
+static cache_obj_t *Cacheustest_find(cache_t *cache, const request_t *req,
                                  const bool update_cache);
-static cache_obj_t *Cacheus_insert(cache_t *cache, const request_t *req);
-static cache_obj_t *Cacheus_to_evict(cache_t *cache, const request_t *req);
-static void Cacheus_evict(cache_t *cache, const request_t *req);
-static bool Cacheus_remove(cache_t *cache, const obj_id_t obj_id);
+static cache_obj_t *Cacheustest_insert(cache_t *cache, const request_t *req);
+static cache_obj_t *Cacheustest_to_evict(cache_t *cache, const request_t *req);
+static void Cacheustest_evict(cache_t *cache, const request_t *req);
+static bool Cacheustest_remove(cache_t *cache, const obj_id_t obj_id);
 
-static inline int64_t Cacheus_get_occupied_byte(const cache_t *cache);
-static inline int64_t Cacheus_get_n_obj(const cache_t *cache);
-static void Cacheus_parse_params(cache_t *cache,
+static inline int64_t Cacheustest_get_occupied_byte(const cache_t *cache);
+static inline int64_t Cacheustest_get_n_obj(const cache_t *cache);
+static void Cacheustest_parse_params(cache_t *cache,
                                  const char *cache_specific_params);
 
 /* internal functions */
@@ -74,24 +84,24 @@ static void check_and_update_history(cache_t *cache, const request_t *req);
  * @param ccache_params some common cache parameters
  * @param cache_specific_params Cacheus specific parameters, should be NULL
  */
-cache_t *Cacheus_init(const common_cache_params_t ccache_params,
+cache_t *Cacheustest_init(const common_cache_params_t ccache_params,
                       const char *cache_specific_params) {
   common_cache_params_t updated_cc_params = ccache_params;
   /* reduce the hash table size */
   updated_cc_params.hashpower -= 2;
 
   cache_t *cache = cache_struct_init("Cacheus", updated_cc_params, cache_specific_params);
-  cache->cache_init = Cacheus_init;
-  cache->cache_free = Cacheus_free;
-  cache->get = Cacheus_get;
-  cache->find = Cacheus_find;
-  cache->insert = Cacheus_insert;
-  cache->evict = Cacheus_evict;
-  cache->remove = Cacheus_remove;
-  cache->to_evict = Cacheus_to_evict;
+  cache->cache_init = Cacheustest_init;
+  cache->cache_free = Cacheustest_free;
+  cache->get = Cacheustest_get;
+  cache->find = Cacheustest_find;
+  cache->insert = Cacheustest_insert;
+  cache->evict = Cacheustest_evict;
+  cache->remove = Cacheustest_remove;
+  cache->to_evict = Cacheustest_to_evict;
   cache->can_insert = cache_can_insert_default;
-  cache->get_n_obj = Cacheus_get_n_obj;
-  cache->get_occupied_byte = Cacheus_get_occupied_byte;
+  cache->get_n_obj = Cacheustest_get_n_obj;
+  cache->get_occupied_byte = Cacheustest_get_occupied_byte;
 
   if (ccache_params.consider_obj_metadata) {
     cache->obj_md_size = 8 * 2 + 8 * 2 + 8;  // LRU chain, LFU chain, history
@@ -99,8 +109,8 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
     cache->obj_md_size = 0;
   }
 
-  cache->eviction_params = my_malloc_n(Cacheus_params_t, 1);
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  cache->eviction_params = my_malloc_n(Cacheustest_params_t, 1);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   params->ghost_list_factor = 1;
   params->update_interval = ccache_params.cache_size;  // From paper
   // learning rate chooses randomly between 10-3 & 1
@@ -111,9 +121,9 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
 
   params->w_lru = 0.5;
   params->w_lfu = 1 - params->w_lru;  // weights for LRU and LFU
-  Cacheus_parse_params(cache, DEFAULT_CACHE_PARAMS);
+  Cacheustest_parse_params(cache, DEFAULT_CACHE_PARAMS);
   if (cache_specific_params != NULL) {
-    Cacheus_parse_params(cache, cache_specific_params);
+    Cacheustest_parse_params(cache, cache_specific_params);
   }
   params->track_wlru = params->w_lru;
   params->num_hit = 0;
@@ -137,17 +147,29 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
 
   params->LRU_g = LRU_init(ccache_params_g, NULL);  // LRU_history
   params->LFU_g = LRU_init(ccache_params_g, NULL);  // LFU_history
+
+  //used for analysis
+  params->lasthitobjid = 0;
+  params->hitonlfughost = 0;
+  params->hitonlrughost = 0;
+
+  params->hitfromlrughost = 0;
+  params->objfromlrughost = 0;
+  params->objhitfromlrughost = 0;
+  params->objfromlfughost = 0;
+  params->hitfromlfughost = 0;
+  params->objhitfromlfughost = 0;
   return cache;
 }
 
-static void Cacheus_free(cache_t *cache) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static void Cacheustest_free(cache_t *cache) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   free_request(params->req_local);
   params->LRU->cache_free(params->LRU);
   params->LRU_g->cache_free(params->LRU_g);
   params->LFU->cache_free(params->LFU);
   params->LFU_g->cache_free(params->LFU_g);
-  my_free(sizeof(Cacheus_params_t), params);
+  my_free(sizeof(Cacheustest_params_t), params);
   cache_struct_free(cache);
   return ;
 }
@@ -171,8 +193,8 @@ static void Cacheus_free(cache_t *cache) {
  * @param req
  * @return true if cache hit, false if cache miss
  */
-static bool Cacheus_get(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static bool Cacheustest_get(cache_t *cache, const request_t *req) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   cache_t *lru = params->LRU;
   cache_t *lfu = params->LFU;
 
@@ -189,7 +211,13 @@ static bool Cacheus_get(cache_t *cache, const request_t *req) {
     if(track){
         params->track_wlru = params->w_lru;
     }
-    printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+    //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+    //printf("reqnum: %d objfromghost: %d hitfromghost: %d objhitfromghost: %d \n",
+    //           cache->n_req, params->objfromghost, params->hitfromghost, params->objhitfromghost);
+    printf("reqnum: %d objfromlrughost: %d hitfromlrughost: %d objhitfromlrughost: %d objfromlfughost: %d hitfromlfughost: %d objhitfromlfughost: %d\n",
+              cache->n_req,
+           params->objfromlrughost, params->hitfromlrughost, params->objhitfromlrughost,
+           params->objfromlfughost, params->hitfromlfughost, params->objhitfromlfughost);
   }
   #endif
 
@@ -215,9 +243,9 @@ static bool Cacheus_get(cache_t *cache, const request_t *req) {
  *  and if the object is expired, it is removed from the cache
  * @return true on hit, false on miss
  */
-static cache_obj_t *Cacheus_find(cache_t *cache, const request_t *req,
+static cache_obj_t *Cacheustest_find(cache_t *cache, const request_t *req,
                                  bool update_cache) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
 
   cache_obj_t *obj_lru, *obj_lfu;
   obj_lru = params->LRU->find(params->LRU, req, update_cache);
@@ -237,6 +265,20 @@ static cache_obj_t *Cacheus_find(cache_t *cache, const request_t *req,
   } else {
     // If hit, update the data structure and increment num_hit counter
     params->num_hit += 1;
+    if (obj_lru->SR_LRU.fromlfughost) {
+        if(obj_lru->SR_LRU.accessed==0){
+            obj_lru->SR_LRU.accessed = 1;
+            params->objhitfromlfughost += 1;
+        }
+        params->hitfromlfughost += 1;
+    }
+    if(obj_lru->SR_LRU.fromlrughost){
+        if(obj_lru->SR_LRU.accessed==0){
+            obj_lru->SR_LRU.accessed = 1;
+            params->objhitfromlrughost += 1;
+        }
+        params->hitfromlrughost += 1;
+    }
   }
 
   // TODO: this is weird because the object is in two caches
@@ -253,33 +295,44 @@ static cache_obj_t *Cacheus_find(cache_t *cache, const request_t *req,
  * @param req
  * @return the inserted object
  */
-static cache_obj_t *Cacheus_insert(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static cache_obj_t *Cacheustest_insert(cache_t *cache, const request_t *req) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
 
   // LFU must be first because it may load frequency stored in LRU history
-  //printf("Cacheus_insert called at req %ld size %ld lru %ld lfu %d, limit %ld %ld %ld\n", cache->n_req, cache->get_occupied_byte(cache), params->LRU->get_occupied_byte(params->LRU), params->LFU->get_occupied_byte(params->LFU),cache->cache_size, params->LRU->cache_size, params->LFU->cache_size);
+  //printf("Cacheustest_insert called at req %ld size %ld lru %ld lfu %d, limit %ld %ld %ld\n", cache->n_req, cache->get_occupied_byte(cache), params->LRU->get_occupied_byte(params->LRU), params->LFU->get_occupied_byte(params->LFU),cache->cache_size, params->LRU->cache_size, params->LFU->cache_size);
   if (!params->LRU->can_insert(params->LRU, req)) {
     return NULL;
   }
   params->LFU->insert(params->LFU, req);
-  params->LRU->insert(params->LRU, req);
+  cache_obj_t * obj = params->LRU->insert(params->LRU, req);
+  if(params->lasthitobjid == req->obj_id){
+      if(params->hitonlrughost){
+          params->objfromlrughost +=1;
+          obj->SR_LRU.fromlrughost = 1;
+      }
+      if(params->hitonlfughost){
+          params->objfromlfughost +=1;
+          obj->SR_LRU.fromlfughost = 1;
+      }
+      params->lasthitobjid = 0;
+  }
 
   /* the cached obj is stored twice, so we cannot really return an object */
   return NULL;
 }
 
 // TODO(jason): this function may not work
-static cache_obj_t *Cacheus_to_evict(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static cache_obj_t *Cacheustest_to_evict(cache_t *cache, const request_t *req) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   // update the candidate gen time
   cache->to_evict_candidate_gen_vtime = cache->n_req;
 //printf("cacheus to_evict called at req %ld\n", cache->n_req);
   double r = ((double)(next_rand() % 100)) / 100.0;
   if (r < params->w_lru) {
-    //printf("Cacheus_to_evict chose LRU at req %ld\n", cache->n_req);
+    //printf("Cacheustest_to_evict chose LRU at req %ld\n", cache->n_req);
     cache->to_evict_candidate = params->LRU->to_evict(params->LRU, req);
   } else {
-    //printf("Cacheus_to_evict chose LFU at req %ld\n", cache->n_req);
+    //printf("Cacheustest_to_evict chose LFU at req %ld\n", cache->n_req);
     cache->to_evict_candidate = params->LFU->to_evict(params->LFU, req);
   }
   return cache->to_evict_candidate;
@@ -293,8 +346,8 @@ static cache_obj_t *Cacheus_to_evict(cache_t *cache, const request_t *req) {
  * @param cache
  * @param req not used
  */
-static void Cacheus_evict(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static void Cacheustest_evict(cache_t *cache, const request_t *req) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   cache_t *lru = params->LRU;
   cache_t *lfu = params->LFU;
   cache_t *lru_g = params->LRU_g;
@@ -310,7 +363,7 @@ static void Cacheus_evict(cache_t *cache, const request_t *req) {
   if (cache->to_evict_candidate_gen_vtime == cache->n_req) {
     obj_to_evict = cache->to_evict_candidate;
   } else {
-    obj_to_evict = Cacheus_to_evict(cache, req);
+    obj_to_evict = Cacheustest_to_evict(cache, req);
   }
 
   if (lru_to_evict->obj_id == lfu_to_evict->obj_id) {
@@ -341,8 +394,8 @@ static void Cacheus_evict(cache_t *cache, const request_t *req) {
   return;
 }
 
-static bool Cacheus_remove(cache_t *cache, const obj_id_t obj_id) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+static bool Cacheustest_remove(cache_t *cache, const obj_id_t obj_id) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   params->req_local->obj_id = obj_id;
   bool lru_removed = params->LRU->remove(params->LRU, obj_id);
   bool lfu_removed = params->LFU->remove(params->LFU, obj_id);
@@ -350,15 +403,15 @@ static bool Cacheus_remove(cache_t *cache, const obj_id_t obj_id) {
   return lru_removed;
 }
 
-static inline int64_t Cacheus_get_occupied_byte(const cache_t *cache) {
-  Cacheus_params_t *params = (Cacheus_params_t *)cache->eviction_params;
+static inline int64_t Cacheustest_get_occupied_byte(const cache_t *cache) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)cache->eviction_params;
   int64_t occupied_byte = params->LRU->get_occupied_byte(params->LRU);
   DEBUG_ASSERT(occupied_byte == params->LFU->get_occupied_byte(params->LFU));
   return occupied_byte;
 }
 
-static inline int64_t Cacheus_get_n_obj(const cache_t *cache) {
-  Cacheus_params_t *params = (Cacheus_params_t *)cache->eviction_params;
+static inline int64_t Cacheustest_get_n_obj(const cache_t *cache) {
+  Cacheustest_params_t *params = (Cacheustest_params_t *)cache->eviction_params;
   int64_t n_obj = params->LRU->get_n_obj(params->LRU);
   DEBUG_ASSERT(n_obj == params->LFU->get_n_obj(params->LFU));
   return n_obj;
@@ -371,7 +424,7 @@ static inline int64_t Cacheus_get_n_obj(const cache_t *cache) {
 // ***********************************************************************
 
 static void update_weight(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   bool cache_hit_lru_g, cache_hit_lfu_g;
 
   cache_hit_lru_g = params->LRU_g->find(params->LRU_g, req, false) != NULL;
@@ -392,7 +445,7 @@ static void update_weight(cache_t *cache, const request_t *req) {
 
     if(params->track_wlru - params->w_lru > 0.02|| params->w_lru - params->track_wlru > 0.02){
         params->track_wlru = params->w_lru;
-        printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+        //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
     }
     if(params->w_lru -0.5>0.1||0.5 - params->w_lru >0.1){
         //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
@@ -404,7 +457,7 @@ static void update_weight(cache_t *cache, const request_t *req) {
 }
 
 static void update_lr(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
   // Here: num_hit is the number of hits; reset to 0 when update_lr is called.
   double hit_rate_current = params->num_hit / params->update_interval;
   double delta_hit_rate = hit_rate_current - params->hit_rate_prev;
@@ -449,9 +502,9 @@ static void update_lr(cache_t *cache, const request_t *req) {
   return;
 }
 
-static void Cacheus_parse_params(cache_t *cache,
+static void Cacheustest_parse_params(cache_t *cache,
                                 const char *cache_specific_params) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
 
   char *params_str = strdup(cache_specific_params);
   char *old_params_str = params_str;
@@ -481,14 +534,16 @@ static void Cacheus_parse_params(cache_t *cache,
 
 // Update weight and history, only called in cache miss.
 static void check_and_update_history(cache_t *cache, const request_t *req) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
+  Cacheustest_params_t *params = (Cacheustest_params_t *)(cache->eviction_params);
 
   bool hit_lru_g = params->LRU_g->find(params->LRU_g, req, false) != NULL;
   bool hit_lfu_g = params->LFU_g->find(params->LFU_g, req, false) != NULL;
   DEBUG_ASSERT((hit_lru_g ? 1 : 0) + (hit_lfu_g ? 1 : 0) <= 1);
 
   update_weight(cache, req);
-
+    params->hitonlfughost = hit_lfu_g;
+    params->hitonlrughost = hit_lru_g;
+    params->lasthitobjid = req->obj_id;
   params->LRU_g->remove(params->LRU_g, req->obj_id);
   params->LFU_g->remove(params->LFU_g, req->obj_id);
   return;

@@ -32,6 +32,10 @@ typedef struct {
 typedef struct {
   int lru_id;
   bool ghost;
+  //used for analysis
+  int fromt1;
+  int fromt2;
+  int accessed;
 } ARC_obj_metadata_t;
 
 typedef struct {
@@ -51,11 +55,18 @@ typedef struct {
 
 typedef struct {
   int64_t last_access_vtime;
+  //used for analysis
+  int fromghost;
+  int accessed;
 } Cacheus_obj_metadata_t;
 
 typedef struct {
   bool demoted;
   bool new_obj;
+  //used for analysis
+  int fromlrughost;
+  int fromlfughost;
+  int accessed;
 } SR_LRU_obj_metadata_t;
 
 typedef struct {
@@ -127,6 +138,9 @@ typedef struct {
   int64_t insertion_time;   // measured in number of objects inserted
   int64_t freq;
   int32_t main_insert_freq;
+  //used for analysis
+  int fromghost;
+  int accessed;
 } S3FIFO_obj_metadata_t;
 
 typedef struct
@@ -138,6 +152,10 @@ typedef struct
     int prefetchhit;
     int sushit;
     int inghost;
+    //used for analysis
+    int fromghost;
+    int fromsketch;
+    int accessed;
 } FLEX_obj_metadata_t;
 
 typedef struct {
