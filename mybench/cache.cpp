@@ -74,14 +74,14 @@ static inline std::string gen_key(struct request *req) {
   return key;
 }
 
-int cache_get(Cache *cache, PoolId pool, struct request *req) {
+int cache_get(Cache *cache, PoolId pool, struct request *req,int thread_id) {
   static __thread char buf[1024 * 1024];
 
   auto key = gen_key(req);
     #ifdef DUMP_TIME
     auto start = rdtscp_now();
     #endif
-  Cache::ReadHandle item_handle = cache->find(key);
+  Cache::ReadHandle item_handle = cache->find(key, thread_id);
   if (item_handle) {
     if (item_handle->isExpired()) {
       return 1;
@@ -101,20 +101,21 @@ int cache_get(Cache *cache, PoolId pool, struct request *req) {
   }
 }
 
-int cache_set(Cache *cache, PoolId pool, struct request *req) {
+int cache_set(Cache *cache, PoolId pool, struct request *req, int thread_id) {
 
   auto key = gen_key(req);
   req->val_len += req->key_len - key.size();
   if (req->val_len < 0) req->val_len = 0;
 
   Cache::WriteHandle item_handle =
-      cache->allocate(pool, key, req->val_len, req->ttl, req->timestamp);
+      cache->allocate(pool, key, req->val_len, req->ttl, req->timestamp, thread_id);
   if (item_handle == nullptr || item_handle->getMemory() == nullptr) {
     return 1;
   }
 
   std::memcpy(item_handle->getMemory(), req->val, req->val_len);
-  cache->insertOrReplace(item_handle);
+  //std::memcpy(item_handle->getMemory(), req->val, req->val_len+1);
+  cache->insertOrReplace(item_handle, thread_id);
 
   #ifdef BACKEND_TIME
   // sleep(BACKEND_LATENCY);
@@ -123,9 +124,9 @@ int cache_set(Cache *cache, PoolId pool, struct request *req) {
   return 0;
 }
 
-int cache_del(Cache *cache, PoolId pool, struct request *req) {
+int cache_del(Cache *cache, PoolId pool, struct request *req, int thread_id) {
   auto key = gen_key(req);
-  auto rm = cache->remove(key);
+  auto rm = cache->remove(key, thread_id);
   if (rm == Cache::RemoveRes::kSuccess)
     return 0;
   else

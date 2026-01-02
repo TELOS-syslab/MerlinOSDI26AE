@@ -205,28 +205,26 @@ class S3FIFOList {
 
   // Bit MM_BIT_2 is used to record if the item is cold.
   void markMain(T& node) noexcept {
-    node.template setFlag<RefFlags::kMMFlag2>();
+    node.template setFlag<RefFlags::kMMFlag1>();
   }
 
   void unmarkMain(T& node) noexcept {
-    node.template unSetFlag<RefFlags::kMMFlag2>();
+    node.template unSetFlag<RefFlags::kMMFlag1>();
   }
 
   bool isMain(const T& node) const noexcept {
-    return node.template isFlagSet<RefFlags::kMMFlag2>();
+    return node.template isFlagSet<RefFlags::kMMFlag1>();
   }
 
 
   void markAccessed(T& node) noexcept {
     incFreq(node);
     return;
-    node.template setFlag<RefFlags::kMMFlag1>();
   }
 
   void unmarkAccessed(T& node) noexcept {
     decFreq(node);
     return;
-    node.template unSetFlag<RefFlags::kMMFlag1>();
   }
 
   void resetAccessed(T& node)noexcept {
@@ -234,13 +232,9 @@ class S3FIFOList {
     return;
   }
 
-  bool isAccessed(const T& node) const noexcept {
+  int isAccessed(const T& node) const noexcept {
     int freq = getFreq(node);
-    if (freq > 0) {
-      return true;
-    }
-    return false;
-    return node.template isFlagSet<RefFlags::kMMFlag1>();
+    return freq;
   }
 
  private:
@@ -259,7 +253,7 @@ class S3FIFOList {
 
   mutable folly::cacheline_aligned<Mutex> mtx_;
 
-  constexpr static double pRatio_ = 0.05;
+  constexpr static double pRatio_ = 0.1;
 
   AtomicFIFOHashTable hist_;
 };

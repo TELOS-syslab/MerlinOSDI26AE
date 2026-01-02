@@ -54,25 +54,25 @@ static inline bench_opts_t create_default_bench_opts() {
 
 static inline int cache_go(Cache *cache, PoolId pool, struct request *req,
                           int64_t *n_get, int64_t *n_set, int64_t *n_del,
-                          int64_t *n_get_miss) {
+                          int64_t *n_get_miss, int thread_id) {
   int status = 0;
 
   switch (req->op) {
     case op_get:
       (*n_get)++;
-      status = cache_get(cache, pool, req);
+      status = cache_get(cache, pool, req, thread_id);
       if (status == 1) {
         (*n_get_miss)++;
         (*n_set)++;
-        status = cache_set(cache, pool, req);
+        status = cache_set(cache, pool, req, thread_id);
       }
       break;
     case op_set:
       (*n_set)++;
-      status = cache_set(cache, pool, req);
+      status = cache_set(cache, pool, req, thread_id);
       break;
     case op_del:
-      status = cache_del(cache, pool, req);
+      status = cache_del(cache, pool, req, thread_id);
       (*n_del)++;
       break;
     case op_ignore:

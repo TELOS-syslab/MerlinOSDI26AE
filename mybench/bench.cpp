@@ -33,7 +33,7 @@ void trace_replay_run(struct bench_data *bdata, bench_opts_t *opts) {
 
   while (req->timestamp < warmup_time) {
     cache_go(bdata->cache, bdata->pool, req, &bdata->n_get, &bdata->n_set,
-             &bdata->n_del, &bdata->n_get_miss);
+             &bdata->n_del, &bdata->n_get_miss,1);
     read_trace(reader, req);
   }
 
@@ -43,7 +43,7 @@ void trace_replay_run(struct bench_data *bdata, bench_opts_t *opts) {
   while (read_trace(reader, req) == 0) {
     util::setCurrentTimeSec(req->timestamp);
     cache_go(bdata->cache, bdata->pool, req, &bdata->n_get, &bdata->n_set,
-             &bdata->n_del, &bdata->n_get_miss);
+             &bdata->n_del, &bdata->n_get_miss,1);
 
     if (req->timestamp >= next_report_trace_ts) {
       next_report_trace_ts += opts->report_interval;

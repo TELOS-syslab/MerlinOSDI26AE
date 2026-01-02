@@ -369,7 +369,7 @@ class MMTinyLFU {
     //
     // @return      True if the information is recorded and bumped the node
     //              to the head of the lru, returns false otherwise
-    bool recordAccess(T& node, AccessMode mode) noexcept;
+    bool recordAccess(T& node, AccessMode mode, int thread_id = 0) noexcept;
 
     // adds the given node into the container and marks it as being present in
     // the container. The node is added to the head of the lru.
@@ -378,7 +378,7 @@ class MMTinyLFU {
     // @return  True if the node was successfully added to the container. False
     //          if the node was already in the contianer. On error state of node
     //          is unchanged.
-    bool add(T& node) noexcept;
+    bool add(T& node, int thread_id = 0) noexcept;
 
     // removes the node from the lru and sets it previous and next to nullptr.
     //
@@ -386,7 +386,7 @@ class MMTinyLFU {
     // @return  True if the node was successfully removed from the container.
     //          False if the node was not part of the container. On error, the
     //          state of node is unchanged.
-    bool remove(T& node) noexcept;
+    bool remove(T& node, int thread_id = 0) noexcept;
 
     class LockedIterator;
     // same as the above but uses an iterator context. The iterator is updated
@@ -396,7 +396,7 @@ class MMTinyLFU {
     // iterator will be advanced to the next node after removing the node
     //
     // @param it    Iterator that will be removed
-    void remove(LockedIterator& it) noexcept;
+    void remove(LockedIterator& it, int thread_id = 0) noexcept;
 
     // replaces one node with another, at the same position
     //
@@ -547,7 +547,7 @@ class MMTinyLFU {
     // Execute provided function under container lock. Function gets
     // iterator passed as parameter.
     template <typename F>
-    void withEvictionIterator(F&& f);
+    void withEvictionIterator(F&& f, int thread_id = 0);
 
     // Execute provided function under container lock.
     template <typename F>
@@ -740,7 +740,7 @@ void MMTinyLFU::Container<T,
 
 template <typename T, MMTinyLFU::Hook<T> T::*HookPtr>
 bool MMTinyLFU::Container<T, HookPtr>::recordAccess(T& node,
-                                                    AccessMode mode) noexcept {
+                                                    AccessMode mode, int thread_id) noexcept {
   if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
       (mode == AccessMode::kRead && !config_.updateOnRead)) {
     return false;
@@ -853,7 +853,7 @@ void MMTinyLFU::Container<T, HookPtr>::maybePromoteTailLocked() noexcept {
 }
 
 template <typename T, MMTinyLFU::Hook<T> T::*HookPtr>
-bool MMTinyLFU::Container<T, HookPtr>::add(T& node) noexcept {
+bool MMTinyLFU::Container<T, HookPtr>::add(T& node, int thread_id) noexcept {
   const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
   LockHolder l(lruMutex_);
   if (node.isInMMContainer()) {
@@ -899,7 +899,7 @@ MMTinyLFU::Container<T, HookPtr>::getEvictionIterator() const noexcept {
 
 template <typename T, MMTinyLFU::Hook<T> T::*HookPtr>
 template <typename F>
-void MMTinyLFU::Container<T, HookPtr>::withEvictionIterator(F&& fun) {
+void MMTinyLFU::Container<T, HookPtr>::withEvictionIterator(F&& fun, int thread_id) {
   // TinyLFU uses spin lock which does not support combined locking
   fun(getEvictionIterator());
 }
@@ -926,7 +926,7 @@ void MMTinyLFU::Container<T, HookPtr>::removeLocked(T& node) noexcept {
 }
 
 template <typename T, MMTinyLFU::Hook<T> T::*HookPtr>
-bool MMTinyLFU::Container<T, HookPtr>::remove(T& node) noexcept {
+bool MMTinyLFU::Container<T, HookPtr>::remove(T& node, int thread_id) noexcept {
   LockHolder l(lruMutex_);
   if (!node.isInMMContainer()) {
     return false;
@@ -936,7 +936,7 @@ bool MMTinyLFU::Container<T, HookPtr>::remove(T& node) noexcept {
 }
 
 template <typename T, MMTinyLFU::Hook<T> T::*HookPtr>
-void MMTinyLFU::Container<T, HookPtr>::remove(LockedIterator& it) noexcept {
+void MMTinyLFU::Container<T, HookPtr>::remove(LockedIterator& it, int thread_id) noexcept {
   T& node = *it;
   XDCHECK(node.isInMMContainer());
   ++it;

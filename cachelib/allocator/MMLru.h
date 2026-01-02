@@ -328,7 +328,7 @@ class MMLru {
     //
     // @return      True if the information is recorded and bumped the node
     //              to the head of the lru, returns false otherwise
-    bool recordAccess(T& node, AccessMode mode) noexcept;
+    bool recordAccess(T& node, AccessMode mode, int thread_id = 0) noexcept;
 
     // adds the given node into the container and marks it as being present in
     // the container. The node is added to the head of the lru.
@@ -337,7 +337,7 @@ class MMLru {
     // @return  True if the node was successfully added to the container. False
     //          if the node was already in the contianer. On error state of node
     //          is unchanged.
-    bool add(T& node) noexcept;
+    bool add(T& node, int thread_id = 0) noexcept;
 
     // removes the node from the lru and sets it previous and next to nullptr.
     //
@@ -345,7 +345,7 @@ class MMLru {
     // @return  True if the node was successfully removed from the container.
     //          False if the node was not part of the container. On error, the
     //          state of node is unchanged.
-    bool remove(T& node) noexcept;
+    bool remove(T& node, int thread_id = 0) noexcept;
 
     // same as the above but uses an iterator context. The iterator is updated
     // on removal of the corresponding node to point to the next node. The
@@ -354,7 +354,7 @@ class MMLru {
     // iterator will be advanced to the next node after removing the node
     //
     // @param it    Iterator that will be removed
-    void remove(Iterator& it) noexcept;
+    void remove(Iterator& it, int thread_id = 0) noexcept;
 
     // replaces one node with another, at the same position
     //
@@ -374,7 +374,7 @@ class MMLru {
     // Execute provided function under container lock. Function gets
     // iterator passed as parameter.
     template <typename F>
-    void withEvictionIterator(F&& f);
+    void withEvictionIterator(F&& f, int thread_id = 0);
 
     // Execute provided function under container lock.
     template <typename F>
@@ -531,7 +531,7 @@ MMLru::Container<T, HookPtr>::Container(serialization::MMLruObject object,
 
 template <typename T, MMLru::Hook<T> T::*HookPtr>
 bool MMLru::Container<T, HookPtr>::recordAccess(T& node,
-                                                AccessMode mode) noexcept {
+                                                AccessMode mode,int thread_id) noexcept {
   if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
       (mode == AccessMode::kRead && !config_.updateOnRead)) {
     return false;
@@ -680,7 +680,7 @@ void MMLru::Container<T, HookPtr>::updateLruInsertionPoint() noexcept {
 }
 
 template <typename T, MMLru::Hook<T> T::*HookPtr>
-bool MMLru::Container<T, HookPtr>::add(T& node) noexcept {
+bool MMLru::Container<T, HookPtr>::add(T& node, int thread_id) noexcept {
   const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
 
   return lruMutex_->lock_combine([this, &node, currTime]() {
@@ -709,7 +709,7 @@ MMLru::Container<T, HookPtr>::getEvictionIterator() const noexcept {
 
 template <typename T, MMLru::Hook<T> T::*HookPtr>
 template <typename F>
-void MMLru::Container<T, HookPtr>::withEvictionIterator(F&& fun) {
+void MMLru::Container<T, HookPtr>::withEvictionIterator(F&& fun, int thread_id) {
   if (config_.useCombinedLockForIterators) {
     lruMutex_->lock_combine([this, &fun]() { fun(Iterator{lru_.rbegin()}); });
   } else {
@@ -754,7 +754,7 @@ void MMLru::Container<T, HookPtr>::removeLocked(T& node) {
 }
 
 template <typename T, MMLru::Hook<T> T::*HookPtr>
-bool MMLru::Container<T, HookPtr>::remove(T& node) noexcept {
+bool MMLru::Container<T, HookPtr>::remove(T& node, int thread_id) noexcept {
   return lruMutex_->lock_combine([this, &node]() {
     if (!node.isInMMContainer()) {
       return false;
@@ -765,7 +765,7 @@ bool MMLru::Container<T, HookPtr>::remove(T& node) noexcept {
 }
 
 template <typename T, MMLru::Hook<T> T::*HookPtr>
-void MMLru::Container<T, HookPtr>::remove(Iterator& it) noexcept {
+void MMLru::Container<T, HookPtr>::remove(Iterator& it, int thread_id) noexcept {
   T& node = *it;
   XDCHECK(node.isInMMContainer());
   ++it;

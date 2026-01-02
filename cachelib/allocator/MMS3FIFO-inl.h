@@ -27,7 +27,7 @@ MMS3FIFO::Container<T, HookPtr>::Container(serialization::MMS3FIFOObject object,
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
 bool MMS3FIFO::Container<T, HookPtr>::recordAccess(T& node,
-                                                 AccessMode mode) noexcept {
+                                                 AccessMode mode, int thread_id) noexcept {
   if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
       (mode == AccessMode::kRead && !config_.updateOnRead)) {
     return false;
@@ -36,9 +36,7 @@ bool MMS3FIFO::Container<T, HookPtr>::recordAccess(T& node,
   const auto curr = static_cast<Time>(util::getCurrentTimeSec());
   // check if the node is still being memory managed
   if (node.isInMMContainer()) {
-    if (!isAccessed(node)) {
-      markAccessed(node);
-    }
+        markAccessed(node);
         setUpdateTime(node, curr);
 
     return true;
@@ -78,7 +76,7 @@ typename MMS3FIFO::Config MMS3FIFO::Container<T, HookPtr>::getConfig() const {
 }
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
-bool MMS3FIFO::Container<T, HookPtr>::add(T& node) noexcept {
+bool MMS3FIFO::Container<T, HookPtr>::add(T& node, int thread_id) noexcept {
   const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
 
   // return lruMutex_->lock_combine([this, &node, currTime]() {
@@ -87,7 +85,7 @@ bool MMS3FIFO::Container<T, HookPtr>::add(T& node) noexcept {
     }
 
     qdlist_.add(node);
-    unmarkAccessed(node);
+    resetAccessed(node);
     node.markInMMContainer();
     setUpdateTime(node, currTime);
 
@@ -104,7 +102,7 @@ MMS3FIFO::Container<T, HookPtr>::getEvictionIterator() noexcept {
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
 template <typename F>
-void MMS3FIFO::Container<T, HookPtr>::withEvictionIterator(F&& fun) {
+void MMS3FIFO::Container<T, HookPtr>::withEvictionIterator(F&& fun, int thread_id) {
   fun(getEvictionIterator());
 }
 
@@ -134,7 +132,7 @@ void MMS3FIFO::Container<T, HookPtr>::removeLocked(T& node) noexcept {
 }
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
-bool MMS3FIFO::Container<T, HookPtr>::remove(T& node) noexcept {
+bool MMS3FIFO::Container<T, HookPtr>::remove(T& node, int thread_id) noexcept {
   return lruMutex_->lock_combine([this, &node]() {
     if (!node.isInMMContainer()) {
       return false;
@@ -145,7 +143,7 @@ bool MMS3FIFO::Container<T, HookPtr>::remove(T& node) noexcept {
 }
 
 template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
-void MMS3FIFO::Container<T, HookPtr>::remove(LockedIterator& it) noexcept {
+void MMS3FIFO::Container<T, HookPtr>::remove(LockedIterator& it, int thread_id) noexcept {
   T& node = *it;
   XDCHECK(node.isInMMContainer());
   node.unmarkInMMContainer();
@@ -177,7 +175,7 @@ bool MMS3FIFO::Container<T, HookPtr>::replace(T& oldNode, T& newNode) noexcept {
     oldNode.unmarkInMMContainer();
     newNode.markInMMContainer();
     setUpdateTime(newNode, updateTime);
-    if (isAccessed(oldNode)) {
+    if (isAccessed(oldNode)>0) {
       markAccessed(newNode);
     } else {
       unmarkAccessed(newNode);

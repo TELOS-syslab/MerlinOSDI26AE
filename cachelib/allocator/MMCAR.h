@@ -218,13 +218,13 @@ class MMCAR {
       Container* parent_{nullptr};
     };
 
-    bool recordAccess(T& node, AccessMode mode) noexcept;
+    bool recordAccess(T& node, AccessMode mode,int thread_id = 0) noexcept;
 
-    bool add(T& node) noexcept;
+    bool add(T& node, int thread_id = 0) noexcept;
 
-    bool remove(T& node) noexcept;
+    bool remove(T& node, int thread_id = 0) noexcept;
 
-    void remove(Iterator& it) noexcept;
+    void remove(Iterator& it, int thread_id = 0) noexcept;
 
     bool replace(T& oldNode, T& newNode) noexcept;
 
@@ -232,7 +232,7 @@ class MMCAR {
     LockedIterator getEvictionIterator() const noexcept;
 
     template <typename F>
-    void withEvictionIterator(F&& f);
+    void withEvictionIterator(F&& f, int thread_id = 0);
 
     template <typename F>
     void withContainerLock(F&& f);
@@ -292,7 +292,7 @@ MMCAR::Container<T, HookPtr>::Container(
 
 template <typename T, MMCAR::Hook<T> T::*HookPtr>
 bool MMCAR::Container<T, HookPtr>::recordAccess(T& node,
-                                                AccessMode mode) noexcept {
+                                                AccessMode mode,int thread_id) noexcept {
   if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
       (mode == AccessMode::kRead && !config_.updateOnRead)) {
     return false;
@@ -342,7 +342,7 @@ bool MMCAR::Container<T, HookPtr>::recordAccess(T& node,
 }
 
 template <typename T, MMCAR::Hook<T> T::*HookPtr>
-bool MMCAR::Container<T, HookPtr>::add(T& node) noexcept {
+bool MMCAR::Container<T, HookPtr>::add(T& node, int thread_id) noexcept {
   const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
   return lruMutex_->lock_combine([this, &node, currTime]() {
     if (node.isInMMContainer()) {
@@ -392,7 +392,7 @@ MMCAR::Container<T, HookPtr>::getEvictionIterator() const noexcept {
 
 template <typename T, MMCAR::Hook<T> T::*HookPtr>
 template <typename F>
-void MMCAR::Container<T, HookPtr>::withEvictionIterator(F&& fun) {
+void MMCAR::Container<T, HookPtr>::withEvictionIterator(F&& fun, int thread_id) {
   if (config_.useCombinedLockForIterators) {
     lruMutex_->lock_combine([this, &fun]() {
       LockedIterator it{LockHolder{*lruMutex_}, Iterator{}, this};
@@ -422,7 +422,7 @@ void MMCAR::Container<T, HookPtr>::removeLocked(T& node) noexcept {
 }
 
 template <typename T, MMCAR::Hook<T> T::*HookPtr>
-bool MMCAR::Container<T, HookPtr>::remove(T& node) noexcept {
+bool MMCAR::Container<T, HookPtr>::remove(T& node, int thread_id) noexcept {
   return lruMutex_->lock_combine([this, &node]() {
     if (!node.isInMMContainer()) {
       return false;
@@ -433,7 +433,7 @@ bool MMCAR::Container<T, HookPtr>::remove(T& node) noexcept {
 }
 
 template <typename T, MMCAR::Hook<T> T::*HookPtr>
-void MMCAR::Container<T, HookPtr>::remove(Iterator& it) noexcept {
+void MMCAR::Container<T, HookPtr>::remove(Iterator& it, int thread_id) noexcept {
   if (!it) {
     return;
   }

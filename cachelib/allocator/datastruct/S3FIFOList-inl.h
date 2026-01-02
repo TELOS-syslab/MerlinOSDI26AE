@@ -62,7 +62,7 @@ T* S3FIFOList<T, HookPtr>::getEvictionCandidate() noexcept {
       if (curr == nullptr) {
         continue;
       }
-      if (isAccessed(*curr)) {
+      if (isAccessed(*curr)>0) {
         unmarkAccessed(*curr);
         mfifo_->linkAtHead(*curr);
       } else {

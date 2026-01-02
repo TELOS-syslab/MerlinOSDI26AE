@@ -132,12 +132,6 @@ class MMS3FIFO {
     // to the head of the lru.
     bool updateOnRead{true};
 
-    // By default insertions happen at the head of the LRU. If we need
-    // insertions at the middle of lru we can adjust this to be a non-zero.
-    // Ex: lruInsertionPointSpec = 1, we insert at the middle (1/2 from end)
-    //     lruInsertionPointSpec = 2, we insert at a point 1/4th from tail
-    uint8_t lruInsertionPointSpec{0};
-
     // Minimum interval between reconfigurations. If 0, reconfigure is never
     // called.
     std::chrono::seconds mmReconfigureIntervalSecs{};
@@ -256,7 +250,7 @@ class MMS3FIFO {
     //
     // @return      True if the information is recorded and bumped the node
     //              to the head of the lru, returns false otherwise
-    bool recordAccess(T& node, AccessMode mode) noexcept;
+    bool recordAccess(T& node, AccessMode mode, int thread_id) noexcept;
 
     // adds the given node into the container and marks it as being present in
     // the container. The node is added to the head of the lru.
@@ -265,7 +259,7 @@ class MMS3FIFO {
     // @return  True if the node was successfully added to the container. False
     //          if the node was already in the contianer. On error state of node
     //          is unchanged.
-    bool add(T& node) noexcept;
+    bool add(T& node, int thread_id = 0) noexcept;
 
     // removes the node from the lru and sets it previous and next to nullptr.
     //
@@ -273,7 +267,7 @@ class MMS3FIFO {
     // @return  True if the node was successfully removed from the container.
     //          False if the node was not part of the container. On error, the
     //          state of node is unchanged.
-    bool remove(T& node) noexcept;
+    bool remove(T& node, int thread_id = 0) noexcept;
 
     // same as the above but uses an iterator context. The iterator is updated
     // on removal of the corresponding node to point to the next node. The
@@ -282,7 +276,7 @@ class MMS3FIFO {
     // iterator will be advanced to the next node after removing the node
     //
     // @param it    Iterator that will be removed
-    void remove(LockedIterator& it) noexcept;
+    void remove(LockedIterator& it, int thread_id = 0) noexcept;
 
     // replaces one node with another, at the same position
     //
@@ -302,7 +296,7 @@ class MMS3FIFO {
     // Execute provided function under container lock. Function gets
     // iterator passed as parameter.
     template <typename F>
-    void withEvictionIterator(F&& f);
+    void withEvictionIterator(F&& f, int thread_id = 0);
 
     template <typename F>
     void withContainerLock(F&& fun);
@@ -380,15 +374,15 @@ class MMS3FIFO {
 
     // Bit MM_BIT_2 is used to record if the item is cold.
     void markMain(T& node) noexcept {
-      node.template setFlag<RefFlags::kMMFlag2>();
+      node.template setFlag<RefFlags::kMMFlag1>();
     }
 
     void unmarkMain(T& node) noexcept {
-      node.template unSetFlag<RefFlags::kMMFlag2>();
+      node.template unSetFlag<RefFlags::kMMFlag1>();
     }
 
     bool isMain(const T& node) const noexcept {
-      return node.template isFlagSet<RefFlags::kMMFlag2>();
+      return node.template isFlagSet<RefFlags::kMMFlag1>();
     }
 
     // Bit MM_BIT_1 is used to record if the item has been accessed since
@@ -396,17 +390,21 @@ class MMS3FIFO {
     // projected update time.
     void markAccessed(T& node) noexcept {
         qdlist_.markAccessed(node);
-      //node.template setFlag<RefFlags::kMMFlag1>();
+      //node.template setFlag<RefFlags::kMMFlag2>();
     }
 
     void unmarkAccessed(T& node) noexcept {
         qdlist_.unmarkAccessed(node);
-      //node.template unSetFlag<RefFlags::kMMFlag1>();
     }
 
-    bool isAccessed(const T& node) const noexcept {
+    void resetAccessed(T& node) noexcept {
+        qdlist_.resetAccessed(node);
+        return;
+    }
+
+    int isAccessed(const T& node) const noexcept {
         return qdlist_.isAccessed(node);
-      //return node.template isFlagSet<RefFlags::kMMFlag1>();
+      //return node.template isFlagSet<RefFlags::kMMFlag2>();
     }
 
     // protects all operations on the lru. We never really just read the state

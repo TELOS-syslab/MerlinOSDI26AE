@@ -15,7 +15,6 @@ if (${FORCE_COLORED_OUTPUT})
     endif ()
 endif ()
 
-
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cachelib/cmake/")
 # set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../opt/cachelib/lib/cmake/")
 set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../opt/cachelib/")
@@ -68,9 +67,9 @@ add_executable(flex main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(flex PRIVATE USE_FLEX)
 target_link_libraries(flex cachelib fmt::fmt atomic)
 
-add_executable(flexdump main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
-target_compile_definitions(flexdump PRIVATE USE_FLEXDUMP)
-target_link_libraries(flexdump cachelib fmt::fmt atomic)
+#add_executable(flexdump main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+#target_compile_definitions(flexdump PRIVATE USE_FLEXDUMP)
+#target_link_libraries(flexdump cachelib fmt::fmt atomic)
 
 add_executable(arc main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(arc PRIVATE USE_ARC)

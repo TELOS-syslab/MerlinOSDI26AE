@@ -41,6 +41,12 @@ struct AtomicDListObject {
   3: required i64 size,
 }
 
+struct MerlinAtomicDListObject {
+  1: required i64 compressedHead,
+  2: required i64 compressedTail,
+  3: required i64 size,
+}
+
 struct MultiDListObject {
   1: required list<DListObject> lists;
 }
@@ -51,11 +57,11 @@ struct S3FIFOListObject {
 }
 
 struct FLEXListObject {
-  1: required AtomicDListObject smallfifo;
-  2: required AtomicDListObject mainfifo;
-  3: required AtomicDListObject susfifo;
-  4: required i32 guard_freq;
-  5: required list<i32> freq_distribution;
+  1: required list<MerlinAtomicDListObject> smallfifo;
+  2: required list<MerlinAtomicDListObject> mainfifo;
+  3: required list<MerlinAtomicDListObject> susfifo;
+  4: required list<i64> guard_freq;
+  5: required list<i64> freq_distribution;
 }
 
 struct GhostEntry {

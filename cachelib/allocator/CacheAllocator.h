@@ -417,7 +417,7 @@ class CacheAllocator : public CacheBase {
                        Key key,
                        uint32_t size,
                        uint32_t ttlSecs = 0,
-                       uint32_t creationTime = 0);
+                       uint32_t creationTime = 0, int threadId = 0);
 
   // Allocate a chained item
   //
@@ -531,7 +531,7 @@ class CacheAllocator : public CacheBase {
   // @throw cachelib::exception::RefcountOverflow if the item we are replacing
   //        is already out of refcounts.
   // @return handle to the old item that had been replaced
-  WriteHandle insertOrReplace(const WriteHandle& handle);
+  WriteHandle insertOrReplace(const WriteHandle& handle, int threadId = 0);
 
   // look up an item by its key across the nvm cache as well if enabled.
   //
@@ -539,7 +539,7 @@ class CacheAllocator : public CacheBase {
   //
   // @return          the read handle for the item or a handle to nullptr if the
   //                  key does not exist.
-  ReadHandle find(Key key);
+  ReadHandle find(Key key, int thread_id = 0);
 
   // Warning: this API is synchronous today with HybridCache. This means as
   //          opposed to find(), we will block on an item being read from
@@ -615,7 +615,7 @@ class CacheAllocator : public CacheBase {
   // @param handle        the item handle
   // @param mode          the mode of access for the lookup. defaults to
   //                      AccessMode::kRead
-  void markUseful(const ReadHandle& handle, AccessMode mode);
+  void markUseful(const ReadHandle& handle, AccessMode mode, int thread_id = 0);
 
   using AccessIterator = typename AccessContainer::Iterator;
   // Iterator interface for the cache. It guarantees that all keys that were
@@ -649,7 +649,7 @@ class CacheAllocator : public CacheBase {
   // @return      kSuccess if the key exists and was successfully removed.
   //              kNotFoundInRam if the key was not present in memory (doesn't
   //              check nvm)
-  RemoveRes remove(Key key);
+  RemoveRes remove(Key key, int thread_id = 0);
 
   // remove the key that the iterator is pointing to. The element will
   // not be accessible upon success. However, the elemenet will not actually be
@@ -660,7 +660,7 @@ class CacheAllocator : public CacheBase {
   //              successfully removed.
   //              kNotFoundInRam if the element the iterator was pointing to was
   //              deleted already.
-  RemoveRes remove(AccessIterator& it);
+  RemoveRes remove(AccessIterator& it, int thread_id = 0);
 
   // removes the allocation corresponding to the handle. The allocation will
   // be freed when all the existing handles are released.
@@ -671,7 +671,7 @@ class CacheAllocator : public CacheBase {
   //              kNotFoundInRam otherwise
   //
   // @throw std::invalid_argument if item handle is null
-  RemoveRes remove(const ReadHandle& it);
+  RemoveRes remove(const ReadHandle& it, int thread_id = 0);
 
   // view a read-only parent item as a chain of allocations if it has chained
   // alloc. The returned chained-alloc is good to iterate upon, but will block
@@ -1447,7 +1447,7 @@ class CacheAllocator : public CacheBase {
   ReleaseRes releaseBackToAllocator(Item& it,
                                     RemoveContext ctx,
                                     bool nascent = false,
-                                    const Item* toRecycle = nullptr);
+                                    const Item* toRecycle = nullptr, int thraed_id = 0);
 
   // acquires an handle on the item. returns an empty handle if it is null.
   // @param it    pointer to an item
@@ -1512,7 +1512,7 @@ class CacheAllocator : public CacheBase {
                                uint32_t size,
                                uint32_t creationTime,
                                uint32_t expiryTime,
-                               bool fromBgThread = false);
+                               bool fromBgThread = false, int thread_id = 0);
 
   // Allocate a chained item
   //
@@ -1578,7 +1578,7 @@ class CacheAllocator : public CacheBase {
   //
   // @return      the handle for the item or a handle to nullptr if the key does
   //              not exist.
-  FOLLY_ALWAYS_INLINE WriteHandle findImpl(Key key, AccessMode mode);
+  FOLLY_ALWAYS_INLINE WriteHandle findImpl(Key key, AccessMode mode, int thread_id = 0);
 
   // look up an item by its key. This ignores the nvm cache and only does RAM
   // lookup.
@@ -1688,7 +1688,7 @@ class CacheAllocator : public CacheBase {
   // @param  item  Item that we want to insert.
   //
   // @throw std::runtime_error if the handle is already in the mm container
-  void insertInMMContainer(Item& item);
+  void insertInMMContainer(Item& item, int thread_id = 0);
 
   // Removes an item from the corresponding MMContainer if it is in the
   // container. The caller must hold a valid handle for the item.
@@ -1697,7 +1697,7 @@ class CacheAllocator : public CacheBase {
   //
   // @return true   if the item is successfully removed
   //         false  if the item is not in MMContainer
-  bool removeFromMMContainer(Item& item);
+  bool removeFromMMContainer(Item& item, int thread_id = 0);
 
   // Replaces an item in the MMContainer with another item, at the same
   // position.
@@ -1757,7 +1757,7 @@ class CacheAllocator : public CacheBase {
                        Item& it,
                        DeleteTombStoneGuard tombstone,
                        bool removeFromNvm = true,
-                       bool recordApiEvent = true);
+                       bool recordApiEvent = true, int thread_id = 0);
 
   // Must be called by the thread which called markForEviction and
   // succeeded. After this call, the item is unlinked from Access and
@@ -1772,7 +1772,7 @@ class CacheAllocator : public CacheBase {
   // @param  cid  the id of the class to look for evictions inside
   // @return An evicted item or nullptr  if there is no suitable candidate found
   // within the configured number of attempts.
-  Item* findEviction(PoolId pid, ClassId cid);
+  Item* findEviction(PoolId pid, ClassId cid, int thread_id = 0);
 
   // Get next eviction candidate from MMContainer, remove from AccessContainer,
   // MMContainer and insert into NVMCache if enabled.
@@ -1786,7 +1786,7 @@ class CacheAllocator : public CacheBase {
   // within the configured number of attempts
   std::pair<Item*, Item*> getNextCandidate(PoolId pid,
                                            ClassId cid,
-                                           unsigned int& searchTries);
+                                           unsigned int& searchTries, int thread_id = 0);
 
   using EvictionIterator = typename MMContainer::LockedIterator;
 
@@ -2085,7 +2085,7 @@ class CacheAllocator : public CacheBase {
   // @param mode    the mode of access
   // @param stats   stats object to avoid a thread local lookup.
   // @return true   if successfully recorded in MMContainer
-  bool recordAccessInMMContainer(Item& item, AccessMode mode);
+  bool recordAccessInMMContainer(Item& item, AccessMode mode, int thread_id = 0);
 
   WriteHandle findChainedItem(const Item& parent) const;
 
@@ -2727,12 +2727,12 @@ CacheAllocator<CacheTrait>::allocate(PoolId poolId,
                                      typename Item::Key key,
                                      uint32_t size,
                                      uint32_t ttlSecs,
-                                     uint32_t creationTime) {
+                                     uint32_t creationTime, int thread_id) {
   if (creationTime == 0) {
     creationTime = util::getCurrentTimeSec();
   }
   return allocateInternal(poolId, key, size, creationTime,
-                          ttlSecs == 0 ? 0 : creationTime + ttlSecs);
+                          ttlSecs == 0 ? 0 : creationTime + ttlSecs, false, thread_id);
 }
 
 template <typename CacheTrait>
@@ -2748,7 +2748,7 @@ CacheAllocator<CacheTrait>::allocateInternal(PoolId pid,
                                              uint32_t size,
                                              uint32_t creationTime,
                                              uint32_t expiryTime,
-                                             bool fromBgThread) {
+                                             bool fromBgThread, int thread_id) {
   util::LatencyTracker tracker{stats().allocateLatency_};
 
   SCOPE_FAIL { stats_.invalidAllocs.inc(); };
@@ -2770,8 +2770,8 @@ CacheAllocator<CacheTrait>::allocateInternal(PoolId pid,
         ->wakeUp();
   }
 
-  if (memory == nullptr) {
-    memory = findEviction(pid, cid);
+  if (memory == nullptr) {//find a eviction candidate
+    memory = findEviction(pid, cid, thread_id);
   }
 
   WriteHandle handle;
@@ -3183,7 +3183,7 @@ typename CacheAllocator<CacheTrait>::ReleaseRes
 CacheAllocator<CacheTrait>::releaseBackToAllocator(Item& it,
                                                    RemoveContext ctx,
                                                    bool nascent,
-                                                   const Item* toRecycle) {
+                                                   const Item* toRecycle,int thread_id) {
   if (!it.isDrained()) {
     throw std::runtime_error(
         folly::sformat("cannot release this item: {}", it.toString()));
@@ -3287,7 +3287,7 @@ CacheAllocator<CacheTrait>::releaseBackToAllocator(Item& it,
       (*stats_.fragmentationSize)[childInfo.poolId][childInfo.classId].sub(
           util::getFragmentation(*this, *head));
 
-      removeFromMMContainer(*head);
+      removeFromMMContainer(*head, thread_id);
 
       // No other thread can access any of the chained items by this point,
       // so the refcount for each chained item must be equal to 1. Since
@@ -3380,11 +3380,11 @@ void CacheAllocator<CacheTrait>::release(Item* it, bool isNascent) {
 }
 
 template <typename CacheTrait>
-bool CacheAllocator<CacheTrait>::removeFromMMContainer(Item& item) {
+bool CacheAllocator<CacheTrait>::removeFromMMContainer(Item& item, int thread_id) {
   // remove it from the mm container.
   if (item.isInMMContainer()) {
     auto& mmContainer = getMMContainer(item);
-    return mmContainer.remove(item);
+    return mmContainer.remove(item, thread_id);
   }
   return false;
 }
@@ -3421,10 +3421,10 @@ bool CacheAllocator<CacheTrait>::replaceChainedItemInMMContainer(
 }
 
 template <typename CacheTrait>
-void CacheAllocator<CacheTrait>::insertInMMContainer(Item& item) {
+void CacheAllocator<CacheTrait>::insertInMMContainer(Item& item, int thread_id) {
   XDCHECK(!item.isInMMContainer());
   auto& mmContainer = getMMContainer(item);
-  if (!mmContainer.add(item)) {
+  if (!mmContainer.add(item, thread_id)) {
     throw std::runtime_error(folly::sformat(
         "Invalid state. Node {} was already in the container.", &item));
   }
@@ -3485,7 +3485,7 @@ bool CacheAllocator<CacheTrait>::insertImpl(const WriteHandle& handle,
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::WriteHandle
-CacheAllocator<CacheTrait>::insertOrReplace(const WriteHandle& handle) {
+CacheAllocator<CacheTrait>::insertOrReplace(const WriteHandle& handle, int thread_id) {
   XDCHECK(handle);
   if (handle->isAccessible()) {
     throw std::invalid_argument("Handle is already accessible");
@@ -3493,7 +3493,7 @@ CacheAllocator<CacheTrait>::insertOrReplace(const WriteHandle& handle) {
 
   HashedKey hk{handle->getKey()};
 
-  insertInMMContainer(*(handle.getInternal()));
+  insertInMMContainer(*(handle.getInternal()), thread_id);
   WriteHandle replaced;
   try {
     auto lock = nvmCache_ ? nvmCache_->getItemDestructorLock(hk)
@@ -3508,7 +3508,7 @@ CacheAllocator<CacheTrait>::insertOrReplace(const WriteHandle& handle) {
       nvmCache_->markNvmItemRemovedLocked(hk);
     }
   } catch (const std::exception&) {
-    removeFromMMContainer(*(handle.getInternal()));
+    removeFromMMContainer(*(handle.getInternal()), thread_id);
     if (auto eventTracker = getEventTracker()) {
       eventTracker->record(AllocatorApiEvent::INSERT_OR_REPLACE,
                            handle->getKey(),
@@ -3521,7 +3521,7 @@ CacheAllocator<CacheTrait>::insertOrReplace(const WriteHandle& handle) {
 
   // Remove from LRU as well if we do have a handle of old item
   if (replaced) {
-    removeFromMMContainer(*replaced);
+    removeFromMMContainer(*replaced, thread_id);
   }
 
   if (UNLIKELY(nvmCache_ != nullptr)) {
@@ -3730,7 +3730,7 @@ std::pair<typename CacheAllocator<CacheTrait>::Item*,
           typename CacheAllocator<CacheTrait>::Item*>
 CacheAllocator<CacheTrait>::getNextCandidate(PoolId pid,
                                              ClassId cid,
-                                             unsigned int& searchTries) {
+                                             unsigned int& searchTries, int thread_id) {
   typename NvmCacheT::PutToken token;
   Item* toRecycle = nullptr;
   Item* candidate = nullptr;
@@ -3738,7 +3738,7 @@ CacheAllocator<CacheTrait>::getNextCandidate(PoolId pid,
 
   mmContainer.withEvictionIterator([this, pid, cid, &candidate, &toRecycle,
                                     &searchTries, &mmContainer,
-                                    &token](auto&& itr) {
+                                    &token, thread_id](auto&& itr) {
     if (!itr) {
       ++searchTries;
       (*stats_.evictionAttempts)[pid][cid].inc();
@@ -3814,11 +3814,11 @@ CacheAllocator<CacheTrait>::getNextCandidate(PoolId pid,
       // unmarkForEviction() returns 0 - so just go through normal path.
       if (!toRecycle_->isChainedItem() ||
           &toRecycle->asChainedItem().getParentItem(compressor_) == candidate) {
-        mmContainer.remove(itr);
+        mmContainer.remove(itr,thread_id);
       }
       return;
     }
-  });
+  }, thread_id);
 
   if (!toRecycle) {
     return {candidate, toRecycle};
@@ -3838,13 +3838,13 @@ CacheAllocator<CacheTrait>::getNextCandidate(PoolId pid,
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::Item*
-CacheAllocator<CacheTrait>::findEviction(PoolId pid, ClassId cid) {
+CacheAllocator<CacheTrait>::findEviction(PoolId pid, ClassId cid, int thread_id) {
   // Keep searching for a candidate until we were able to evict it
   // or until the search limit has been exhausted
   unsigned int searchTries = 0;
   while (config_.evictionSearchTries == 0 ||
          config_.evictionSearchTries > searchTries) {
-    auto [candidate, toRecycle] = getNextCandidate(pid, cid, searchTries);
+    auto [candidate, toRecycle] = getNextCandidate(pid, cid, searchTries, thread_id);
 
     // Reached the end of the eviction queue but doulen't find a candidate,
     // start again.
@@ -3869,7 +3869,7 @@ CacheAllocator<CacheTrait>::findEviction(PoolId pid, ClassId cid) {
     // check if by releasing the item we intend to, we actually
     // recycle the candidate.
     auto ret = releaseBackToAllocator(*candidate, RemoveContext::kEviction,
-                                      /* isNascent */ false, toRecycle);
+                                      /* isNascent */ false, toRecycle, thread_id);
     if (ret == ReleaseRes::kRecycled) {
       return toRecycle;
     }
@@ -3927,7 +3927,7 @@ bool CacheAllocator<CacheTrait>::shouldWriteToNvmCacheExclusive(
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::RemoveRes
-CacheAllocator<CacheTrait>::remove(typename Item::Key key) {
+CacheAllocator<CacheTrait>::remove(typename Item::Key key, int thread_id) {
   // While we issue this delete, there can be potential races that change the
   // state of the cache between ram and nvm. If we find the item in RAM and
   // obtain a handle, the situation is simpler. The complicated ones are the
@@ -3989,7 +3989,8 @@ CacheAllocator<CacheTrait>::remove(typename Item::Key key) {
     return RemoveRes::kNotFoundInRam;
   }
 
-  return removeImpl(hk, *handle, std::move(tombStone));
+  return removeImpl(hk, *handle, std::move(tombStone), true /* removeFromNvm */, true
+                    /* recordApiEvent */, thread_id);
 }
 
 template <typename CacheTrait>
@@ -4036,7 +4037,7 @@ void CacheAllocator<CacheTrait>::flushNvmCache() {
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::RemoveRes
-CacheAllocator<CacheTrait>::remove(AccessIterator& it) {
+CacheAllocator<CacheTrait>::remove(AccessIterator& it, int thread_id) {
   stats_.numCacheRemoves.inc();
   if (auto eventTracker = getEventTracker()) {
     eventTracker->record(AllocatorApiEvent::REMOVE, it->getKey(),
@@ -4046,12 +4047,13 @@ CacheAllocator<CacheTrait>::remove(AccessIterator& it) {
   HashedKey hk{it->getKey()};
   auto tombstone =
       nvmCache_ ? nvmCache_->createDeleteTombStone(hk) : DeleteTombStoneGuard{};
-  return removeImpl(hk, *it, std::move(tombstone));
+  return removeImpl(hk, *it, std::move(tombstone), true /* removeFromNvm */, false
+                    /* recordApiEvent */, thread_id);
 }
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::RemoveRes
-CacheAllocator<CacheTrait>::remove(const ReadHandle& it) {
+CacheAllocator<CacheTrait>::remove(const ReadHandle& it, int thread_id) {
   stats_.numCacheRemoves.inc();
   if (!it) {
     throw std::invalid_argument("Trying to remove a null item handle");
@@ -4059,7 +4061,8 @@ CacheAllocator<CacheTrait>::remove(const ReadHandle& it) {
   HashedKey hk{it->getKey()};
   auto tombstone =
       nvmCache_ ? nvmCache_->createDeleteTombStone(hk) : DeleteTombStoneGuard{};
-  return removeImpl(hk, *(it.getInternal()), std::move(tombstone));
+  return removeImpl(hk, *(it.getInternal()), std::move(tombstone), true /* removeFromNvm */, true
+                    /* recordApiEvent */, thread_id);
 }
 
 template <typename CacheTrait>
@@ -4068,7 +4071,7 @@ CacheAllocator<CacheTrait>::removeImpl(HashedKey hk,
                                        Item& item,
                                        DeleteTombStoneGuard tombstone,
                                        bool removeFromNvm,
-                                       bool recordApiEvent) {
+                                       bool recordApiEvent, int thread_id) {
   bool success = false;
   {
     auto lock = nvmCache_ ? nvmCache_->getItemDestructorLock(hk)
@@ -4087,7 +4090,7 @@ CacheAllocator<CacheTrait>::removeImpl(HashedKey hk,
 
   // remove it from the mm container. this will be no-op if it is already
   // removed.
-  removeFromMMContainer(item);
+  removeFromMMContainer(item, thread_id);
 
   // Enqueue delete to nvmCache if we know from the item that it was pulled in
   // from NVM. If the item was not pulled in from NVM, it is not possible to
@@ -4284,10 +4287,10 @@ CacheAllocator<CacheTrait>::findFastToWrite(typename Item::Key key) {
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::WriteHandle
-CacheAllocator<CacheTrait>::findImpl(typename Item::Key key, AccessMode mode) {
+CacheAllocator<CacheTrait>::findImpl(typename Item::Key key, AccessMode mode, int thread_id) {
   auto handle = findInternalWithExpiration(key, AllocatorApiEvent::FIND);
   if (handle) {
-    markUseful(handle, mode);
+    markUseful(handle, mode, thread_id);
     return handle;
   }
 
@@ -4315,19 +4318,19 @@ CacheAllocator<CacheTrait>::findToWrite(typename Item::Key key) {
 
 template <typename CacheTrait>
 typename CacheAllocator<CacheTrait>::ReadHandle
-CacheAllocator<CacheTrait>::find(typename Item::Key key) {
-  return findImpl(key, AccessMode::kRead);
+CacheAllocator<CacheTrait>::find(typename Item::Key key, int thread_id) {
+  return findImpl(key, AccessMode::kRead, thread_id);
 }
 
 template <typename CacheTrait>
 void CacheAllocator<CacheTrait>::markUseful(const ReadHandle& handle,
-                                            AccessMode mode) {
+                                            AccessMode mode, int thread_id) {
   if (!handle) {
     return;
   }
 
   auto& item = *(handle.getInternal());
-  bool recorded = recordAccessInMMContainer(item, mode);
+  bool recorded = recordAccessInMMContainer(item, mode, thread_id);
 
   // if parent is not recorded, skip children as well when the config is set
   if (LIKELY(!item.hasChainedItem() ||
@@ -4335,14 +4338,14 @@ void CacheAllocator<CacheTrait>::markUseful(const ReadHandle& handle,
     return;
   }
 
-  forEachChainedItem(item, [this, mode](ChainedItem& chainedItem) {
-    recordAccessInMMContainer(chainedItem, mode);
+  forEachChainedItem(item, [this, mode, thread_id](ChainedItem& chainedItem) {
+    recordAccessInMMContainer(chainedItem, mode, thread_id);
   });
 }
 
 template <typename CacheTrait>
 bool CacheAllocator<CacheTrait>::recordAccessInMMContainer(Item& item,
-                                                           AccessMode mode) {
+                                                           AccessMode mode, int thread_id) {
   const auto allocInfo =
       allocator_->getAllocInfo(static_cast<const void*>(&item));
   (*stats_.cacheHits)[allocInfo.poolId][allocInfo.classId].inc();
@@ -4353,7 +4356,7 @@ bool CacheAllocator<CacheTrait>::recordAccessInMMContainer(Item& item,
   }
 
   auto& mmContainer = getMMContainer(allocInfo.poolId, allocInfo.classId);
-  return mmContainer.recordAccess(item, mode);
+  return mmContainer.recordAccess(item, mode, thread_id);
 }
 
 template <typename CacheTrait>
@@ -6101,7 +6104,6 @@ extern template class CacheAllocator<TinyLFUCacheTrait>;
 extern template class CacheAllocator<WTinyLFUCacheTrait>;
 extern template class CacheAllocator<S3FIFOCacheTrait>;
 extern template class CacheAllocator<FLEXCacheTrait>;
-extern template class CacheAllocator<FLEXCachedumpTrait>;
 extern template class CacheAllocator<ARCCacheTrait>;
 extern template class CacheAllocator<CARCacheTrait>;
 
@@ -6141,7 +6143,6 @@ using WTinyLFUAllocator = CacheAllocator<WTinyLFUCacheTrait>;
 
 using S3FIFOAllocator = CacheAllocator<S3FIFOCacheTrait>;
 using FLEXAllocator = CacheAllocator<FLEXCacheTrait>;
-using FLEXdumpAllocator = CacheAllocator<FLEXCachedumpTrait>;
 using ARCAllocator = CacheAllocator<ARCCacheTrait>;
 using CARAllocator = CacheAllocator<CARCacheTrait>;
 } // namespace facebook::cachelib

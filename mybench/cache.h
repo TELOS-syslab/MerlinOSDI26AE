@@ -29,10 +29,10 @@ using Cache = CARAllocator;
 void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,
                   Cache **cache_p, PoolId *pool_p);
 
-int cache_get(Cache *cache, PoolId pool, struct request *req);
+int cache_get(Cache *cache, PoolId pool, struct request *req, int thread_id=0);
 
-int cache_set(Cache *cache, PoolId pool, struct request *req);
+int cache_set(Cache *cache, PoolId pool, struct request *req, int thread_id=0);
 
-int cache_del(Cache *cache, PoolId pool, struct request *req);
+int cache_del(Cache *cache, PoolId pool, struct request *req, int thread_id=0);
 
 double cache_utilization(Cache *cache);
