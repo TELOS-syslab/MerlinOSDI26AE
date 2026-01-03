@@ -94,7 +94,7 @@ class MerlinAtomicDList {
       : compressor_(std::move(compressor)),
         head_(compressor_.unCompress(CompressedPtrType{*object.compressedHead()})),
         tail_(compressor_.unCompress(CompressedPtrType{*object.compressedTail()})),
-        relaxed_size_(*object.size()) {}
+        size_(*object.size()) {}
 
   /**
    * Exports the current state as a thrift object for later restoration.
@@ -103,7 +103,7 @@ class MerlinAtomicDList {
     MerlinAtomicDListObject state;
     *state.compressedHead() = compressor_.compress(head_).saveState();
     *state.compressedTail() = compressor_.compress(tail_).saveState();
-    *state.size() = relaxed_size_;
+    *state.size() = size_;
     return state;
   }
 
@@ -158,7 +158,7 @@ class MerlinAtomicDList {
   T* getHead() const noexcept { return head_.load(); }
   T* getTail() const noexcept { return tail_.load(); }
 
-  size_t size() const noexcept { return relaxed_size_.load(std::memory_order_relaxed); }
+  size_t size() const noexcept { return size_.load(std::memory_order_relaxed); }
 
   void sanityCheck(); 
 
@@ -179,7 +179,7 @@ class MerlinAtomicDList {
   std::cout << "MerlinAtomicDList @" << this << "\n";
   dump(" head_", &head_);
   dump(" tail_", &tail_);
-  dump(" relaxed_size_", &relaxed_size_);
+  dump(" size_", &size_);
   dump(" head_mutex", &head_mutex);
 }
 
@@ -271,7 +271,7 @@ class MerlinAtomicDList {
   alignas(64) std::atomic<T*> tail_{nullptr};
 
   // size of the list
-  alignas(64) std::atomic<size_t> relaxed_size_{0};
+  alignas(64) std::atomic<size_t> size_{0};
   char padding1_[64 - sizeof(std::atomic<size_t>)] = {0};
   alignas(64) std::atomic<int> dump_once{0};
   char padding2_[64 - sizeof(std::atomic<size_t>)] = {0};
@@ -292,11 +292,11 @@ void MerlinAtomicDList<T, HookPtr>::sanityCheck() {
       curr_size++;
       curr = getNext(*curr);
     }
-    XDCHECK_EQ(curr_size, relaxed_size_.load());
+    XDCHECK_EQ(curr_size, size_.load());
 
-    if (curr_size != relaxed_size_.load()) {
-      XLOGF(ERR, "curr_size: {}, size: {}", curr_size, relaxed_size_.load());
-      printf("curr_size: %zu, size: %zu\n", curr_size, relaxed_size_.load());
+    if (curr_size != size_.load()) {
+      XLOGF(ERR, "curr_size: {}, size: {}", curr_size, size_.load());
+      printf("curr_size: %zu, size: %zu\n", curr_size, size_.load());
       abort();
     }
   }
@@ -311,9 +311,9 @@ if(dump_once==0){
     dump_once=1;
 }
     */
-    setPrev(node, nullptr);
+    
   std::shared_lock lock(head_mutex);
-
+    setPrev(node, nullptr);
   T* oldHead = head_.load();
   setNext(node, oldHead);
 
@@ -327,12 +327,19 @@ if(dump_once==0){
     XDCHECK_EQ(tail_, nullptr);
 
     T* tail = nullptr;
-    tail_.compare_exchange_weak(tail, &node);
+    while (!tail_.compare_exchange_weak(tail, &node)) {
+      tail = tail_.load();
+      if(tail != nullptr) {
+        break;
+      }
+    }
+    //tail_.compare_exchange_weak(tail, &node);
   } else {
     setPrev(*oldHead, &node);
   }
 
-  relaxed_size_.fetch_add(1, std::memory_order_relaxed);
+  size_.fetch_add(1, std::memory_order_relaxed);
+  //size_++;
 }
 
 
@@ -362,14 +369,14 @@ void MerlinAtomicDList<T, HookPtr>::linkAtHeadMultiple(T& start,
     setPrev(*oldHead, &end);
   }
 
-  relaxed_size_.fetch_add(n, std::memory_order_relaxed);
+  size += n;
 }
 
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
 void MerlinAtomicDList<T, HookPtr>::linkAtHeadFromADList(
     MerlinAtomicDList<T, HookPtr>& o) noexcept {
   std::shared_lock lock(head_mutex);
-  
+  printf("linkAtHeadFromADList o head %p tail %p size %lu %s %d\n", o.getHead(), o.getTail(), o.size(), __func__, __LINE__);
   T* oHead = &o.getHead();
   T* oTail = &o.getTail();
 
@@ -393,7 +400,7 @@ void MerlinAtomicDList<T, HookPtr>::linkAtHeadFromADList(
     setPrev(*oldHead, &oTail);
   }
 
-  relaxed_size_.fetch_add(o.size(), std::memory_order_relaxed);
+  size_ += o.size();
 }
 
 /* note that the next of the tail may not be nullptr  */
@@ -424,7 +431,8 @@ T* MerlinAtomicDList<T, HookPtr>::removeTail() noexcept {
   setNext(*tail, nullptr);
   setPrev(*tail, nullptr);
 
-  relaxed_size_.fetch_sub(1, std::memory_order_relaxed);
+  //size_ --;
+  size_.fetch_sub(1, std::memory_order_relaxed);
 
   return tail;
 }
@@ -433,7 +441,7 @@ T* MerlinAtomicDList<T, HookPtr>::removeTail() noexcept {
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
 T* MerlinAtomicDList<T, HookPtr>::removeNTail(int n) noexcept {
     LockHolder l(*mtx_);
-
+printf("removeNTail n=%d %s %d\n", n, __func__, __LINE__);
   T* tail = tail_.load();
   if (tail == nullptr) {
     // empty list
@@ -459,12 +467,12 @@ T* MerlinAtomicDList<T, HookPtr>::removeNTail(int n) noexcept {
     next = getNext(*next);
     setNext(*tail_, nullptr);
     setPrev(*next, nullptr);
-    relaxed_size_.fetch_sub(i - 1, std::memory_order_relaxed);
+    size_ -= (i - 1);
   } else {
     tail_ = curr;
     setNext(*curr, nullptr);
     setPrev(*next, nullptr);
-    relaxed_size_.fetch_sub(i, std::memory_order_relaxed);
+    size_ -= i;
   }
 
   return tail;
@@ -472,7 +480,7 @@ T* MerlinAtomicDList<T, HookPtr>::removeNTail(int n) noexcept {
 
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
 void MerlinAtomicDList<T, HookPtr>::unlink(const T& node) noexcept {
-  XDCHECK_GT(relaxed_size_, 0u);
+  XDCHECK_GT(size_, 0u);
 
   {
     std::unique_lock lock(head_mutex);
@@ -498,7 +506,8 @@ void MerlinAtomicDList<T, HookPtr>::unlink(const T& node) noexcept {
     setNextFrom(*prev, node);
   }
 
-  relaxed_size_.fetch_sub(1, std::memory_order_relaxed);
+    size_.fetch_sub(1, std::memory_order_relaxed);
+  //size_--;
 }
 
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
@@ -518,7 +527,7 @@ void MerlinAtomicDList<T, HookPtr>::remove(T& node) noexcept {
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
 void MerlinAtomicDList<T, HookPtr>::replace(T& oldNode, T& newNode) noexcept {
   LockHolder l(*mtx_);
-
+  printf("replace node %p prev %p next %p\n", &oldNode, getPrev(oldNode), getNext(oldNode));
   // Update head and tail links if needed
   if (&oldNode == head_) {
     head_ = &newNode;

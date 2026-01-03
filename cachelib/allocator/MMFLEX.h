@@ -29,7 +29,7 @@ namespace facebook::cachelib
         static const int kId;
         // forward declaration;
         template <typename T>
-        using Hook = AtomicDListHook<T>;
+        using Hook = MerlinAtomicDListHook<T>;
         using SerializationType = serialization::MMFLEXObject;
         using SerializationConfigType = serialization::MMFLEXConfig;
         using SerializationTypeContainer = serialization::MMFLEXCollection;
@@ -142,7 +142,7 @@ namespace facebook::cachelib
                 // LockedIterator has reached the end is undefined.
                 LockedIterator &operator++()
                 {
-                    candidate_ = flexlist_->getEvictionCandidate();
+                    candidate_ = flexlist_->getEvictionCandidate(thread_id_);
                     return *this;
                 }
                 LockedIterator &operator--() { throw std::logic_error("Not implemented"); }
@@ -175,15 +175,17 @@ namespace facebook::cachelib
                 LockedIterator &operator=(LockedIterator &&) noexcept = default;
 
                 // create an lru iterator with the lock being held.
-                LockedIterator(LIST *flexlist)
+                LockedIterator(LIST *flexlist, int thread_id)
                 {
                     flexlist_ = flexlist;
-                    candidate_ = flexlist_->getEvictionCandidate();
+                    thread_id_ = thread_id;
+                    candidate_ = flexlist_->getEvictionCandidate(thread_id_);
                 }
 
                 LIST *flexlist_;
 
                 T *candidate_;
+                int thread_id_{0};
 
                 // only the container can create iterators
                 friend Container<T, HookPtr>;
@@ -196,7 +198,7 @@ namespace facebook::cachelib
             //
             // @return      True if the information is recorded and bumped the node
             //              to the head of the lru, returns false otherwise
-            bool recordAccess(T &node, AccessMode mode) noexcept;
+            bool recordAccess(T &node, AccessMode mode, int thread_id = 0) noexcept;
 
             // adds the given node into the container and marks it as being present in
             // the container. The node is added to the head of the lru.
@@ -205,7 +207,7 @@ namespace facebook::cachelib
             // @return  True if the node was successfully added to the container. False
             //          if the node was already in the contianer. On error state of node
             //          is unchanged.
-            bool add(T &node) noexcept;
+            bool add(T &node, int thread_id = 0) noexcept;
 
             // removes the node from the lru and sets it previous and next to nullptr.
             //
@@ -213,7 +215,7 @@ namespace facebook::cachelib
             // @return  True if the node was successfully removed from the container.
             //          False if the node was not part of the container. On error, the
             //          state of node is unchanged.
-            bool remove(T &node) noexcept;
+            bool remove(T &node, int thread_id = 0) noexcept;
 
             // same as the above but uses an iterator context. The iterator is updated
             // on removal of the corresponding node to point to the next node. The
@@ -222,7 +224,7 @@ namespace facebook::cachelib
             // iterator will be advanced to the next node after removing the node
             //
             // @param it    Iterator that will be removed
-            void remove(LockedIterator &it) noexcept;
+            void remove(LockedIterator &it, int thread_id = 0) noexcept;
 
             // replaces one node with another, at the same position
             //
@@ -237,12 +239,12 @@ namespace facebook::cachelib
             // Obtain an iterator that start from the tail and can be used
             // to search for evictions. This iterator holds a lock to this
             // container and only one such iterator can exist at a time
-            LockedIterator getEvictionIterator() noexcept;
+            LockedIterator getEvictionIterator(int thread_id = 0) noexcept;
 
             // Execute provided function under container lock. Function gets
             // iterator passed as parameter.
             template <typename F>
-            void withEvictionIterator(F &&f);
+            void withEvictionIterator(F &&f, int thread_id = 0);
 
             template <typename F>
             void withContainerLock(F &&fun);
@@ -280,25 +282,9 @@ namespace facebook::cachelib
             // return the stats for this container.
             MMContainerStat getStats() const noexcept;
 
-            void setSmall(T &node) noexcept
-            {
-                node.template setFlag<RefFlags::kMMFlag0>();
-            }
-            void unSetSmall(T &node) noexcept
-            {
-                node.template unSetFlag<RefFlags::kMMFlag0>();
-            }
             bool isSmall(const T &node) const noexcept
             {
                 return node.template isFlagSet<RefFlags::kMMFlag0>();
-            }
-            void setMain(T &node) noexcept
-            {
-                node.template setFlag<RefFlags::kMMFlag1>();
-            }
-            void unSetMain(T &node) noexcept
-            {
-                node.template unSetFlag<RefFlags::kMMFlag1>();
             }
             bool isMain(const T &node) const noexcept
             {
@@ -313,7 +299,6 @@ namespace facebook::cachelib
                     return LruType::Main;
                 return LruType::Suspicious;
             }
-
         private:
             EvictionAgeStat
             getEvictionAgeStatLocked(
@@ -333,29 +318,16 @@ namespace facebook::cachelib
             //
             // @param node          node to remove
             // @param doRebalance     whether to do rebalance in this remove
-            void removeLocked(T &node) noexcept;
+            void removeLocked(T &node, int thread_id) noexcept;
 
             // Bit MM_BIT_1 is used to record if the item has been accessed since
             // being written in cache. Unaccessed items are ignored when determining
             // projected update time.
-
+            
             void incFreq(T &node) noexcept
             {
                 //node.template setFlag<RefFlags::kMMFlag2>();
                 flexlist_.incFreq(node);
-                return;
-            }
-
-            int getFreq(const T &node) const noexcept
-            {
-                //return (int) node.template isFlagSet<RefFlags::kMMFlag2>();
-                return flexlist_.getFreq(node);
-            }
-
-            void setFreq(T &node, int freq) noexcept
-            {
-                //node.template setFlag<RefFlags::kMMFlag2>();
-                flexlist_.setFreq(node, freq);
                 return;
             }
 
@@ -381,14 +353,17 @@ namespace facebook::cachelib
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     bool MMFLEX::Container<T, HookPtr>::recordAccess(T &node,
-                                                     AccessMode mode) noexcept
+                                                     AccessMode mode, int thread_id) noexcept
     {
         if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
             (mode == AccessMode::kRead && !config_.updateOnRead))
         {
             return false;
         }
-
+        if(thread_id == 0){
+            printf("Error: thread_id is 0 in recordAccess of MMFLEX\n");
+            //abort();
+        }
         const auto curr = static_cast<Time>(util::getCurrentTimeSec());
         // check if the node is still being memory managed
         if (node.isInMMContainer())
@@ -433,13 +408,14 @@ namespace facebook::cachelib
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::add(T &node) noexcept
+    bool MMFLEX::Container<T, HookPtr>::add(T &node, int thread_id) noexcept
     {
         const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
         if (node.isInMMContainer())
         {
             return false;
         }
+        resetFreq(node);
         flexlist_.add(node);
         node.markInMMContainer();
         setUpdateTime(node, currTime);
@@ -448,16 +424,16 @@ namespace facebook::cachelib
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     typename MMFLEX::Container<T, HookPtr>::LockedIterator
-    MMFLEX::Container<T, HookPtr>::getEvictionIterator() noexcept
+    MMFLEX::Container<T, HookPtr>::getEvictionIterator(int thread_id) noexcept
     {
-        return LockedIterator{&flexlist_};
+        return LockedIterator{&flexlist_, thread_id};
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     template <typename F>
-    void MMFLEX::Container<T, HookPtr>::withEvictionIterator(F &&fun)
+    void MMFLEX::Container<T, HookPtr>::withEvictionIterator(F &&fun, int thread_id)
     {
-        fun(getEvictionIterator());
+        fun(getEvictionIterator(thread_id));
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
@@ -469,28 +445,36 @@ namespace facebook::cachelib
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::removeLocked(T &node) noexcept
+    void MMFLEX::Container<T, HookPtr>::removeLocked(T &node, int thread_id) noexcept
     {
-        flexlist_.remove(node);
+        flexlist_.remove(node, thread_id);
         node.unmarkInMMContainer();
         return;
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    bool MMFLEX::Container<T, HookPtr>::remove(T &node) noexcept
+    bool MMFLEX::Container<T, HookPtr>::remove(T &node, int thread_id) noexcept
     {
-        return Mutex_->lock_combine([this, &node]()
+        if(thread_id == 0){
+            printf("Error: thread_id is 0 in remove of MMFLEX\n");
+            //abort();
+        }
+        return Mutex_->lock_combine([this, &node,thread_id]()
                                     {
-    if (!node.isInMMContainer()) {
-      return false;
-    }
-    removeLocked(node);
-    return true; });
+        if (!node.isInMMContainer()) {
+        return false;
+        }
+        removeLocked(node,thread_id);
+        return true; });
     }
 
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
-    void MMFLEX::Container<T, HookPtr>::remove(LockedIterator &it) noexcept
+    void MMFLEX::Container<T, HookPtr>::remove(LockedIterator &it, int thread_id) noexcept
     {
+        if(thread_id == 0){
+            printf("remove by iterator in MMFLEX\n");
+            //abort();
+        }
         T &node = *it;
         XDCHECK(node.isInMMContainer());
         node.unmarkInMMContainer();
@@ -499,6 +483,8 @@ namespace facebook::cachelib
     template <typename T, MMFLEX::Hook<T> T::*HookPtr>
     bool MMFLEX::Container<T, HookPtr>::replace(T &oldNode, T &newNode) noexcept
     {
+        printf("replace happen\n");
+        //abort();
         return Mutex_->lock_combine([this, &oldNode, &newNode]()
                                     {
     if (!oldNode.isInMMContainer() || newNode.isInMMContainer()) {
@@ -506,32 +492,9 @@ namespace facebook::cachelib
     }
     const auto updateTime = getUpdateTime(oldNode);
 
-    LruType type = getLruType(oldNode);
-    switch (type) {
-    case LruType::Small:
-    setSmall(newNode);
-      flexlist_.getListSmall().replace(oldNode, newNode);
-      break;
-    case LruType::Main:
-    setMain(newNode);
-      flexlist_.getListMain().replace(oldNode, newNode);
-      break;
-    case LruType::Suspicious:
-      flexlist_.getListSuspicious().replace(oldNode, newNode);
-      break;
-    case LruType::NumTypes:
-      XDCHECK(false);
-    }
-
     oldNode.unmarkInMMContainer();
     newNode.markInMMContainer();
     setUpdateTime(newNode, updateTime);
-    int freq = getFreq(oldNode);
-    if(freq > 0) {
-        setFreq(newNode, freq);
-    } else {
-        resetFreq(newNode);
-    }
     return true; });
     }
 
