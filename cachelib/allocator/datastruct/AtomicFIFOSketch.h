@@ -9,11 +9,12 @@
 
 #include "cachelib/common/Mutex.h"
 
+#include "cachelib/allocator/datastruct/merlinconfig.h"
+
 namespace facebook
 {
     namespace cachelib
     {
-#define GHOST_MAX_FREQ 3
         class AtomicFIFOSketch
         {
         public:
@@ -28,10 +29,11 @@ namespace facebook
 
             ~AtomicFIFOSketch() { hashTable_ = nullptr; }
 
-            bool initialized() const noexcept { return hashTable_ != nullptr; }
+            inline bool initialized() const noexcept { return initialized_.load(std::memory_order_acquire); }
 
             void initHashtable() noexcept
             {
+                initialized_.store(true, std::memory_order_release);
                 auto hashTable = std::unique_ptr<std::atomic<uint64_t>[]>(new std::atomic<uint64_t>[numElem_]);
                 for (size_t i = 0; i < numElem_; ++i)
                 {
@@ -75,10 +77,10 @@ namespace facebook
                     if (matchKey(valInTable, key))
                     {
                         int ori_freq = getFreq(valInTable);
-                        if(ori_freq == GHOST_MAX_FREQ){
-                            return GHOST_MAX_FREQ;
+                        if(ori_freq == MAX_FREQ){
+                            return MAX_FREQ;
                         }
-                        int new_freq = std::min(ori_freq + 1, GHOST_MAX_FREQ);
+                        int new_freq = std::min(ori_freq + 1, MAX_FREQ);
                         uint64_t newVal = genHashtableVal(key, insertionTime, new_freq);
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, newVal, std::memory_order_relaxed);
                         if(ret){
@@ -115,7 +117,6 @@ namespace facebook
                     }
                 }
                 // we do not find an empty slots, random choose and overwrite one
-                numEvicts_++;
                 hashTable_[key % numElem_].store(hashTableVal, std::memory_order_relaxed);
                 //__atomic_store_n(&hashTable_[key % numElem_], hashTableVal, __ATOMIC_RELAXED);
                 return;
@@ -123,7 +124,7 @@ namespace facebook
 
             void insert(uint32_t key, int freq = 0) noexcept
             {
-                int64_t currTime = numInserts_++;
+                int64_t currTime = numInserts_;
                 freq++;
                 // reset if overflow
                 if (currTime > MAX_VALUE)
@@ -165,11 +166,11 @@ namespace facebook
                     {
                         int overflow = 0;
                         int ori_freq = getFreq(valInTable);
-                        if (ori_freq == GHOST_MAX_FREQ)
+                        if (ori_freq == MAX_FREQ)
                         {
                             return;
                         }
-                        int new_freq = std::min(ori_freq + freq, GHOST_MAX_FREQ);
+                        int new_freq = std::min(ori_freq + freq, MAX_FREQ);
                         uint64_t newVal = genHashtableVal(key, insertionTime, new_freq);
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, newVal, std::memory_order_relaxed);
                         if (ret)
@@ -186,12 +187,12 @@ namespace facebook
                 }
                 // not find, insert
                 freq--;
+                currTime = numInserts_++;
                 uint64_t hashTableVal = genHashtableVal(key, static_cast<uint32_t>(currTime), freq);
                 // attempt only once
                 if (empty_slot == -1)
                 {//random evict
                     size_t evictIdx = key % numElem_;
-                    numEvicts_++;
                     bool success = false;
                     uint64_t valInTable = hashTable_[evictIdx].load(std::memory_order_relaxed);
                     success = hashTable_[evictIdx].compare_exchange_weak(valInTable, hashTableVal, std::memory_order_relaxed);
@@ -269,13 +270,14 @@ namespace facebook
             constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
 
         public:
-            std::vector<std::atomic<uint32_t>> freq_distribution_{std::vector<std::atomic<uint32_t>>(GHOST_MAX_FREQ + 5)};
+            alignas(64) std::atomic<size_t> freq_distribution_[MAX_FREQ + 1];
+
+            alignas(64) std::atomic<bool> initialized_{false};
 
         private:
-            size_t numElem_{0};
+            alignas(64) size_t numElem_{0};
             size_t fifoSize_{0};
-            std::atomic<int64_t> numInserts_{0};
-            std::atomic<int64_t> numEvicts_{0};
+            alignas(64) std::atomic<int64_t> numInserts_{0};
             alignas(64) std::unique_ptr<std::atomic<uint64_t>[]> hashTable_{nullptr};
         };
 

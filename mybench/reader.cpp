@@ -102,7 +102,7 @@ int read_trace(struct reader *reader, struct request *req) {
   if (req->ttl == 0) {
     req->ttl = 86400;
   }
-
+  req->ttl = 0;
   /* it is possible we have overflow here, but it should be rare */
   // unsigned long key = *(uint64_t *)req->key;
   // sprintf(req->key, "%.*lu", req->key_len, key);
@@ -127,7 +127,7 @@ int read_oracleGeneral_trace(struct reader *reader, struct request *req) {
 
   uint64_t obj_id = *(uint64_t *)(record + 4);
   // used to make sure each reader has different keys
-  obj_id = obj_id % (uint64_t)UINT32_MAX + reader->reader_id * 1000000000ULL;
+  obj_id = obj_id % (uint64_t)UINT32_MAX + (reader->reader_id << 32);
   *(uint64_t *)req->key = obj_id;
 
   req->key_len = 8;
@@ -136,7 +136,7 @@ int read_oracleGeneral_trace(struct reader *reader, struct request *req) {
   
   req->op = op_get;
   req->ttl = 2000000;
-
+req->ttl = 0;
   return 0;
 }
 

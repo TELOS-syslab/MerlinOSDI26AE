@@ -323,18 +323,18 @@ namespace facebook::cachelib
             // Bit MM_BIT_1 is used to record if the item has been accessed since
             // being written in cache. Unaccessed items are ignored when determining
             // projected update time.
-            
-            void incFreq(T &node) noexcept
+
+            void incFreq(T &node, int thread_id) noexcept
             {
                 //node.template setFlag<RefFlags::kMMFlag2>();
-                flexlist_.incFreq(node);
+                flexlist_.incFreq(node, thread_id);
                 return;
             }
 
             void resetFreq(T &node) noexcept
             {
                 //node.template unSetFlag<RefFlags::kMMFlag2>();
-                flexlist_.resetFreq(node);
+                //flexlist_.resetFreq(node);
                 return;
             }
 
@@ -368,7 +368,7 @@ namespace facebook::cachelib
         // check if the node is still being memory managed
         if (node.isInMMContainer())
         {
-            incFreq(node);
+            incFreq(node, thread_id);
             setUpdateTime(node, curr);
             return true;
         }
@@ -415,8 +415,8 @@ namespace facebook::cachelib
         {
             return false;
         }
-        resetFreq(node);
-        flexlist_.add(node);
+        //resetFreq(node);
+        flexlist_.add(node, thread_id);
         node.markInMMContainer();
         setUpdateTime(node, currTime);
         return true;

@@ -27,10 +27,13 @@ namespace facebook
 
             ~AtomicSketch() { hashTable_ = nullptr; }
 
-            bool initialized() const noexcept { return hashTable_ != nullptr; }
+            bool initialized() const noexcept {
+                return initialized_.load(std::memory_order_acquire);
+            }
 
             void initHashtable() noexcept
             {
+                initialized_.store(true, std::memory_order_release);
                 auto hashTable = std::unique_ptr<std::atomic<uint32_t>[]>(new std::atomic<uint32_t>[numElem_]);
                 for (size_t i = 0; i < numElem_; ++i)
                 {
@@ -83,12 +86,11 @@ namespace facebook
             constexpr static uint64_t valueMask_ = 0x0FFFFFFF00000000;
             constexpr static uint64_t freqMask_ = 0xF000000000000000;
             constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
-
+            alignas(64) std::atomic<bool> initialized_{false};
         private:
-            size_t numElem_{0};
-            size_t fifoSize_{0};
-            std::atomic<int64_t> numInserts_{0};
-            std::atomic<int64_t> numEvicts_{0};
+            alignas(64) size_t numElem_{0};
+            alignas(64) size_t fifoSize_{0};
+            alignas(64) std::atomic<int64_t> numInserts_{0};
             alignas(64) std::unique_ptr<std::atomic<uint32_t>[]> hashTable_{nullptr};
         };
 
