@@ -169,6 +169,20 @@ struct MMFLEXCollection {
   1: required map<i32, map<i32, MMFLEXObject>> pools,
 }
 
+struct MMMerlinConfig {
+  2: required bool updateOnWrite,
+  4: bool updateOnRead = true,
+}
+
+struct MMMerlinObject {
+  1: required MMMerlinConfig config,
+  8: required MerlinListObject merlinlist,
+}
+
+struct MMMerlinCollection {
+  1: required map<i32, map<i32, MMMerlinObject>> pools,
+}
+
 // MMARC serialization support
 struct MMARCConfig {
   1: i32 lruRefreshTime;

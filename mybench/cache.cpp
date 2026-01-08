@@ -32,7 +32,7 @@ static void print_config(Cache::Config &config) {
 }
 
 void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,
-                       Cache **cache_p, PoolId *pool_p) {
+                       Cache **cache_p, PoolId *pool_p, int n_thread) {
   Cache::Config config;
 
   // auto rebalance_strategy = std::make_shared<HitsPerSlabStrategy>();
@@ -45,8 +45,10 @@ void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,
       .setCacheName("My cache")
 #ifdef USE_STRICTLRU
       .setAccessConfig({hashpower, 1})
+      .configureChainedItems({hashpower, 1},10)
 #else
       .setAccessConfig({hashpower, hashpower})
+      .configureChainedItems({hashpower, hashpower},hashpower)
 #endif
       .validate();
 
@@ -56,6 +58,12 @@ void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,
   Cache::MMConfig mm_config;
   mm_config.lruRefreshTime = 0;
   *pool_p = (*cache_p)->addPool("default",
+                                (*cache_p)->getCacheMemoryStats().ramCacheSize,
+                                {}, mm_config);
+#elif USE_MERLIN
+    Cache::MMConfig mm_config;
+    mm_config.total_thread_num = n_thread;
+    *pool_p = (*cache_p)->addPool("default",
                                 (*cache_p)->getCacheMemoryStats().ramCacheSize,
                                 {}, mm_config);
 #else

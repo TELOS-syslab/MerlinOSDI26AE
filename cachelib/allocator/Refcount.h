@@ -101,6 +101,7 @@ class FOLLY_PACK_ATTR RefcountWithFlags {
     kMMFlag2,
     kMMFlag3,
     kMMFlag4,
+    kMMFlag5,
 
     // Whether or not an item is a regular item or chained alloc
     kIsChainedItem,

@@ -23,6 +23,7 @@
 #include "cachelib/allocator/memory/CompressedPtr.h"
 #include "cachelib/allocator/MMS3FIFO.h"
 #include "cachelib/allocator/MMFLEX.h"
+#include "cachelib/allocator/MMMerlin.h"
 #include "cachelib/allocator/MMARC.h"
 #include "cachelib/allocator/MMCAR.h"
 #include "cachelib/common/Mutex.h"
@@ -116,6 +117,13 @@ struct S3FIFOCacheTrait {
 
 struct FLEXCacheTrait {
   using MMType = MMFLEX;
+  using AccessType = ChainedHashTable;
+  using AccessTypeLocks = SharedMutexBuckets;
+  using CompressedPtrType = CompressedPtr5B;
+};
+
+struct MerlinCacheTrait {
+  using MMType = MMMerlin;
   using AccessType = ChainedHashTable;
   using AccessTypeLocks = SharedMutexBuckets;
   using CompressedPtrType = CompressedPtr5B;

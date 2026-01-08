@@ -18,6 +18,8 @@ using Cache = Lru2QAllocator;
 using Cache = TinyLFUAllocator;
 #elif defined(USE_FLEX)
 using Cache = FLEXAllocator;
+#elif defined(USE_MERLIN)
+using Cache = MerlinAllocator;
 #elif defined(USE_FLEXDUMP)
 using Cache = FLEXdumpAllocator;
 #elif defined(USE_ARC)
@@ -27,7 +29,7 @@ using Cache = CARAllocator;
 #endif
 
 void mycache_init(int64_t cache_size_in_mb, unsigned int hashpower,
-                  Cache **cache_p, PoolId *pool_p);
+                  Cache **cache_p, PoolId *pool_p, int n_thread);
 
 int cache_get(Cache *cache, PoolId pool, struct request *req, int thread_id=0);
 

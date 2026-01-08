@@ -64,12 +64,43 @@ target_compile_definitions(s3fifo PRIVATE USE_S3FIFO)
 target_link_libraries(s3fifo cachelib fmt::fmt atomic) 
 
 add_executable(flex main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
+
+if (ENABLE_ASAN)
+  target_compile_options(flex PRIVATE
+    -fsanitize=address
+    -fno-omit-frame-pointer
+    -O1
+  )
+  target_link_options(flex PRIVATE
+    -fsanitize=address
+  )
+endif()
+
+option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+
+if (ENABLE_TSAN)
+  target_compile_options(flex PRIVATE
+    -fsanitize=thread
+    -fno-omit-frame-pointer
+    -O1
+  )
+  target_link_options(flex PRIVATE
+    -fsanitize=thread
+  )
+endif()
+
+
 target_compile_definitions(flex PRIVATE USE_FLEX)
 target_link_libraries(flex cachelib fmt::fmt atomic)
 
 #add_executable(flexdump main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 #target_compile_definitions(flexdump PRIVATE USE_FLEXDUMP)
 #target_link_libraries(flexdump cachelib fmt::fmt atomic)
+
+add_executable(merlin main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
+target_compile_definitions(merlin PRIVATE USE_MERLIN)
+target_link_libraries(merlin cachelib fmt::fmt atomic)
 
 add_executable(arc main.cpp reader.cpp bench.cpp benchMT.cpp cache.cpp log.cpp)
 target_compile_definitions(arc PRIVATE USE_ARC)

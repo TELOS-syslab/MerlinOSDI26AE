@@ -33,13 +33,13 @@ namespace facebook
 
             void initHashtable() noexcept
             {
-                initialized_.store(true, std::memory_order_release);
                 auto hashTable = std::unique_ptr<std::atomic<uint32_t>[]>(new std::atomic<uint32_t>[numElem_]);
                 for (size_t i = 0; i < numElem_; ++i)
                 {
                     hashTable[i].store(0, std::memory_order_relaxed);
                 }
                 hashTable_ = std::move(hashTable);
+                initialized_.store(true, std::memory_order_release);
             }
 
             void setFIFOSize(uint32_t fifoSize) noexcept

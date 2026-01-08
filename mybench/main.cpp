@@ -21,7 +21,7 @@ int main(int argc, char *argv[]) {
   memset(&bench_data, 0, sizeof(bench_data));
 
   mycache_init(opts.cache_size_in_mb, opts.hashpower, &bench_data.cache,
-               &bench_data.pool);
+               &bench_data.pool, opts.n_thread);
 
   if (opts.n_thread == 1) {
     trace_replay_run(&bench_data, &opts);

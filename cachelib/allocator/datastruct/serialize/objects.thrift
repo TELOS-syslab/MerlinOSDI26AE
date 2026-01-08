@@ -47,6 +47,12 @@ struct MerlinAtomicDListObject {
   3: required i64 size,
 }
 
+struct MerlinFIFOObject {
+  1: required i64 compressedHead,
+  2: required i64 compressedTail,
+  3: required i64 size,
+}
+
 struct MultiDListObject {
   1: required list<DListObject> lists;
 }
@@ -60,6 +66,14 @@ struct FLEXListObject {
   1: required list<MerlinAtomicDListObject> smallfifo;
   2: required list<MerlinAtomicDListObject> mainfifo;
   3: required list<MerlinAtomicDListObject> susfifo;
+  4: required list<i64> guard_freq;
+  5: required list<i64> freq_distribution;
+}
+
+struct MerlinListObject {
+  1: required list<MerlinFIFOObject> smallfifo;
+  2: required list<MerlinFIFOObject> mainfifo;
+  3: required list<MerlinFIFOObject> susfifo;
   4: required list<i64> guard_freq;
   5: required list<i64> freq_distribution;
 }
