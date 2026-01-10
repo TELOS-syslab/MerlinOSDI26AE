@@ -16,3 +16,6 @@
 [submodule "mvfst"]
 	path = cachelib/external/mvfst
 	url = https://github.com/facebook/mvfst
+[submodule "cachelib/external/zstd"]
+	path = cachelib/external/zstd
+	url = https://github.com/facebook/zstd.git
