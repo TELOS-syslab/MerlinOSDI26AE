@@ -189,13 +189,11 @@ struct MMARCConfig {
   2: bool updateOnWrite;
   3: bool updateOnRead;
   4: bool tryLockUpdate;
-  5: double ghostMultiplier;
 }
 
 struct MMARCObject {
-  1: MMARCConfig config;
-  2: MultiDListObject lrus;
-  3: i32 partitionSize;
+  1: required MMARCConfig config;
+  8: required ARCListObject arclist;
 }
 
 struct MMARCCollection {

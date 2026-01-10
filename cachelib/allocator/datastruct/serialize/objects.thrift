@@ -91,3 +91,9 @@ struct CARListObject {
   5: list<GhostEntry> ghostB1;
   6: list<GhostEntry> ghostB2;
 }
+
+struct ARCListObject {
+  1: required DListObject t1;
+  2: required DListObject t2;
+  3: required i32 p;
+}
