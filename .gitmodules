@@ -19,3 +19,6 @@
 [submodule "cachelib/external/zstd"]
 	path = cachelib/external/zstd
 	url = https://github.com/facebook/zstd.git
+[submodule "cachelib/external/liburing"]
+	path = cachelib/external/liburing
+	url = https://github.com/axboe/liburing.git

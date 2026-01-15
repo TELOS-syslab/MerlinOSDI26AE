@@ -194,6 +194,20 @@ case "$1" in
     SRCDIR=$REPODIR
     external_git_clone=yes
     ;;
+    
+  fast-float)
+    NAME=fast_float
+    REPO=https://github.com/fastfloat/fast_float.git
+    REPODIR=cachelib/external/$NAME
+    SRCDIR=$REPODIR
+    cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
+    external_git_clone=yes
+    if test "$build_tests" = "yes" ; then
+        cmake_custom_params="$cmake_custom_params -DBUILD_TESTS=ON"
+    else
+        cmake_custom_params="$cmake_custom_params -DBUILD_TESTS=OFF"
+    fi
+    ;;
 
   folly)
     NAME=folly
