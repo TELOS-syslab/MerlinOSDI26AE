@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     autoconf \
     libtool \
     bc \
+    numactl \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /CacheLib
@@ -27,5 +28,7 @@ RUN cd cachelib/external/liburing && \
     make -j$(nproc) && \
     make install && \
     ldconfig
+
+RUN ./contrib/build.sh -j -v
 
 CMD ["/bin/bash"]

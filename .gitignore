@@ -15,6 +15,7 @@ build-sparsemap/
 build-wangle/
 build-mvfst/
 build-zstd/
+build-fast_float/
 
 mybench/_build/
 mybench/data/
