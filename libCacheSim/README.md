@@ -26,13 +26,6 @@
 <!-- TOC end -->
 
 
-<!-- TOC --><a name="news"></a>
-## News
-* **2023 June**: **QDLP** is available now, see [our paper](https://dl.acm.org/doi/10.1145/3593856.3595887) for details.
-* **2023 Oct**: **[S3-FIFO](https://dl.acm.org/doi/10.1145/3600006.3613147)** and **SIEVE(https://sievecache.com)** are available! These are very simple algorithms that are very effective in reducing cache misses. Try them out in libCacheSim and your production!
-* **2024 Jan**: We compiled a list of open-source cache datasets at the bottom of this page 
----
-
 <!-- TOC --><a name="what-is-libcachesim"></a>
 ## What is libCacheSim
 * a high-performance **cache simulator** for running cache simulations. 
@@ -71,6 +64,7 @@ cachesim supports the following algorithms:
 * [QD-LP](/libCacheSim/cache/eviction/QDLP.c)
 * [S3-FIFO](/libCacheSim/cache/eviction/S3FIFO.c)
 * [Sieve](/libCacheSim/cache/eviction/Sieve.c)
+* [Merlin](/libCacheSim/cache/eviction/cpp/merlin.cpp)
 ### Admission algorithms
 * [Adaptsize](/libCacheSim/cache/admission/adaptsize.c)
 * [Bloomfilter](/libCacheSim/cache/admission/bloomfilter.c)
@@ -105,7 +99,7 @@ Please see [install.md](/doc/install.md) for instructions on how to install the 
 ### Build libCacheSim
 cmake recommends **out-of-source build**, so we do it in a new directory:
 ```bash
-git clone https://github.com/1a1a11a/libCacheSim
+git clone https://github.com/TELOS-syslab/MerlinOSDI26AE.git
 pushd libCacheSim
 mkdir _build && cd _build
 cmake .. && make -j
@@ -276,7 +270,6 @@ The compressed traces can be used with libCacheSim without decompression. And li
 
 Among the large number of traces, I recommend using the newer traces from Twitter (cluster52), Wiki, and Meta. 
 
-
 ---
 <!-- TOC --><a name="questions"></a>
 ## Questions? 
@@ -292,54 +285,9 @@ If the changes are minor, then feel free to make them without discussion.
 This project adheres to Google's coding style. By participating, you are expected to uphold this code. 
 
 ---
-<!-- TOC --><a name="reference"></a>
-## Reference
-```
-@inproceedings{yang2020-workload,
-    author = {Juncheng Yang and Yao Yue and K. V. Rashmi},
-    title = {A large scale analysis of hundreds of in-memory cache clusters at Twitter},
-    booktitle = {14th USENIX Symposium on Operating Systems Design and Implementation (OSDI 20)},
-    year = {2020},
-    isbn = {978-1-939133-19-9},
-    pages = {191--208},
-    url = {https://www.usenix.org/conference/osdi20/presentation/yang},
-    publisher = {USENIX Association},
-}
-
-@inproceedings{yang2023-s3fifo,
-  title = {FIFO Queues Are All You Need for Cache Eviction},
-  author = {Juncheng Yang and Yazhuo Zhang and Ziyue Qiu and Yao Yue and K.V. Rashmi},
-  isbn = {9798400702297},
-  publisher = {Association for Computing Machinery},
-  booktitle = {Symposium on Operating Systems Principles (SOSP'23)},
-  pages = {130–149},
-  numpages = {20},
-  year={2023}
-}
-
-@inproceedings{yang2023-qdlp,
-  author = {Juncheng Yang and Ziyue Qiu and Yazhuo Zhang and Yao Yue and K.V. Rashmi},
-  title = {FIFO Can Be Better than LRU: The Power of Lazy Promotion and Quick Demotion},
-  year = {2023},
-  isbn = {9798400701955},
-  publisher = {Association for Computing Machinery},
-  doi = {10.1145/3593856.3595887},
-  booktitle = {Proceedings of the 19th Workshop on Hot Topics in Operating Systems (HotOS23)},
-  pages = {70–79},
-  numpages = {10},
-}
-```
-If you used libCacheSim in your research, please cite the above papers. And we welcome you to send us a link to your paper and add a reference to [references.md](references.md).
-
----
-
 
 <!-- TOC --><a name="license"></a>
 ## License
 See [LICENSE](LICENSE) for details.
 
-<!-- TOC --><a name="related"></a>
-## Related
-* [PyMimircache](https://github.com/1a1a11a/PyMimircache): a python based cache trace analysis platform, now deprecated
----
 

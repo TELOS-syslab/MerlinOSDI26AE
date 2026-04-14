@@ -84,12 +84,6 @@ set(sourceCPP
         cpp/LFU.cpp
         cpp/GDSF.cpp
         cpp/merlin.cpp
-        cpp/flex.cpp
-        cpp/flextest.cpp
-        cpp/flexs.cpp
-        cpp/flex-cbf.cpp
-        cpp/flexP.cpp
-        cpp/flex-pp.cpp
         LHD/lhd.cpp
         LHD/LHD_Interface.cpp
         )

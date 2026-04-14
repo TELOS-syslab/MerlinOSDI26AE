@@ -174,18 +174,6 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
 #endif
   } else if (strcasecmp(eviction_algo, "merlin") == 0) {
     cache = merlin_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flex") == 0) {
-    cache = flex_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flexs") == 0) {
-    cache = flexs_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flexP") == 0) {
-    cache = flexP_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flexc") == 0) {
-    cache = flexc_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flexpp") == 0) {
-    cache = flexpp_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "flextest") == 0) {
-    cache = flextest_init(cc_params, eviction_params);
   } else{
     ERROR("do not support algorithm %s\n", eviction_algo);
     abort();
