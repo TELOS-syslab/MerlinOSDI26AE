@@ -1,0 +1,220 @@
+/*
+ * Copyright (c) Meta Platforms, Inc. and affiliates.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+#include <folly/synchronization/DistributedMutex.h>
+namespace facebook {
+namespace cachelib {
+using Mutex = folly::DistributedMutex;
+using LockHolder = std::unique_lock<Mutex>;
+/* Container Interface Implementation */
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+MMS3FIFO::Container<T, HookPtr>::Container(serialization::MMS3FIFOObject object,
+                                         PtrCompressor compressor)
+    : qdlist_(*object.qdlist(), compressor), config_(*object.config()) {
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+bool MMS3FIFO::Container<T, HookPtr>::recordAccess(T& node,
+                                                 AccessMode mode, int thread_id) noexcept {
+  if ((mode == AccessMode::kWrite && !config_.updateOnWrite) ||
+      (mode == AccessMode::kRead && !config_.updateOnRead)) {
+    return false;
+  }
+
+  const auto curr = static_cast<Time>(util::getCurrentTimeSec());
+  // check if the node is still being memory managed
+  if (node.isInMMContainer()) {
+        markAccessed(node);
+        setUpdateTime(node, curr);
+
+    return true;
+  }
+  return false;
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+cachelib::EvictionAgeStat MMS3FIFO::Container<T, HookPtr>::getEvictionAgeStat(
+    uint64_t projectedLength) const noexcept {
+  return lruMutex_->lock_combine([this, projectedLength]() {
+    return getEvictionAgeStatLocked(projectedLength);
+  });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+cachelib::EvictionAgeStat
+MMS3FIFO::Container<T, HookPtr>::getEvictionAgeStatLocked(
+    uint64_t projectedLength) const noexcept {
+  EvictionAgeStat stat{};
+  const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
+  printf("getEvictionAgeStatLocked not implemented yet\n");
+
+  return stat;
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+void MMS3FIFO::Container<T, HookPtr>::setConfig(const Config& newConfig) {
+  lruMutex_->lock_combine([this, newConfig]() {
+    config_ = newConfig;
+  });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+typename MMS3FIFO::Config MMS3FIFO::Container<T, HookPtr>::getConfig() const {
+  return lruMutex_->lock_combine([this]() { return config_; });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+bool MMS3FIFO::Container<T, HookPtr>::add(T& node, int thread_id) noexcept {
+  const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
+
+  // return lruMutex_->lock_combine([this, &node, currTime]() {
+    if (node.isInMMContainer()) {
+      return false;
+    }
+
+    qdlist_.add(node);
+    resetAccessed(node);
+    node.markInMMContainer();
+    setUpdateTime(node, currTime);
+
+    return true;
+  // });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+typename MMS3FIFO::Container<T, HookPtr>::LockedIterator
+MMS3FIFO::Container<T, HookPtr>::getEvictionIterator() noexcept {
+  //LockHolder l(*lruMutex_, std::defer_lock);
+  return LockedIterator{&qdlist_};
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+template <typename F>
+void MMS3FIFO::Container<T, HookPtr>::withEvictionIterator(F&& fun, int thread_id) {
+  fun(getEvictionIterator());
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+template <typename F>
+void MMS3FIFO::Container<T, HookPtr>::withContainerLock(F&& fun) {
+  //LockHolder l(lruMutex_);
+  fun();
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+void MMS3FIFO::Container<T, HookPtr>::removeLocked(T& node) noexcept {
+  LruType type = getLruType(node);
+
+  switch (type) {
+  case LruType::Prob:
+    qdlist_.getListProbationary().remove(node);
+    break;
+  case LruType::Main:
+    qdlist_.getListMain().remove(node);
+    break;
+  case LruType::NumTypes:
+    XDCHECK(false);
+  }
+  node.unmarkInMMContainer();
+  return;
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+bool MMS3FIFO::Container<T, HookPtr>::remove(T& node, int thread_id) noexcept {
+  return lruMutex_->lock_combine([this, &node]() {
+    if (!node.isInMMContainer()) {
+      return false;
+    }
+    removeLocked(node);
+    return true;
+  });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+void MMS3FIFO::Container<T, HookPtr>::remove(LockedIterator& it, int thread_id) noexcept {
+  T& node = *it;
+  XDCHECK(node.isInMMContainer());
+  node.unmarkInMMContainer();
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+bool MMS3FIFO::Container<T, HookPtr>::replace(T& oldNode, T& newNode) noexcept {
+  return lruMutex_->lock_combine([this, &oldNode, &newNode]() {
+    if (!oldNode.isInMMContainer() || newNode.isInMMContainer()) {
+      return false;
+    }
+    const auto updateTime = getUpdateTime(oldNode);
+
+    LruType type = getLruType(oldNode);
+
+    switch (type) {
+    case LruType::Prob:
+      markProbationary(newNode);
+      qdlist_.getListProbationary().replace(oldNode, newNode);
+      break;
+    case LruType::Main:
+      markMain(newNode);
+      qdlist_.getListMain().replace(oldNode, newNode);
+      break;
+    case LruType::NumTypes:
+      XDCHECK(false);
+    }
+
+    oldNode.unmarkInMMContainer();
+    newNode.markInMMContainer();
+    setUpdateTime(newNode, updateTime);
+    if (isAccessed(oldNode)>0) {
+      markAccessed(newNode);
+    } else {
+      unmarkAccessed(newNode);
+    }
+    return true;
+  });
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+serialization::MMS3FIFOObject MMS3FIFO::Container<T, HookPtr>::saveState()
+    const noexcept {
+  serialization::MMS3FIFOConfig configObject;
+  *configObject.updateOnWrite() = config_.updateOnWrite;
+  *configObject.updateOnRead() = config_.updateOnRead;
+
+  serialization::MMS3FIFOObject object;
+  *object.config() = configObject;
+  *object.qdlist() = qdlist_.saveState();
+  return object;
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+MMContainerStat MMS3FIFO::Container<T, HookPtr>::getStats() const noexcept {
+  auto stat = lruMutex_->lock_combine([this]() {
+    // we return by array here because DistributedMutex is fastest when the
+    // output data fits within 48 bytes.  And the array is exactly 48 bytes, so
+    // it can get optimized by the implementation.
+    //
+    // the rest of the parameters are 0, so we don't need the critical section
+    // to return them
+    return folly::make_array(qdlist_.size());
+  });
+  return {stat[0] /* lru size */,
+          // stat[1] /* tail time */,
+          0, 0 /* refresh time */, 0, 0, 0, 0};
+}
+
+template <typename T, MMS3FIFO::Hook<T> T::*HookPtr>
+void MMS3FIFO::Container<T, HookPtr>::reconfigureLocked(const Time& currTime) {
+}
+} // namespace cachelib
+} // namespace facebook
