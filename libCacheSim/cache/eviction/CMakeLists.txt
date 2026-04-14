@@ -83,6 +83,7 @@ endif()
 set(sourceCPP
         cpp/LFU.cpp
         cpp/GDSF.cpp
+        cpp/merlin.cpp
         cpp/flex.cpp
         cpp/flextest.cpp
         cpp/flexs.cpp

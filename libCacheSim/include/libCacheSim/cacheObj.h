@@ -158,6 +158,18 @@ typedef struct
     int accessed;
 } FLEX_obj_metadata_t;
 
+typedef struct
+{
+    int64_t freq;
+    int seqaccess;
+    int staginghit;
+    int inghost;
+    //used for analysis
+    int fromghost;
+    int fromsketch;
+    int accessed;
+} MERLIN_obj_metadata_t;
+
 typedef struct {
   int32_t freq;
 } __attribute__((packed)) Sieve_obj_params_t;
@@ -210,6 +222,7 @@ typedef struct cache_obj {
     S3FIFO_obj_metadata_t S3FIFO;
     Sieve_obj_params_t sieve;
     FLEX_obj_metadata_t FLEX;
+    MERLIN_obj_metadata_t MERLIN;
 
 #if defined(ENABLE_GLCACHE) && ENABLE_GLCACHE == 1
     GLCache_obj_metadata_t GLCache;

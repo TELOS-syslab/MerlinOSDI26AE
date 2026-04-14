@@ -204,6 +204,10 @@ cache_t *flexc_init(const common_cache_params_t ccache_params,
 
 cache_t *flexpp_init(const common_cache_params_t ccache_params,
                          const char *cache_specific_params);
+
+cache_t *merlin_init(const common_cache_params_t ccache_params,
+                         const char *cache_specific_params);
+
 #ifdef ENABLE_LRB
 cache_t *LRB_init(const common_cache_params_t ccache_params,
                   const char *cache_specific_params);

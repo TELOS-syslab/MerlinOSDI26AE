@@ -7,7 +7,7 @@
 #include "../../traceAnalyzer/analyzer.h"
 
 #define N_ARGS 2
-#define OFILEPATH_LEN 128
+#define OFILEPATH_LEN 256
 
 #ifdef __cplusplus
 extern "C" {

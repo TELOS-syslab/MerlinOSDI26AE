@@ -172,6 +172,8 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
   } else if (strcasecmp(eviction_algo, "myMQv1") == 0) {
     cache = myMQv1_init(cc_params, eviction_params);
 #endif
+  } else if (strcasecmp(eviction_algo, "merlin") == 0) {
+    cache = merlin_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "flex") == 0) {
     cache = flex_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "flexs") == 0) {
