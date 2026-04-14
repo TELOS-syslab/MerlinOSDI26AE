@@ -15,19 +15,19 @@ namespace facebook
 {
     namespace cachelib
     {
-        class AtomicFIFOSketch
+        class MerlinGhost
         {
         public:
-            AtomicFIFOSketch() = default;
+            MerlinGhost() = default;
 
-            explicit AtomicFIFOSketch(uint32_t fifoSize) noexcept
+            explicit MerlinGhost(uint32_t fifoSize) noexcept
             {
                 fifoSize_ = ((fifoSize >> 3) + 1) << 3;
                 numElem_ = fifoSize_ * loadFactorInv_;
                 initHashtable();
             }
 
-            ~AtomicFIFOSketch() { hashTable_ = nullptr; }
+            ~MerlinGhost() { hashTable_ = nullptr; }
 
             inline bool initialized() const noexcept { return initialized_.load(std::memory_order_acquire); }
 
@@ -50,11 +50,13 @@ namespace facebook
 
             int contains(uint32_t key) noexcept
             {
+                // return the freq if found, otherwise return 0
                 uint32_t bucketIdx = getBucketIdx(key);
                 int64_t currTime = numInserts_.load();
                 for(int i = 0; i < nItemPerBucket_; i++){
                     uint64_t valInTable = hashTable_[bucketIdx + i].load(std::memory_order_relaxed);
                     if(valInTable == 0){
+                        //an empty slot
                         continue;
                     }
                     int64_t insertionTime = getInsertionTime(valInTable);
@@ -62,6 +64,7 @@ namespace facebook
 
                     if (age > fifoSize_)
                     {
+                        //outdated, attempt to clean
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, 0, std::memory_order_relaxed);
                         if(ret){
                             int ori_freq = getFreq(valInTable);
@@ -76,6 +79,8 @@ namespace facebook
                     }
                     if (matchKey(valInTable, key))
                     {
+                        //found, attempt to increase freq by 1
+                        //hit in ghost
                         int ori_freq = getFreq(valInTable);
                         if(ori_freq == MAX_FREQ){
                             return MAX_FREQ;
@@ -97,33 +102,10 @@ namespace facebook
                 return 0;
             }
 
-            void insert2(uint32_t key, int freq = 0) noexcept
-            {
-                int64_t currTime = numInserts_++;
-                if (currTime > MAX_VALUE)
-                {
-                    numInserts_ = 0;
-                    currTime = 0;
-                }
-                size_t bucketIdx = getBucketIdx(key);
-                uint64_t hashTableVal = genHashtableVal(key, currTime, 0);
-
-                 for (size_t i = 0; i < nItemPerBucket_; i++) {
-                    uint64_t valInTable = hashTable_[bucketIdx + i].load(std::memory_order_relaxed);
-                    if (valInTable == 0) {
-                        if(hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, hashTableVal, std::memory_order_relaxed)) {
-                            return;
-                        }
-                    }
-                }
-                // we do not find an empty slots, random choose and overwrite one
-                hashTable_[key % numElem_].store(hashTableVal, std::memory_order_relaxed);
-                //__atomic_store_n(&hashTable_[key % numElem_], hashTableVal, __ATOMIC_RELAXED);
-                return;
-            }
-
             void insert(uint32_t key, int freq = 0) noexcept
             {
+                // insert or update the freq of the key
+                // if freq = 0, it means a new key, otherwise it's an update with the given freq increment
                 int64_t currTime = numInserts_;
                 freq++;
                 // reset if overflow
@@ -140,6 +122,7 @@ namespace facebook
                     uint64_t valInTable = hashTable_[bucketIdx + i].load(std::memory_order_relaxed);
                     if (valInTable == 0)
                     {
+                        //an empty slot
                         empty_slot = i;
                         continue;
                     }
@@ -148,6 +131,7 @@ namespace facebook
 
                     if (age > fifoSize_)
                     {
+                        //outdated, attempt to clean
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, 0, std::memory_order_relaxed);
                         if (ret)
                         {
@@ -164,6 +148,7 @@ namespace facebook
                     }
                     if (matchKey(valInTable, key))
                     {
+                        //found, attempt to increase freq by the given freq increment
                         int overflow = 0;
                         int ori_freq = getFreq(valInTable);
                         if (ori_freq == MAX_FREQ)

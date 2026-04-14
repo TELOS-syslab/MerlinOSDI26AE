@@ -39,7 +39,6 @@ add_library (cachelib_allocator
     CacheAllocatorWTinyLFU5BCache.cpp
     CacheAllocatorWTinyLFUCache.cpp
     CacheAllocatorS3fifoCache.cpp
-    CacheAllocatorFLEXCache.cpp
     CacheAllocatorMerlinCache.cpp
     CacheAllocatorARCCache.cpp
     CacheAllocatorCARCache.cpp

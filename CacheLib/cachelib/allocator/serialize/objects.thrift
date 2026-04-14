@@ -155,20 +155,6 @@ struct MMS3FIFOCollection {
   1: required map<i32, map<i32, MMS3FIFOObject>> pools,
 }
 
-struct MMFLEXConfig {
-  2: required bool updateOnWrite,
-  4: bool updateOnRead = true,
-}
-
-struct MMFLEXObject {
-  1: required MMFLEXConfig config,
-  8: required FLEXListObject flexlist,
-}
-
-struct MMFLEXCollection {
-  1: required map<i32, map<i32, MMFLEXObject>> pools,
-}
-
 struct MMMerlinConfig {
   2: required bool updateOnWrite,
   4: bool updateOnRead = true,

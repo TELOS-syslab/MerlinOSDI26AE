@@ -62,19 +62,11 @@ struct S3FIFOListObject {
   2: required AtomicDListObject mfifo;
 }
 
-struct FLEXListObject {
-  1: required list<MerlinAtomicDListObject> smallfifo;
-  2: required list<MerlinAtomicDListObject> mainfifo;
-  3: required list<MerlinAtomicDListObject> susfifo;
-  4: required list<i64> guard_freq;
-  5: required list<i64> freq_distribution;
-}
-
 struct MerlinListObject {
-  1: required list<MerlinFIFOObject> smallfifo;
-  2: required list<MerlinFIFOObject> mainfifo;
-  3: required list<MerlinFIFOObject> susfifo;
-  4: required list<i64> guard_freq;
+  1: required list<MerlinFIFOObject> filterfifo;
+  2: required list<MerlinFIFOObject> corefifo;
+  3: required list<MerlinFIFOObject> stagingfifo;
+  4: required list<i64> hotness_threshold;
   5: required list<i64> freq_distribution;
 }
 

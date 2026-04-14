@@ -16,12 +16,8 @@ using Cache = S3FIFOAllocator;
 using Cache = Lru2QAllocator;
 #elif defined(USE_TINYLFU)
 using Cache = TinyLFUAllocator;
-#elif defined(USE_FLEX)
-using Cache = FLEXAllocator;
 #elif defined(USE_MERLIN)
 using Cache = MerlinAllocator;
-#elif defined(USE_FLEXDUMP)
-using Cache = FLEXdumpAllocator;
 #elif defined(USE_ARC)
 using Cache = ARCAllocator;
 #elif defined(USE_CAR)

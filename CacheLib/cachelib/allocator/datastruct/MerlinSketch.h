@@ -13,19 +13,19 @@ namespace facebook
 {
     namespace cachelib
     {
-        class AtomicSketch
+        class MerlinSketch
         {
         public:
-            AtomicSketch() = default;
+            MerlinSketch() = default;
 
-            explicit AtomicSketch(uint32_t fifoSize) noexcept
+            explicit MerlinSketch(uint32_t fifoSize) noexcept
             {
                 fifoSize_ = ((fifoSize >> 3) + 1) << 3;
                 numElem_ = fifoSize_ * loadFactorInv_;
                 initHashtable();
             }
 
-            ~AtomicSketch() { hashTable_ = nullptr; }
+            ~MerlinSketch() { hashTable_ = nullptr; }
 
             bool initialized() const noexcept {
                 return initialized_.load(std::memory_order_acquire);
@@ -56,10 +56,13 @@ namespace facebook
 
             void estimate(uint32_t key) noexcept
             {
+                // increase the count of the key by 1
                 size_t bucketIdx = getBucketIdx(key);
                 hashTable_[bucketIdx].fetch_add(1, std::memory_order_relaxed);
                 int id = numInserts_++;
                 if((id & 0x1f) == 0x1f) {
+                    //periodically clean the outdated entries in the sketch
+                    //clean one entry every 32 inserts, so the cleaning overhead is low and can be ignored
                     int cleanid = ((id >> 5) % numElem_);
                     int val = hashTable_[cleanid].load(std::memory_order_relaxed);
                     val /= 2;

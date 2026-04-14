@@ -6103,7 +6103,6 @@ extern template class CacheAllocator<Lru2QCacheTrait>;
 extern template class CacheAllocator<TinyLFUCacheTrait>;
 extern template class CacheAllocator<WTinyLFUCacheTrait>;
 extern template class CacheAllocator<S3FIFOCacheTrait>;
-extern template class CacheAllocator<FLEXCacheTrait>;
 extern template class CacheAllocator<MerlinCacheTrait>;
 extern template class CacheAllocator<ARCCacheTrait>;
 extern template class CacheAllocator<CARCacheTrait>;
@@ -6143,7 +6142,6 @@ using TinyLFUAllocator = CacheAllocator<TinyLFUCacheTrait>;
 using WTinyLFUAllocator = CacheAllocator<WTinyLFUCacheTrait>;
 
 using S3FIFOAllocator = CacheAllocator<S3FIFOCacheTrait>;
-using FLEXAllocator = CacheAllocator<FLEXCacheTrait>;
 using MerlinAllocator = CacheAllocator<MerlinCacheTrait>;
 using ARCAllocator = CacheAllocator<ARCCacheTrait>;
 using CARAllocator = CacheAllocator<CARCacheTrait>;

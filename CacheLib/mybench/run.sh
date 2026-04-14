@@ -9,16 +9,16 @@ usage() {
    exit
 }
 
-algo=${1:-"flex"}
+algo=${1:-"merlin"}
 sz_base=${2:-"4000"}
 hp_base=${3:-"21"}
 file_path=${4:-"zipf1.0_1_400.oracleGeneral.bin"}
 
-#echo "############## flex 6400 25 16"
-#./_build/flex zipf1.0_1_100.oracleGeneral.bin 6400 25 16 #| tail -n 10
+#echo "############## merlin 6400 25 16"
+#./_build/merlin zipf1.0_1_100.oracleGeneral.bin 6400 25 16 #| tail -n 10
 #echo "############## s3fifo 6400 25 16"
 #./_build/s3fifo zipf1.0_1_100.oracleGeneral.bin 6400 25 16 #| tail -n 10
-#numactl --membind=0 ./_build/flex zipf1.0_1_100.oracleGeneral.bin 1000 22 2 | tail -n 4
+#numactl --membind=0 ./_build/merlin zipf1.0_1_100.oracleGeneral.bin 1000 22 2 | tail -n 4
 
 for nThread in 1 2 4 8 16 24 32 48 64 128; do 
     sz=$(echo "${sz_base} * ${nThread}" | bc)

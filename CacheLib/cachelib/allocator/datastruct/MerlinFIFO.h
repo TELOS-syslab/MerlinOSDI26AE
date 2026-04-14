@@ -132,17 +132,17 @@ class MerlinFIFO {
   }
 
   bool try_lock_head() noexcept{
-    // 成功返回 true，失败返回 false
+    // return true if succeed，return false if failed
     return !flag_.test_and_set(std::memory_order_acquire);
   }
   void unlock_head() noexcept{
     flag_.clear(std::memory_order_release);
   }
   void lock_head() noexcept{
-    // test_and_set 返回旧值
+    // test_and_set return old value
     while (flag_.test_and_set(std::memory_order_acquire)) {
     #if defined(__x86_64__) || defined(__i386__)
-        __builtin_ia32_pause();  // 减少 HT/SMT 争用
+        __builtin_ia32_pause();  // reduce HT/SMT contention
     #endif
     }
   }
@@ -337,7 +337,6 @@ void MerlinFIFO<T, HookPtr>::linkAtHead(T& node) noexcept {
     setPrev(*oldHead, &node);
   }
   head_insert_size_.fetch_add(1, std::memory_order_relaxed);
-  //size_.fetch_add(1, std::memory_order_relaxed);
 }
 
 /* note that the next of the tail may not be nullptr  */
@@ -348,7 +347,7 @@ T* MerlinFIFO<T, HookPtr>::removeTail() noexcept {
     // empty list
     return nullptr;
   }
-  T* prev = getPrev(*tail);// nullptr?
+  T* prev = getPrev(*tail);
 
   // if tail has not changed, the prev is correct
   while (!tail_.compare_exchange_weak(tail, prev)) {
@@ -373,8 +372,6 @@ T* MerlinFIFO<T, HookPtr>::removeTail() noexcept {
   setPrev(*tail, nullptr);
 
   tail_remove_size_.fetch_add(1, std::memory_order_relaxed);
-  //size_ --;
-  //size_.fetch_sub(1, std::memory_order_relaxed);
 
   return tail;
 }
@@ -408,9 +405,9 @@ void MerlinFIFO<T, HookPtr>::unlink(const T& node) noexcept {
     setNextFrom(*prev, node);
   }
 
+  //remove the node from the linked list
+  //which is the same as removing the tail
   tail_remove_size_.fetch_add(1, std::memory_order_relaxed);
-    //size_.fetch_sub(1, std::memory_order_relaxed);
-  //size_--;
 }
 
 template <typename T, MerlinFIFOHook<T> T::*HookPtr>
@@ -422,6 +419,7 @@ void MerlinFIFO<T, HookPtr>::remove(T& node) noexcept {
   }
 
   LockHolder l(*mtx_);
+  // manage the head and tail links
   unlink(node);
   setNext(node, nullptr);
   setPrev(node, nullptr);

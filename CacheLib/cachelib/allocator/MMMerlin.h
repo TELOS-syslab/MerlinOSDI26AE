@@ -23,7 +23,7 @@
 namespace facebook::cachelib
 {
     class MMMerlin
-    {
+    {// work with interface in CacheLib
     public:
         // unique identifier per MMType
         static const int kId;
@@ -37,9 +37,9 @@ namespace facebook::cachelib
         // This is not applicable for MMLru, just for compile of cache allocator
         enum LruType
         {
-            Small,
-            Main,
-            Suspicious,
+            Filter,
+            Core,
+            Staging,
             NumTypes
         };
 
@@ -283,22 +283,22 @@ namespace facebook::cachelib
             // return the stats for this container.
             MMContainerStat getStats() const noexcept;
 
-            bool isSmall(const T &node) const noexcept
+            bool isFilter(const T &node) const noexcept
             {
                 return node.template isFlagSet<RefFlags::kMMFlag0>();
             }
-            bool isMain(const T &node) const noexcept
+            bool isCore(const T &node) const noexcept
             {
                 return node.template isFlagSet<RefFlags::kMMFlag1>();
             }
 
             LruType getLruType(const T &node) noexcept
             {
-                if (isSmall(node))
-                    return LruType::Small;
-                if (isMain(node))
-                    return LruType::Main;
-                return LruType::Suspicious;
+                if (isFilter(node))
+                    return LruType::Filter;
+                if (isCore(node))
+                    return LruType::Core;
+                return LruType::Staging;
             }
         private:
             EvictionAgeStat
@@ -456,10 +456,6 @@ namespace facebook::cachelib
     template <typename T, MMMerlin::Hook<T> T::*HookPtr>
     bool MMMerlin::Container<T, HookPtr>::remove(T &node, int thread_id) noexcept
     {
-        if(thread_id == 0){
-            printf("Error: thread_id is 0 in remove of MMMerlin\n");
-            //abort();
-        }
         return Mutex_->lock_combine([this, &node,thread_id]()
                                     {
         if (!node.isInMMContainer()) {
@@ -472,10 +468,6 @@ namespace facebook::cachelib
     template <typename T, MMMerlin::Hook<T> T::*HookPtr>
     void MMMerlin::Container<T, HookPtr>::remove(LockedIterator &it, int thread_id) noexcept
     {
-        if(thread_id == 0){
-            printf("remove by iterator in MMMerlin\n");
-            //abort();
-        }
         T &node = *it;
         XDCHECK(node.isInMMContainer());
         node.unmarkInMMContainer();
@@ -484,8 +476,6 @@ namespace facebook::cachelib
     template <typename T, MMMerlin::Hook<T> T::*HookPtr>
     bool MMMerlin::Container<T, HookPtr>::replace(T &oldNode, T &newNode) noexcept
     {
-        printf("replace happen\n");
-        //abort();
         return Mutex_->lock_combine([this, &oldNode, &newNode]()
                                     {
     if (!oldNode.isInMMContainer() || newNode.isInMMContainer()) {
