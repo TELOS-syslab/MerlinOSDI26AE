@@ -64,7 +64,7 @@ extern "C"
 #endif
 
     static const char *DEFAULT_CACHE_PARAMS =
-        "filter-size-ratio=0.10,staging-size-ratio=0.05,ghost-size-ratio=1.00,epoch-update=32,sckech-scale=1.0";
+        "filter-size-ratio=0.10,staging-size-ratio=0.05,ghost-size-ratio=1.00,epoch-update=32,sketch-scale=1.0";
 
     cache_t *merlin_init(const common_cache_params_t ccache_params,
                         const char *cache_specific_params);

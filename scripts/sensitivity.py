@@ -159,7 +159,7 @@ def get_policy_todo(result_file):
                 parts = line.strip().split()
                 if len(parts) > 1:
                     done.add(parts[1])
-    #--eviction-params filter-size-ratio=0.10,staging-size-ratio=0.05,ghost-size-ratio=1.00,epoch-update=32,sckech-scale=1.0
+    #--eviction-params filter-size-ratio=0.10,staging-size-ratio=0.05,ghost-size-ratio=1.00,epoch-update=32,sketch-scale=1.0
     filter_size_ratio = "0.10"
     staging_size_ratio = "0.05"
     ghost_size_ratio = "1.00"
@@ -220,9 +220,8 @@ def run_cmd(cmd, result_file):
         return proc.returncode == 0
 
     except Exception as e:
-        print(f"[ERROR] {e}")
-        time.sleep(1)
-
+        print(f"[ERROR] {e} during {cmd}")
+        
     return False
 
 # -----------------------------
