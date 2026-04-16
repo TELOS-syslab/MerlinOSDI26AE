@@ -142,7 +142,7 @@ extern "C"
         params->CBF =
             (struct minimalIncrementCBF *)malloc(sizeof(struct minimalIncrementCBF));
         params->CBF->ready = 0;
-        int cbf_size = MIN(ccache_params.cache_size * 4 * params->sketch_scale, 1<<30);
+        int cbf_size = MIN(ccache_params.cache_size * params->sketch_scale, 1<<30);
         int ret = minimalIncrementCBF_init(params->CBF, cbf_size, 0.001);
         if (ret != 0)
         {
