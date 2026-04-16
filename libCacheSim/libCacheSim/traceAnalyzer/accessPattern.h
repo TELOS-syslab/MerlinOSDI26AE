@@ -16,7 +16,7 @@
 #include "../include/libCacheSim/logging.h"
 #include "../include/libCacheSim/request.h"
 #include "../include/libCacheSim/cache.h"
-#include "cache_init.h"
+#include "../bin/cachesim/cache_init.h"
 #include "struct.h"
 #include <set>
 
@@ -34,7 +34,7 @@ class AccessPattern {
       : sample_ratio_(sample_ratio) {
         if(cache_name != nullptr && strlen(cache_name) > 0){
             printf("create cache %s for access pattern analysis size %d\n", cache_name,cache_size);
-            cache = create_cache(cache_name, cache_size, eviction_params, false);
+            cache = create_cache(NULL, cache_name, cache_size, eviction_params, false);
         }
 
     if (sample_ratio_ < 1) {

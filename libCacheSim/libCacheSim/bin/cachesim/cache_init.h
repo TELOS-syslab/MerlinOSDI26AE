@@ -82,7 +82,7 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     } else {
       const char *window_size = strstr(eviction_params, "window-size=");
       if (window_size == NULL) {
-        char *new_params = malloc(strlen(eviction_params) + 20);
+        char *new_params = (char *)malloc(strlen(eviction_params) + 20);
         sprintf(new_params, "%s,window-size=0.01", eviction_params);
         cache = WTinyLFU_init(cc_params, new_params);
       } else {
@@ -138,8 +138,6 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = S3FIFO_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "s3fifod") == 0) {
     cache = S3FIFOd_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "s3fifotest") == 0) {
-    cache = S3FIFOtest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "qdlp") == 0) {
     cache = QDLP_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "sieve") == 0) {
