@@ -745,7 +745,7 @@ int find_track = (req->obj_id == track_id);
             {
                 params->epoch_update = strtol(value, NULL, 10);
             }
-            else if (strcasecmp(key, "sckech-scale") == 0)
+            else if (strcasecmp(key, "sketch-scale") == 0)
             {
                 params->sketch_scale = strtod(value, NULL);
             }
