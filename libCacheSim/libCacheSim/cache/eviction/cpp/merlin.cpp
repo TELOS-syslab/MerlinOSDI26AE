@@ -642,7 +642,7 @@ int find_track = (req->obj_id == track_id);
         {
             params->evictobj_num = 0;
             params->epoch_count += 1;
-            if ((params->epoch_count >= params->epoch_update) == 0)
+            if ((params->epoch_count >= params->epoch_update))
             {
                 params->epoch_count = 0;
                 minimalIncrementCBF_decay(params->CBF);
