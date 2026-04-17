@@ -12,10 +12,12 @@ import re
 # global state
 # =============================
 file_lock = threading.Lock()
-running_tasks = {}  # pid -> info
+oom_happen = False
+
+# pid -> start_time
+running_tasks = {}
 running_lock = threading.Lock()
 
-oom_happen = False
 MEM_SAFE_GB = 100
 
 # -----------------------------
@@ -40,11 +42,11 @@ def is_oom(stderr):
     s = stderr.lower()
     return "killed" in s or "out of memory" in s or "oom" in s
 
-
 # =============================
 # kill shortest job
 # =============================
 def kill_shortest_jobs_until_safe():
+    killed = 0
     while True:
         cpu_usage = psutil.cpu_percent(interval=0.5)
         free_gb = get_available_memory_gb()
@@ -84,6 +86,7 @@ def kill_shortest_jobs_until_safe():
 
             p = psutil.Process(pid)
             p.kill()
+            killed += 1
 
             try:
                 p.wait(timeout=3)
@@ -93,11 +96,14 @@ def kill_shortest_jobs_until_safe():
         except Exception as e:
             print(f"[WARN] kill failed {pid}: {e}")
 
-        time.sleep(1)
-
+        time.sleep(5*killed)
+        if killed >= 10:
+            print("killed too many tasks, wait for a while")
+            time.sleep(60)
+            return
 
 # =============================
-# extract output
+# extract important lines
 # =============================
 def extract_important_lines(stdout_lines):
     """
@@ -161,7 +167,6 @@ def get_available_workers():
         workers = 1
     return max(0, workers)
 
-
 # -----------------------------
 # policy todo list
 # recover from existing result file, only run the policies that are not done yet
@@ -193,9 +198,9 @@ def get_policy_todo(result_file):
                 todo.append((f"merlin", eparams))
     return todo
 
-# =============================
-# worker
-# =============================
+# -----------------------------
+# execute command with retry and OOM handling
+# -----------------------------
 def run_cmd(cmd, result_file):
     global oom_happen
     try:
@@ -250,10 +255,9 @@ def run_cmd(cmd, result_file):
         print(f"[ERROR] {e}")
     return False
 
-
-# =============================
-# build tasks
-# =============================
+# -----------------------------
+# construct task list based on input directory and existing results, supports resuming
+# -----------------------------
 def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
     tasks = []
     os.makedirs(output_dir, exist_ok=True)
@@ -278,10 +282,9 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
                     tasks.append((cmd, result_file))
     return tasks
 
-
-# =============================
+# -----------------------------
 # main loop
-# =============================
+# -----------------------------
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", required=True)
@@ -345,8 +348,8 @@ def main():
         time.sleep(next_sleep)
 
     executor.shutdown(wait=True)
-    print("[DONE]")
+    print("[INFO] All tasks completed.")
 
-#python sensitivity.py   --root_dir /pathto/libCacheSim   --input_dir /pathto/CacheTrace   --output_dir /pathtooutput   --ignore_obj
+#python sensitivity.py   --root_dir /pathto/libCacheSim/_build   --input_dir /pathto/CacheTrace   --output_dir /pathtooutput   --ignore_obj
 if __name__ == "__main__":
     main()
