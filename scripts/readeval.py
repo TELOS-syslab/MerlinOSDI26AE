@@ -107,7 +107,7 @@ def main():
             for i, (size, policy_map) in enumerate(parsed):
                 ratio = XTICK[i]
 
-                row = {"file": file, "size": size}
+                row = {"#file": file, "size": size}
                 row.update(policy_map)
 
                 bucket[dataset][ratio].append(row)
