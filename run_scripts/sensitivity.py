@@ -12,12 +12,10 @@ import re
 # global state
 # =============================
 file_lock = threading.Lock()
-oom_happen = False
-
-# pid -> start_time
-running_tasks = {}
+running_tasks = {}  # pid -> info
 running_lock = threading.Lock()
 
+oom_happen = False
 MEM_SAFE_GB = 100
 
 # -----------------------------
@@ -31,47 +29,75 @@ policy_name = [
 ]
 
 # =============================
-# functions
+# utils
 # =============================
 def get_available_memory_gb():
     return psutil.virtual_memory().available / (1024**3)
 
+def is_oom(stderr):
+    if not stderr:
+        return False
+    s = stderr.lower()
+    return "killed" in s or "out of memory" in s or "oom" in s
+
+
 # =============================
-# oom, kill the shortest job until memory is safe
+# kill shortest job
 # =============================
 def kill_shortest_jobs_until_safe():
-    print("[OOM] Trigger kill by runtime policy")
-
     while True:
+        cpu_usage = psutil.cpu_percent(interval=0.5)
         free_gb = get_available_memory_gb()
-        if free_gb >= MEM_SAFE_GB:
-            print(f"[OOM] Memory recovered: {free_gb:.1f} GB")
+
+        print(f"[CHECK] free memory {free_gb:.1f} GB cpu {cpu_usage:.1f}%")
+
+        if free_gb >= MEM_SAFE_GB and cpu_usage < 80:
             return
 
+        now = time.time()
+
+        alive = []
         with running_lock:
-            if len(running_tasks) <= 1:
-                print("[OOM] limited running tasks")
-                return
+            for pid, info in list(running_tasks.items()):
+                if not psutil.pid_exists(pid):
+                    running_tasks.pop(pid, None)
+                    continue
+                if info.get("killed"):
+                    continue
+                alive.append((pid, info))
 
-            # 按运行时间排序（最短优先）
-            now = time.time()
-            sorted_tasks = sorted(
-                running_tasks.items(),
-                key=lambda x: now - x[1]["start_time"]
-            )
+        if len(alive) <= 1:
+            print("[OOM] limited running tasks")
+            return
 
-            pid, info = sorted_tasks[0]
+        pid, info = sorted(
+            alive,
+            key=lambda x: now - x[1]["start_time"]
+        )[0]
 
         try:
-            print(f"[KILL] PID={pid}, runtime={now - info['start_time']:.1f}s")
-            psutil.Process(pid).kill()
+            runtime = now - info["start_time"]
+            print(f"[KILL] PID={pid}, runtime={runtime:.1f}s")
+
+            with running_lock:
+                running_tasks[pid]["killed"] = True
+
+            p = psutil.Process(pid)
+            p.kill()
+
+            try:
+                p.wait(timeout=3)
+            except psutil.TimeoutExpired:
+                pass
+
         except Exception as e:
             print(f"[WARN] kill failed {pid}: {e}")
 
         time.sleep(1)
 
+
 # =============================
-# 
+# extract output
 # =============================
 def extract_important_lines(stdout_lines):
     """
@@ -101,7 +127,6 @@ def extract_important_lines(stdout_lines):
             )
     return important_lines
 
-
 def convert_to_bytes(size_str):
     """
     convert cache size string to bytes integer
@@ -120,9 +145,9 @@ def convert_to_bytes(size_str):
 # resource check
 # =============================
 def get_available_workers():
-    cpu_total = psutil.cpu_count() * 0.8
+    cpu_total = psutil.cpu_count()
     cpu_usage = psutil.cpu_percent(interval=0.5)
-
+    cpu_usage += 15  # add some buffer
     cpu_free = cpu_total * (1 - cpu_usage/100) // 2
 
     mem_free = get_available_memory_gb()
@@ -130,20 +155,12 @@ def get_available_workers():
 
     if oom_happen:
         mem_based = max(0, mem_based // 5)
-
+    print(f"[RESOURCE] CPU usage {cpu_usage:.1f}% CPU free {cpu_free:.1f}, Mem free {mem_free:.1f} GB, mem_based {mem_based}")
     workers = int(min(cpu_free, mem_based))
     if workers <= 0 and len(running_tasks) == 0:
         workers = 1
     return max(0, workers)
 
-# -----------------------------
-# OOM detection
-# -----------------------------
-def is_oom(stderr):
-    if not stderr:
-        return False
-    s = stderr.lower()
-    return "killed" in s or "out of memory" in s or "oom" in s
 
 # -----------------------------
 # policy todo list
@@ -176,9 +193,9 @@ def get_policy_todo(result_file):
                 todo.append((f"merlin", eparams))
     return todo
 
-# -----------------------------
-# execute command with retry and OOM handling
-# -----------------------------
+# =============================
+# worker
+# =============================
 def run_cmd(cmd, result_file):
     global oom_happen
     try:
@@ -190,20 +207,30 @@ def run_cmd(cmd, result_file):
             text=True
         )
 
-        # register running task
+        # register
         with running_lock:
             running_tasks[proc.pid] = {
                 "start_time": time.time(),
-                "cmd": cmd
+                "cmd": cmd,
+                "killed": False
             }
 
         stdout, stderr = proc.communicate()
 
-        # register task finished
+        # check killed
+        killed = False
         with running_lock:
+            info = running_tasks.get(proc.pid)
+            if info:
+                killed = info.get("killed", False)
             running_tasks.pop(proc.pid, None)
 
+        if killed:
+            print(f"[KILLED] {cmd}")
+            return "KILLED"
+
         if is_oom(stderr):
+            print(f"[OOM] {cmd}")
             oom_happen = True
             kill_shortest_jobs_until_safe()
             return False
@@ -220,23 +247,26 @@ def run_cmd(cmd, result_file):
         return proc.returncode == 0
 
     except Exception as e:
-        print(f"[ERROR] {e} during {cmd}")
-        
+        print(f"[ERROR] {e}")
     return False
 
-# -----------------------------
-# construct task list based on input directory and existing results, supports resuming
-# -----------------------------
+
+# =============================
+# build tasks
+# =============================
 def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
     tasks = []
     os.makedirs(output_dir, exist_ok=True)
-    for dir_name in os.listdir(input_dir):
-        dir_path = os.path.join(input_dir, dir_name)
-        out_dir = os.path.join(output_dir, dir_name)
+    for dataset in os.listdir(input_dir):
+        dataset_path = os.path.join(input_dir, dataset)
+        if not os.path.isdir(dataset_path):
+            continue
+
+        out_dir = os.path.join(output_dir, dataset)
         os.makedirs(out_dir, exist_ok=True)
 
-        for file in os.listdir(dir_path):
-            input_file = os.path.join(dir_path, file)
+        for file in os.listdir(dataset_path):
+            input_file = os.path.join(dataset_path, file)
             result_file = os.path.join(out_dir, file)
             policies_params = get_policy_todo(result_file)
             if not policies_params:
@@ -244,13 +274,14 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
             for po_eparams in policies_params:
                 po, eparams = po_eparams
                 for ratio in ["0.003,0.01","0.03,0.1","0.2,0.4"]:
-                    cmd = f"{root_dir}/_build/bin/cachesim {input_file} oracleGeneral {po} {ratio} --num-thread 2 --eviction-params {eparams} --outputdir {out_dir} {ignoreobj}"
+                    cmd = f"{root_dir}/bin/cachesim {input_file} oracleGeneral {po} {ratio} --num-thread 2 --eviction-params {eparams} --outputdir {out_dir} {ignoreobj}"
                     tasks.append((cmd, result_file))
     return tasks
 
-# -----------------------------
+
+# =============================
 # main loop
-# -----------------------------
+# =============================
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--root_dir", required=True)
@@ -264,8 +295,6 @@ def main():
 
     tasks = build_tasks(args.root_dir, args.input_dir, args.output_dir, ignoreobj)
     print(f"[INFO] Total tasks: {len(tasks)}")
-    if not tasks:
-        return
 
     executor = ThreadPoolExecutor(max_workers=psutil.cpu_count())
     futures = {}
@@ -277,6 +306,7 @@ def main():
 
         for _ in range(n_submit):
             cmd, result_file = tasks.pop(0)
+            print(f"[SUBMIT] {cmd}")
             fut = executor.submit(run_cmd, cmd, result_file)
             futures[fut] = (cmd, result_file)
 
@@ -285,32 +315,38 @@ def main():
         finished = 0
         for fut in done:
             finished += 1
-            ok = fut.result()
+            result = fut.result()
             cmd, result_file = futures.pop(fut)
 
-            if not ok:
+            # if failed, re-append to task list for retry, but only for OOM or killed cases
+            if result == "KILLED":
+                tasks.append((cmd, result_file))
+            elif result is False:
                 tasks.append((cmd, result_file))
 
-        # check OOM and kill if needed
-        if finished < 3:
-            free_gb = get_available_memory_gb()
-            print(f"[CHECK] free memory {free_gb:.1f} GB")
-
-            if free_gb < MEM_SAFE_GB:
-                kill_shortest_jobs_until_safe()
-            next_sleep = 300
+        # congestion control
+        if finished <= 1:
+            kill_shortest_jobs_until_safe()
+            next_sleep += check_interval * 5
+            next_sleep = min(300, next_sleep)
+        if n_submit >= 10:
+            next_sleep = check_interval
         elif n_submit <= 3:
             next_sleep += check_interval
             next_sleep = min(300, next_sleep)
         else:
-            next_sleep = check_interval
+            next_sleep -= check_interval
+            next_sleep = max(check_interval, next_sleep)
         
-        print(f"[INFO] Submitted {n_submit} tasks, {len(futures)} running, next check in {next_sleep:.1f}s lefting {len(tasks)}")
+        if next_sleep == 300:
+            global oom_happen
+            oom_happen = False
+        print(f"[INFO] Finished {finished} tasks, Submitted {n_submit} tasks, {len(futures)} running, next check in {next_sleep:.1f}s lefting {len(tasks)}")
         time.sleep(next_sleep)
 
     executor.shutdown(wait=True)
-    print("[INFO] All tasks completed.")
-    
+    print("[DONE]")
+
 #python sensitivity.py   --root_dir /pathto/libCacheSim   --input_dir /pathto/CacheTrace   --output_dir /pathtooutput   --ignore_obj
 if __name__ == "__main__":
     main()
