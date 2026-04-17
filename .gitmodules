@@ -1,0 +1,31 @@
+[submodule "fbthrift"]
+	path = CacheLib/cachelib/external/fbthrift
+	url = https://github.com/facebook/fbthrift
+
+[submodule "folly"]
+	path = CacheLib/cachelib/external/folly
+	url = https://github.com/facebook/folly
+
+[submodule "fizz"]
+	path = CacheLib/cachelib/external/fizz
+	url = https://github.com/facebookincubator/fizz
+
+[submodule "wangle"]
+	path = CacheLib/cachelib/external/wangle
+	url = https://github.com/facebook/wangle
+
+[submodule "cachelib/external/fast_float"]
+	path = CacheLib/cachelib/external/fast_float
+	url = https://github.com/fastfloat/fast_float
+
+[submodule "mvfst"]
+	path = CacheLib/cachelib/external/mvfst
+	url = https://github.com/facebook/mvfst
+
+[submodule "cachelib/external/zstd"]
+	path = CacheLib/cachelib/external/zstd
+	url = https://github.com/facebook/zstd.git
+
+[submodule "cachelib/external/liburing"]
+	path = CacheLib/cachelib/external/liburing
+	url = https://github.com/axboe/liburing.git

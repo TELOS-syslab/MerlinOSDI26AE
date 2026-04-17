@@ -4,7 +4,7 @@
 An x86-64 machine with an arbitrary Linux install is suffice. We've tested Merlin on an AMD machine with 384 cores (two Epyc 9965 processors).
 
 ```
-git clone https://github.com/TELOS-syslab/MerlinOSDI26AE.git
+git clone --recursive https://github.com/TELOS-syslab/MerlinOSDI26AE.git
 cd MerlinOSDI26AE
 ```
 
@@ -18,7 +18,13 @@ bash ./scripts/install_dependency.sh
 ## Install libCacheSim and CacheLib
 ```
 bash ./scripts/install.sh
+cd CacheLib
+docker run --rm --cap-add=SYS_NICE -it -v "$(pwd)":/CacheLib cachelib-ae /bin/bash
+cd mybench 
+bash build.sh
 ```
+
+Congratulations! Now you have installed libCacheSim and CacheLib. Please exit the docker before running the following instructions. 
 
 ## Reproducing Performance Evaluation Figures
 This may take several hours.

@@ -21,14 +21,10 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /CacheLib
 
-RUN git submodule update --init --recursive
-
 RUN cd cachelib/external/liburing && \
     ./configure --prefix=/usr/local && \
     make -j$(nproc) && \
     make install && \
     ldconfig
-
-RUN ./contrib/build.sh -j -v
 
 CMD ["/bin/bash"]

@@ -261,7 +261,7 @@ case "$1" in
     REPO=https://github.com/facebook/fbthrift.git
     SRCDIR=cachelib/external/$NAME
     update_submodules=yes
-    cmake_custom_params="-DBUILD_SHARED_LIBS=ON"
+    cmake_custom_params="-DBUILD_SHARED_LIBS=ON -Denable_tests=OFF"
     ;;
 
   cachelib)
@@ -380,7 +380,7 @@ if test "$build" ; then
 fi
 
 ## If no install requested, exit now
-if test -z "install" ; then
+if test -z "$install" ; then
   echo "'$NAME' is now built in build-$NAME (source in $REPODIR)"
   exit 0
 fi

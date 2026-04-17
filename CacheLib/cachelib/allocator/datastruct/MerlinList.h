@@ -84,6 +84,7 @@ namespace facebook::cachelib
             int target_queue_;
             int total_threads_;
             alignas(64) uint64_t hotness_threshold_;
+            uint32_t guard_freq_{0};
             char padding_[64 - sizeof(uint64_t) - sizeof(size_t) * 4 - sizeof(std::vector<std::atomic<uint64_t>>)];
             ThreadInfo()
             {
@@ -675,7 +676,7 @@ namespace facebook::cachelib
                 {
                     cuckoofifo->linkAtHead(node);
                     cuckoofifo->unlock_head();
-                    setcuckoo(node);
+                    setCuckoo(node);
                     return 1;
                 }
             }
@@ -685,7 +686,7 @@ namespace facebook::cachelib
                 {
                     cuckoofifo->linkAtHead(node);
                     cuckoofifo->unlock_head();
-                    setcuckoo(node);
+                    setCuckoo(node);
                     return 1;
                 }
                 if (fifo->try_lock_head())
