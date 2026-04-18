@@ -13,6 +13,7 @@ import re
 # =============================
 file_lock = threading.Lock()
 oom_happen = False
+oom_time = 0
 
 # pid -> start_time
 running_tasks = {}
@@ -164,7 +165,7 @@ def get_available_workers():
 
     mem_free = get_available_memory_gb()
     mem_based = int(mem_free // 20) - 5
-
+    global oom_happen
     if oom_happen:
         mem_based = max(0, mem_based // 5)
     print(f"[RESOURCE] CPU usage {cpu_usage:.1f}% CPU free {cpu_free:.1f}, Mem free {mem_free:.1f} GB, mem_based {mem_based}")
@@ -196,7 +197,7 @@ def get_policy_todo(result_file):
 # execute command with retry and OOM handling
 # -----------------------------
 def run_cmd(cmd, result_file):
-    global oom_happen
+    global oom_happen, oom_time
     try:
         proc = subprocess.Popen(
             cmd,
@@ -231,6 +232,7 @@ def run_cmd(cmd, result_file):
         if is_oom(stderr):
             print(f"[OOM] {cmd}")
             oom_happen = True
+            oom_time = time.time()
             kill_shortest_jobs_until_safe()
             return False
 
@@ -335,9 +337,10 @@ def main():
             next_sleep -= check_interval
             next_sleep = max(check_interval, next_sleep)
         
-        if next_sleep == 300:
-            global oom_happen
+        global oom_happen, oom_time
+        if oom_happen and time.time() - oom_time > 600:
             oom_happen = False
+            oom_time = 0
         print(f"[INFO] Finished {finished} tasks, Submitted {n_submit} tasks, {len(futures)} running, next check in {next_sleep:.1f}s lefting {len(tasks)}")
         time.sleep(next_sleep)
 
