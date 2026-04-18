@@ -84,7 +84,6 @@ namespace facebook::cachelib
             int target_queue_;
             int total_threads_;
             alignas(64) uint64_t hotness_threshold_;
-            uint32_t guard_freq_{0};
             char padding_[64 - sizeof(uint64_t) - sizeof(size_t) * 4 - sizeof(std::vector<std::atomic<uint64_t>>)];
             ThreadInfo()
             {
@@ -339,7 +338,7 @@ namespace facebook::cachelib
             i = 0;
             for (auto &f : *object.hotness_threshold())
             {
-                thread_info_[i].guard_freq_ = f;
+                thread_info_[i].hotness_threshold_ = f;
                 thread_info_[i].target_queue_ = i;
                 i++;
             }

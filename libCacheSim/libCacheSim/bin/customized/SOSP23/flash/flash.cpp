@@ -92,6 +92,19 @@ void calWriteAmp(reader_t *reader, cache_t *cache) {
       printf("\n");
       ERROR("Main cache type only support FIFO and FIFO-Reinsertion (CLOCK)\n");
     }
+  } else if (strcasestr(cache->cache_name, "s3fifo") != NULL) {
+    S3FIFO_params_t *params = (S3FIFO_params_t *)cache->eviction_params;
+    n_byte_write = params->n_byte_admit_to_main + params->n_byte_move_to_main;
+  } else if (strcasestr(cache->cache_name, "merlin") != NULL) {
+    merlin_params_t *params = (merlin_params_t *)cache->eviction_params;
+    n_byte_write = params->n_byte_admit_to_core + params->n_byte_move_to_core;
+  } else if (strcasestr(cache->cache_name, "arcfix") != NULL) {
+    ARCfix_params_t *params = (ARCfix_params_t *)cache->eviction_params;
+    n_byte_write = params->n_byte_write_in_L2_data;
+  } else if (strcasestr(cache->cache_name, "cacheus") != NULL) {
+    Cacheus_params_t *params = (Cacheus_params_t *)cache->eviction_params;
+    SR_LRU_params_t *lru_params = (SR_LRU_params_t *)params->LRU->eviction_params;
+    n_byte_write = lru_params->n_byte_write_in_R;
   } else {
     printf("\n");
     ERROR("Do not support write amp for %s cache\n", cache->cache_name);

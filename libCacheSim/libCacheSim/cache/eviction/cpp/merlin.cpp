@@ -53,6 +53,9 @@ namespace eviction
         int32_t filter2ghost;
         int32_t staging2core;
         int32_t evict_staging_ghost;
+
+        int64_t n_byte_admit_to_core;
+        int64_t n_byte_move_to_core;
     } merlin_params_t;
 } // namespace eviction
 
@@ -162,6 +165,9 @@ extern "C"
         params->filter2ghost = 0;
         params->staging2core = 0;
         params->evict_staging_ghost = 0;
+
+        params->n_byte_move_to_core = 0;
+        params->n_byte_admit_to_core = 0;
 
         snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "merlin-%.2lf-%.2lf-%.2lf-%d-%.2f",
                  params->filter_size_ratio, params->staging_size_ratio,params->ghost_size_ratio,params->epoch_update,params->sketch_scale);
@@ -326,6 +332,7 @@ int find_track = (req->obj_id == track_id);
         {
             // warmup
             obj = params->core->insert(params->core, req);
+            params->n_byte_admit_to_core += obj -> obj_size;
             obj->MERLIN.freq = 0;
             params->hotdistribution[0]++;
         }
@@ -347,6 +354,7 @@ int find_track = (req->obj_id == track_id);
                     params->ghost2staging++;
                     minimalIncrementCBF_add(params->CBF, (void *)&req->obj_id, sizeof(obj_id_t));
                     obj = params->staging->insert(params->staging, req);
+                    params->n_byte_admit_to_core += obj -> obj_size; 
                     obj->MERLIN.freq = 0;
                     //inghost stagingpect
                     obj->MERLIN.inghost = 1;
@@ -465,6 +473,7 @@ int find_track = (req->obj_id == track_id);
             cache_obj_t *new_obj_ghost = addtoghost(cache, params->req_staging, filter_to_evict->MERLIN.freq);
             new_obj_ghost->MERLIN.freq = filter_to_evict->MERLIN.freq;
             params->filter->remove(params->filter, filter_to_evict->obj_id);
+            params->n_byte_move_to_core += filter_to_evict->obj_size;
             return 1;
         }
         return 2;
