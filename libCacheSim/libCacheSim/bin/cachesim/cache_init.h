@@ -31,8 +31,6 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = FIFO_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arc") == 0) {
     cache = ARC_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "arctest") == 0) {
-    cache = ARCtest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arcfix") == 0) {
     cache = ARCfix_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "arcv0") == 0) {
@@ -68,8 +66,6 @@ static inline cache_t *create_cache(const char *trace_path, const char *eviction
     cache = RandomLRU_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "cacheus") == 0) {
     cache = Cacheus_init(cc_params, eviction_params);
-  } else if (strcasecmp(eviction_algo, "cacheustest") == 0) {
-    cache = Cacheustest_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "cacheusfix") == 0) {
     cache = Cacheusfix_init(cc_params, eviction_params);
   } else if (strcasecmp(eviction_algo, "size") == 0) {

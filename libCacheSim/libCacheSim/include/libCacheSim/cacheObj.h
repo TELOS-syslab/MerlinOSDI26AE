@@ -33,9 +33,11 @@ typedef struct {
   int lru_id;
   bool ghost;
   //used for analysis
+  #ifdef TRACK_PARAMETERS
   int fromt1;
   int fromt2;
   int accessed;
+  #endif
 } ARC_obj_metadata_t;
 
 typedef struct {
@@ -64,9 +66,11 @@ typedef struct {
   bool demoted;
   bool new_obj;
   //used for analysis
+  #ifdef TRACK_PARAMETERS
   int fromlrughost;
   int fromlfughost;
   int accessed;
+  #endif
 } SR_LRU_obj_metadata_t;
 
 typedef struct {
@@ -150,9 +154,11 @@ typedef struct
     int staginghit;
     int inghost;
     //used for analysis
-    int fromghost;
-    int fromsketch;
+    #ifdef TRACK_PARAMETERS
+    int tocore;
+    int tostaging;
     int accessed;
+    #endif
 } MERLIN_obj_metadata_t;
 
 typedef struct {

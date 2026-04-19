@@ -53,6 +53,14 @@ typedef struct ARCfix_params {
   request_t *req_local;
 } ARCfix_params_t;
 
+#ifdef TRACK_PARAMETERS
+    #ifdef OUTPUT_GAP
+        int outputgap = OUTPUT_GAP;
+    #else
+        int outputgap = 10000;
+    #endif
+#endif
+
 static const char *DEFAULT_CACHE_PARAMS =
     "p=0.5";
 
@@ -195,7 +203,7 @@ static void ARCfix_free(cache_t *cache) {
 static bool ARCfix_get(cache_t *cache, const request_t *req) {
         #ifdef TRACK_PARAMETERS
         ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
-    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%1000000)==0){
+    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%outputgap)==0){
         params->track_p = params->p;
         printf("%ld ARCfix p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
     }

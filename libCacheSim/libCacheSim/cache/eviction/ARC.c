@@ -51,8 +51,24 @@ typedef struct ARC_params {
   bool curr_obj_in_L2_ghost;
   int64_t vtime_last_req_in_ghost;
   request_t *req_local;
+  //used for analysis
+    #ifdef TRACK_PARAMETERS
+    int objt1ghost;
+    int hitt1;
+    int hitobjt1;
+    int objt2ghost;
+    int hitt2;
+    int hitobjt2;
+    #endif
 } ARC_params_t;
 
+#ifdef TRACK_PARAMETERS
+    #ifdef OUTPUT_GAP
+        int outputgap = OUTPUT_GAP;
+    #else
+        int outputgap = 10000;
+    #endif
+#endif
 // ***********************************************************************
 // ****                                                               ****
 // ****                   function declarations                       ****
@@ -146,7 +162,14 @@ cache_t *ARC_init(const common_cache_params_t ccache_params,
 #ifdef USE_BELADY
   snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "ARC_Belady");
 #endif
-
+  #ifdef TRACK_PARAMETERS
+    params->fromt1g = 0;
+    params->hitt1 = 0;
+    params->hitobjt1 = 0;
+    params->fromt2g = 0;
+    params->hitt2 = 0;
+    params->hitobjt2 = 0;
+  #endif
   return cache;
 }
 
@@ -184,26 +207,18 @@ static void ARC_free(cache_t *cache) {
 static bool ARC_get(cache_t *cache, const request_t *req) {
         #ifdef TRACK_PARAMETERS
         ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
-    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%1000000)==0){
+    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%outputgap)==0){
         params->track_p = params->p;
         printf("%ld ARC p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
+        printf("#req %d, object from t1 ghost %d, average hit %lf, precision %lf, object from t2 ghost %d, average hit %lf, precision %lf\n",
+              cache->n_req,
+            params->fromt1g, params->hitobjt1==0?0:(double)params->hitt1/params->hitobjt1, params->fromt1g==0?0:(double)params->hitobjt1/params->fromt1g,
+            params->fromt2g, params->hitobjt2==0?0:(double)params->hitt2/params->hitobjt2, params->fromt2g==0?0:(double)params->hitobjt2/params->fromt2g);
     }
     #endif
 #ifdef DEBUG_MODE
   return ARC_get_debug(cache, req);
 #else
-
-#if defined(TRACK_DEMOTION)
-  if (cache->n_req % 100000 == 0) {
-    printf(
-        "l1 data size: %lu, %.4lf, l1 ghost size: %lu, l2 data size: %lu, l2 "
-        "ghost size: %lu\n",
-        params->L1_data_size,
-        params->L1_data_size /
-            (double)(params->L1_data_size + params->L2_data_size),
-        params->L1_ghost_size, params->L2_data_size, params->L2_ghost_size);
-  }
-#endif
   return cache_get_base(cache, req);
 #endif
 }
@@ -296,6 +311,22 @@ static cache_obj_t *ARC_find(cache_t *cache, const request_t *req,
       // move to LRU2 head
       move_obj_to_head(&params->L2_data_head, &params->L2_data_tail, obj);
     }
+    #ifdef TRACK_PARAMETERS
+    if(obj->ARC.fromt1){
+        params->hitt1++;
+        if(obj->ARC.accessed == 0){
+            params->hitobjt1++;
+            obj->ARC.accessed = 1;
+        }
+    }
+    if(obj->ARC.fromt2){
+        params->hitt2++;
+        if(obj->ARC.accessed == 0){
+            params->hitobjt2++;
+            obj->ARC.accessed = 1;
+        }
+    }
+    #endif
   }
 
   return ret;
@@ -323,6 +354,21 @@ static cache_obj_t *ARC_insert(cache_t *cache, const request_t *req) {
     obj->ARC.lru_id = 2;
     prepend_obj_to_head(&params->L2_data_head, &params->L2_data_tail, obj);
     params->L2_data_size += req->obj_size + cache->obj_md_size;
+
+    #ifdef TRACK_PARAMETERS
+    if(params->curr_obj_in_L1_ghost){
+        params->fromt1g +=1;
+        obj->ARC.fromt1 = 1;
+        obj->ARC.fromt2 = 0;
+        obj->ARC.accessed = 0;
+    }
+    if(params->curr_obj_in_L2_ghost){
+        params->fromt2g +=1;
+        obj->ARC.fromt2 = 1;
+        obj->ARC.fromt1 = 0;
+        obj->ARC.accessed = 0;
+    }
+    #endif
 
     params->curr_obj_in_L1_ghost = false;
     params->curr_obj_in_L2_ghost = false;
@@ -468,6 +514,12 @@ static void _ARC_evict_L1_data(cache_t *cache, const request_t *req) {
   remove_obj_from_list(&params->L1_data_head, &params->L1_data_tail, obj);
   prepend_obj_to_head(&params->L1_ghost_head, &params->L1_ghost_tail, obj);
   obj->ARC.ghost = true;
+  #ifdef TRACK_PARAMETERS
+    obj->ARC.fromt1 = 0;
+    obj->ARC.fromt2 = 0;
+    obj->ARC.accessed = 0;
+  #endif
+
 }
 
 static void _ARC_evict_L1_data_no_ghost(cache_t *cache, const request_t *req) {
@@ -482,7 +534,11 @@ static void _ARC_evict_L1_data_no_ghost(cache_t *cache, const request_t *req) {
 
   remove_obj_from_list(&params->L1_data_head, &params->L1_data_tail, obj);
   params->L1_data_size -= obj->obj_size + cache->obj_md_size;
-
+    #ifdef TRACK_PARAMETERS
+    obj->ARC.fromt1 = 0;
+    obj->ARC.fromt2 = 0;
+    obj->ARC.accessed = 0;
+  #endif
   cache_evict_base(cache, obj, true);
 }
 

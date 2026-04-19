@@ -56,10 +56,25 @@ namespace eviction
 
         int64_t n_byte_admit_to_core;
         int64_t n_byte_move_to_core;
+        #ifdef TRACK_PARAMETERS
+        //used for analysis
+        uint64_t obj2core;
+        uint64_t obj2staging;
+        uint64_t hitcore;
+        uint64_t hitstaging;
+        uint64_t hitobjcore;
+        uint64_t hitobjstaging;
+        #endif
     } merlin_params_t;
 } // namespace eviction
 
-extern uint64_t track_id;
+#ifdef TRACK_PARAMETERS
+    #ifdef OUTPUT_GAP
+        int outputgap = OUTPUT_GAP;
+    #else
+        int outputgap = 10000;
+    #endif
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -168,6 +183,14 @@ extern "C"
 
         params->n_byte_move_to_core = 0;
         params->n_byte_admit_to_core = 0;
+        #ifdef TRACK_PARAMETERS
+        params->obj2core = 0;
+        params->obj2staging = 0;
+        params->hitcore = 0;
+        params->hitstaging = 0;
+        params->hitobjcore = 0;
+        params->hitobjstaging = 0;
+        #endif
 
         snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "merlin-%.2lf-%.2lf-%.2lf-%d-%.2f",
                  params->filter_size_ratio, params->staging_size_ratio,params->ghost_size_ratio,params->epoch_update,params->sketch_scale);
@@ -192,17 +215,37 @@ extern "C"
     {
         #ifdef TRACK_PARAMETERS
         auto *params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
-        if(params->guard_freq != params->track_freq || (cache->n_req%1000000)==0){
+        if(params->guard_freq != params->track_freq || (cache->n_req%outputgap)==0){
             params->track_freq = params->guard_freq;
             printf("%ld merlin guard_freq: %d epoch guess: %d ", cache->n_req, params->guard_freq, params->filter2staging);
-            printf("ghost2core: %d ghost2staging: %d filter2staging: %d filter2core: %d filter2ghost: %d staging2core: %d evict_staging_ghost: %d\n",
-               params->ghost2core, params->ghost2staging, params->filter2staging, params->filter2core, params->filter2ghost, params->staging2core, params->evict_staging_ghost);
+            printf("obj2core: %lu average hit in core: %lf precision %lf\n", params->obj2core, params->hitobjcore==0?0:(double)params->hitcore/params->hitobjcore, params->obj2core==0?0:(double)params->hitobjcore/params->obj2core);
         }
         #endif
         return cache_get_base(cache, req);
     }
     static void printstatus(cache_t *cache);
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq);
+
+    static void checkhit(cache_t *cache, cache_obj_t * obj){
+        #ifdef TRACK_PARAMETERS
+        auto *params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
+        if(obj->MERLIN.tocore){
+            params->hitcore++;
+            if(obj->MERLIN.accessed==0){
+                params->hitobjcore++;
+                obj->MERLIN.accessed=1;
+            }
+        }
+        if(obj->MERLIN.tostaging){
+            params->hitstaging++;
+            if(obj->MERLIN.accessed==0){
+                params->hitobjstaging++;
+                obj->MERLIN.accessed=1;
+            }
+        }
+        #endif
+        return;
+    }
 
     static cache_obj_t *merlin_find(cache_t *cache, const request_t *req,
                                    const bool update_cache)
@@ -228,19 +271,12 @@ extern "C"
             }
             return NULL;
         }
-#ifdef TRACK_PARAMETERS
-int find_track = (req->obj_id == track_id);
-#endif
+
         params->timer += 1;
 
         obj = params->filter->find(params->filter, req, update_cache);
         if (obj != NULL)
         {
-            #ifdef TRACK_PARAMETERS
-                if (find_track) {
-                    printf("req %d %d find in filter\n",cache->n_req, req->obj_id);
-                    }
-            #endif
             params->filter_hitnum++;
             if (obj->MERLIN.freq < MAXFREQ)
             {
@@ -253,11 +289,6 @@ int find_track = (req->obj_id == track_id);
         obj = params->staging->find(params->staging, req, update_cache);
         if (obj != NULL)
         {
-            #ifdef TRACK_PARAMETERS
-    if (find_track) {
-        printf("req %d %d find in staging\n",cache->n_req, req->obj_id);
-        }
-#endif
             params->staging_hitnum++;
             obj->MERLIN.staginghit = 1;
             if (obj->MERLIN.freq < MAXFREQ)
@@ -266,16 +297,12 @@ int find_track = (req->obj_id == track_id);
                 params->hotdistribution[obj->MERLIN.freq] += 1;
             }
             params->seq_miss = 0;
+            checkhit(cache, obj);
             return obj;
         }
         obj = params->core->find(params->core, req, update_cache);
         if (obj != NULL)
         {
-            #ifdef TRACK_PARAMETERS
-    if (find_track) {
-        printf("req %d %d find in core\n",cache->n_req, req->obj_id);
-        }
-#endif
             params->core_hitnum++;
             if (obj->MERLIN.freq < MAXFREQ)
             {
@@ -283,12 +310,12 @@ int find_track = (req->obj_id == track_id);
                 params->hotdistribution[obj->MERLIN.freq] += 1;
             }
             params->seq_miss = 0;
+            checkhit(cache, obj);
             return obj;
         }
         obj = params->ghost->find(params->ghost, req, false);
         if (obj != NULL)
         {
-            
             params->ghost_hitnum++;
             if (obj->MERLIN.freq < MAXFREQ)
             {
@@ -301,17 +328,7 @@ int find_track = (req->obj_id == track_id);
             {
                 params->move_to_core = true;
             }
-            #ifdef TRACK_PARAMETERS
-    if (find_track) {
-        printf("req %d %d find in ghost move to core %d\n",cache->n_req, req->obj_id, params->move_to_core);
         }
-#endif
-        }
-        #ifdef TRACK_PARAMETERS
-    if (find_track) {
-        printf("req %d %d miss in cache\n",cache->n_req, req->obj_id);
-        }
-#endif
         params->seq_miss ++;
         return NULL;
     }
@@ -348,6 +365,10 @@ int find_track = (req->obj_id == track_id);
                     obj = params->core->insert(params->core, req);
                     obj->MERLIN.freq = params->ghost_freq;
                     params->ghost->remove(params->ghost, obj->obj_id);
+                    #ifdef TRACK_PARAMETERS
+                    params->obj2core++;
+                    obj->MERLIN.tocore = 1;
+                    #endif
                 }
                 else
                 {
@@ -359,6 +380,10 @@ int find_track = (req->obj_id == track_id);
                     //inghost stagingpect
                     obj->MERLIN.inghost = 1;
                     params->hotdistribution[0]++;
+                    #ifdef TRACK_PARAMETERS
+                    params->obj2staging++;
+                    obj->MERLIN.tostaging = 1;
+                    #endif
                 }
             }
             else
@@ -378,8 +403,6 @@ int find_track = (req->obj_id == track_id);
         assert(0);
         return NULL;
     }
-
-
 
     static cache_obj_t *addtoghost(cache_t *cache, const request_t *req, int freq)
     {
@@ -412,17 +435,15 @@ int find_track = (req->obj_id == track_id);
             int ori_freq = obj_to_evict->MERLIN.freq;
             assert(ori_freq >= 0 && ori_freq <= MAXFREQ);
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
-            params->core->remove(params->core, obj_to_evict->obj_id);
             cache_obj_t *new_obj = params->staging->insert(params->staging, params->req_local);
             new_obj->MERLIN.freq = ori_freq;
             #ifdef TRACK_PARAMETERS
-            int find_track = (obj_to_evict->obj_id == track_id);
+            //inherit state
+            new_obj->MERLIN.tocore = obj_to_evict->MERLIN.tocore;
+            new_obj->MERLIN.tostaging = obj_to_evict->MERLIN.tostaging;
+            new_obj->MERLIN.accessed = obj_to_evict->MERLIN.accessed;
             #endif
-            #ifdef TRACK_PARAMETERS
-            if (find_track) {
-                printf("req %d obj %d move to staging\n",cache->n_req, obj_to_evict->obj_id);
-                }
-        #endif
+            params->core->remove(params->core, obj_to_evict->obj_id);
         }
         return;
     }
@@ -434,14 +455,6 @@ int find_track = (req->obj_id == track_id);
         int ori_freq = staging_to_evict->MERLIN.freq;
         decreasepop(params->hotdistribution, ori_freq, -1);
         params->staging->remove(params->staging, staging_to_evict->obj_id);
-        #ifdef TRACK_PARAMETERS
-            int find_track = (staging_to_evict->obj_id == track_id);
-            #endif
-            #ifdef TRACK_PARAMETERS
-            if (find_track) {
-                printf("req %d obj %d removed from staging\n",cache->n_req, staging_to_evict->obj_id);
-                }
-        #endif
     }
 
     static int compare(cache_t *cache){
@@ -474,6 +487,10 @@ int find_track = (req->obj_id == track_id);
             new_obj_ghost->MERLIN.freq = filter_to_evict->MERLIN.freq;
             params->filter->remove(params->filter, filter_to_evict->obj_id);
             params->n_byte_move_to_core += filter_to_evict->obj_size;
+            #ifdef TRACK_PARAMETERS
+            params->obj2staging++;
+            new_obj->MERLIN.tostaging = 1;
+            #endif
             return 1;
         }
         return 2;
@@ -489,14 +506,6 @@ int find_track = (req->obj_id == track_id);
                 break;
             }
             // move object from staging to core
-            #ifdef TRACK_PARAMETERS
-            int find_track = (obj_to_evict->obj_id == track_id);
-            #endif
-            #ifdef TRACK_PARAMETERS
-            if (find_track) {
-                printf("req %d obj %d move to core from staging\n",cache->n_req, obj_to_evict->obj_id);
-                }
-        #endif
             int ori_freq = obj_to_evict->MERLIN.freq;
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             if(obj_to_evict->MERLIN.inghost){
@@ -504,13 +513,19 @@ int find_track = (req->obj_id == track_id);
                 removefromghost(cache, params->req_local);
                 obj_to_evict->MERLIN.inghost = 0;
             }
-            params->staging2core ++;
-            params->staging->remove(params->staging, obj_to_evict->obj_id);
             // decreasepop(params->hotdistribution, ori_freq, 0);
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
             cache_obj_t *new_obj = params->core->insert(params->core, params->req_local);
             new_obj->MERLIN.freq = ori_freq-1;
             decreasepop(params->hotdistribution, ori_freq, ori_freq-1);
+            #ifdef TRACK_PARAMETERS
+            //inherit state
+            new_obj->MERLIN.tocore = obj_to_evict->MERLIN.tocore;
+            new_obj->MERLIN.tostaging = obj_to_evict->MERLIN.tostaging;
+            new_obj->MERLIN.accessed = obj_to_evict->MERLIN.accessed;
+            #endif
+            params->staging2core ++;
+            params->staging->remove(params->staging, obj_to_evict->obj_id);
         }
         return 0;
     }
@@ -523,25 +538,16 @@ int find_track = (req->obj_id == track_id);
         while (!has_evicted && params->filter->get_occupied_byte(params->filter) > 0)
         {
             cache_obj_t *obj_to_evict = params->filter->to_evict(params->filter, NULL);
-            #ifdef TRACK_PARAMETERS
-            int find_track = (obj_to_evict->obj_id == track_id);
-            #endif
             int ori_freq = obj_to_evict->MERLIN.freq;
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             // add to cbf
             if (ori_freq >= params->guard_freq)
             {
                 // move to core
-                // decreasepop(params->hotdistribution, ori_freq, 0);
                 params->filter2core++;
                 cache_obj_t *new_obj = params->core->insert(params->core, params->req_local);
                 new_obj->MERLIN.freq = 0;
                 decreasepop(params->hotdistribution, ori_freq, 0);
-                #ifdef TRACK_PARAMETERS
-                    if (find_track) {
-                        printf("req %d obj %d move to core from filter\n",cache->n_req, obj_to_evict->obj_id);
-                        }
-                #endif
             }
             else
             {
@@ -552,22 +558,11 @@ int find_track = (req->obj_id == track_id);
                     //object movement done in compare
                     params->filter2staging++;
                     evict_staging(cache);
-                    #ifdef TRACK_PARAMETERS
-                    if (find_track) {
-                        printf("req %d obj %d move to staging from filter\n",cache->n_req, obj_to_evict->obj_id);
-                        }
-                #endif
                     return has_evicted;
                 }else{
                     //evict filter
                     params->filter2ghost++;
-                    cache_obj_t *new_obj = addtoghost(cache, params->req_local, ori_freq);
-                    #ifdef TRACK_PARAMETERS
-                    if (find_track) {
-                        printf("req %d obj %d remove from filter\n",cache->n_req,  obj_to_evict->obj_id);
-                        }
-                #endif
-                    
+                    cache_obj_t *new_obj = addtoghost(cache, params->req_local, ori_freq);                    
                 }
             }
             minimalIncrementCBF_add(params->CBF, (void *)&params->req_local->obj_id, sizeof(obj_id_t));
@@ -655,7 +650,6 @@ int find_track = (req->obj_id == track_id);
             {
                 params->epoch_count = 0;
                 minimalIncrementCBF_decay(params->CBF);
-                //printstatus(cache);
             }
         }
 

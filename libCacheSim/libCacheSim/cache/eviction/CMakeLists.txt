@@ -5,7 +5,6 @@ set(sourceC
         LFU.c
         LFUDA.c
         ARC.c
-        ARCtest.c
         ARCfix.c
         CAR.c
         FIFO.c
@@ -20,7 +19,6 @@ set(sourceC
         Hyperbolic.c
         LeCaR.c
         Cacheus.c
-        Cacheustest.c
         Cacheusfix.c
         TwoQ.c
         ARCv0.c
@@ -37,7 +35,6 @@ set(sourceC
         FIFO_Reinsertion.c
 
         S3FIFO.c
-        S3FIFOtest.c
         S3FIFOd.c
 
         other/flashProb.c
