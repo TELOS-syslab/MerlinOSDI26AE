@@ -51,7 +51,10 @@ This generates `relative_hit_ratio.pdf` which is Figure 13.
 
 
 ### Figure 14, throughput of the evaluated algorithms.
+#### Plot the figures using the results
+```
 
+```
 
 ### Figure 15, write bytes (normalized to trace size) and hit rate in Cloudphysics.
 The traces used in this experiment can be downloaded at [Cloudphysics](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/). 
