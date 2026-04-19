@@ -21,13 +21,19 @@ Congratulations! Now you have installed libCacheSim and CacheLib.
 
 ## Reproduce the results and figures
 
+### Figure 11, 
+
+### Figure 12, 
+
+### Figure 13, 
+
+
 ### Figure 14, throughput of the evaluated algorithms.
 
+
 ### Figure 15, write bytes (normalized to trace size) and hit rate in Cloudphysics.
-The traces used in this experiment can be downloaded at [Cloudphysics](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/). We assume that all traces are downloaded and placed in the folder `./raw_data`.
+The traces used in this experiment can be downloaded at [Cloudphysics](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/). 
 
 ```
-# decompress traces for flashield
 
-# 
 ```
