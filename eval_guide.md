@@ -11,31 +11,15 @@ cd MerlinOSDI26AE
 The following guide will assume that you are in this directory.
 
 ## Install Dependency
+We use libCacheSim and CacheLib to perform simulations, which can be installed using the following commands.
 ```
 bash ./scripts/install_dependency.sh
-```
-
-## Install libCacheSim and CacheLib
-```
 bash ./scripts/install.sh
 ```
 
 Congratulations! Now you have installed libCacheSim and CacheLib. 
 
-## Reproducing Performance Evaluation Figures
-This may take several hours.
-
-```
-bash ./scripts/run_all_experiments.sh
-```
-
-Then we could have the raw data and run the plot script.
-
-```
-bash ./scripts/run_all_plot.sh
-```
-
-Or, you can run the following instructions to reproduce our results step by step.
+## Reproduce the results and figures
 
 ### Figure 14, throughput of the evaluated algorithms.
 
