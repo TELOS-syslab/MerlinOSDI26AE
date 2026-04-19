@@ -72,16 +72,41 @@ def make_figure(frames: dict[str, pd.DataFrame]) -> plt.Figure:
                 hit_rate  = 1.0 - float(row["miss_ratio"].iloc[0])
                 write_amp = float(row["write_amp"].iloc[0])
 
+                # 'x' / '*' / '+' are line-style markers: only 'color' applies.
+                # Passing edgecolors to them triggers a UserWarning.
+                LINE_MARKERS = {"x", "*", "+", "1", "2", "3", "4"}
                 is_open = alg in OPEN_MARKERS
-                ax.scatter(
-                    hit_rate, write_amp,
-                    marker=marker,
-                    s=ms ** 2,
-                    color=color if not is_open else "none",
-                    edgecolors=color,
-                    linewidths=1.5,
-                    zorder=3,
-                )
+                is_line_marker = marker in LINE_MARKERS
+
+                if is_line_marker:
+                    ax.scatter(
+                        hit_rate, write_amp,
+                        marker=marker,
+                        s=ms ** 2,
+                        color=color,
+                        linewidths=1.5,
+                        zorder=3,
+                    )
+                elif is_open:
+                    ax.scatter(
+                        hit_rate, write_amp,
+                        marker=marker,
+                        s=ms ** 2,
+                        facecolors="none",
+                        edgecolors=color,
+                        linewidths=1.5,
+                        zorder=3,
+                    )
+                else:
+                    ax.scatter(
+                        hit_rate, write_amp,
+                        marker=marker,
+                        s=ms ** 2,
+                        color=color,
+                        edgecolors=color,
+                        linewidths=1.5,
+                        zorder=3,
+                    )
 
         # Axes cosmetics
         ax.set_title(title, fontsize=10)
