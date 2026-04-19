@@ -20,6 +20,8 @@ bash ./scripts/install.sh
 Congratulations! Now you have installed libCacheSim and CacheLib. 
 
 ## Reproduce the results and figures
+We required you to install some python librarys to run the experiments and plot the figures.
+> pandas, numpy, matplotlib. 
 
 
 ### Figure 11, Hit rate of evaluated algorithms.
@@ -53,8 +55,9 @@ This generates `relative_hit_ratio.pdf` which is Figure 13.
 ### Figure 14, throughput of the evaluated algorithms.
 #### Plot the figures using the results
 ```
-
+python3 scripts/plot/throughput.py
 ```
+This generates `throughput.pdf` which is Figure 14.
 
 ### Figure 15, write bytes (normalized to trace size) and hit rate in Cloudphysics.
 The traces used in this experiment can be downloaded at [Cloudphysics](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/). 
@@ -63,4 +66,4 @@ The traces used in this experiment can be downloaded at [Cloudphysics](https://f
 
 ```
 
-### Figure 17, 
+### Figure 17

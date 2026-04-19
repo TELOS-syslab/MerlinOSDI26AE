@@ -1,0 +1,3 @@
+cache_size, dram_ratio, miss_ratio, write_amp
+0.01, 0.1, 0.6475, 8.2311
+0.1, 0.1, 0.5101, 6.6280

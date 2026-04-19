@@ -3,8 +3,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # ========= 路径 =========
-DIR_WITH = "data/THROUGHPUT/wback"
-DIR_WITHOUT = "data/THROUGHPUT/woback"
+DIR_WITH = "data/throughput/wback"
+DIR_WITHOUT = "data/throughput/woback"
 
 # ========= 算法顺序（论文顺序） =========
 ALGS = ["MERLIN", "S3FIFO", "ARC", "LRU"]
