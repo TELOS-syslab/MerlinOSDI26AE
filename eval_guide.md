@@ -21,11 +21,33 @@ Congratulations! Now you have installed libCacheSim and CacheLib.
 
 ## Reproduce the results and figures
 
-### Figure 11, 
 
-### Figure 12, 
+### Figure 11, Hit rate of evaluated algorithms.
+The provided results are in [/data/HR/withobjsize](./data/HR/withobjsize/).
+#### Plot the figures using the results
+```
+python scripts/plot/hit_rate.py 
+```
+This generates `hit_rate.pdf` which is Figure 11.
 
-### Figure 13, 
+
+### Figure 12, Byte hit rate of evaluated algorithms. 
+The provided results are in [/data/HR/withobjsize](./data/HR/withobjsize/).
+```
+python scripts/plot/byte_hit_rate.py 
+```
+
+This generates `byte_hit_rate.pdf` which is Figure 12.
+
+
+### Figure 13, Relative hit rate compared to the dominant algorithm.
+The provided results are in [/data/RHR/withoutobjsize](./data/RHR/withoutobjsize/).
+
+#### Plot the figures using the results
+```
+python scripts/plot/relative_hit_ratio.py 
+```
+This generates `relative_hit_ratio.pdf` which is Figure 13.
 
 
 ### Figure 14, throughput of the evaluated algorithms.
@@ -37,3 +59,5 @@ The traces used in this experiment can be downloaded at [Cloudphysics](https://f
 ```
 
 ```
+
+### Figure 17, 
