@@ -7,6 +7,7 @@ import psutil
 import threading
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 import re
+import signal
 
 # =============================
 # global state
@@ -69,14 +70,11 @@ def kill_shortest_jobs_until_safe():
         with running_lock:
             for pid, info in list(running_tasks.items()):
                 if not psutil.pid_exists(pid):
-                    running_tasks.pop(pid, None)
-                    continue
-                if info.get("killed"):
                     continue
                 alive.append((pid, info))
 
         if len(alive) <= 1:
-            print("[OOM] limited running tasks")
+            print("[OOM] only 1 task left")
             return
 
         pid, info = sorted(
@@ -84,28 +82,20 @@ def kill_shortest_jobs_until_safe():
             key=lambda x: now - x[1]["start_time"]
         )[0]
 
+        runtime = now - info["start_time"]
+        print(f"[KILL] PID={pid}, runtime={runtime:.1f}s")
+
         try:
-            runtime = now - info["start_time"]
-            print(f"[KILL] PID={pid}, runtime={runtime:.1f}s")
-
-            with running_lock:
-                running_tasks[pid]["killed"] = True
-
-            p = psutil.Process(pid)
-            p.kill()
-            killed += 1
-
-            try:
-                p.wait(timeout=3)
-            except psutil.TimeoutExpired:
-                pass
-
+            # kill the whole process group to avoid orphan processes
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
         except Exception as e:
-            print(f"[WARN] kill failed {pid}: {e}")
+            print(f"[WARN] killpg failed {pid}: {e}")
 
-        time.sleep(5*killed)
+        killed += 1
+        time.sleep(5 * killed)
+
         if killed >= 10:
-            print("killed too many tasks, wait for a while")
+            print("[WARN] killed too many tasks, pause")
             time.sleep(60)
             return
 
@@ -204,38 +194,40 @@ def run_cmd(cmd, result_file):
             shell=True,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            text=True
+            text=True,
+            preexec_fn=os.setsid   # execute in a new process group
         )
 
-        # register
         with running_lock:
             running_tasks[proc.pid] = {
                 "start_time": time.time(),
                 "cmd": cmd,
-                "killed": False
             }
 
         stdout, stderr = proc.communicate()
-
-        # check killed
-        killed = False
         with running_lock:
-            info = running_tasks.get(proc.pid)
-            if info:
-                killed = info.get("killed", False)
             running_tasks.pop(proc.pid, None)
+            
+        rc = proc.returncode
 
-        if killed:
-            print(f"[KILLED] {cmd}")
-            return "KILLED"
+        if rc != 0:
+            # killed by SIGKILL
+            if rc == -signal.SIGKILL:
+                print(f"[KILLED] {cmd}")
+                return "KILLED"
 
-        if is_oom(stderr):
-            print(f"[OOM] {cmd}")
-            oom_happen = True
-            oom_time = time.time()
-            kill_shortest_jobs_until_safe()
+            if is_oom(stderr):
+                print(f"[OOM] {cmd}")
+                oom_happen = True
+                oom_time = time.time()
+                return False
+
+            print(f"[FAIL rc={rc}] {cmd}")
             return False
 
+        # -----------------------------
+        # normal completion
+        # -----------------------------
         lines = extract_important_lines(stdout.splitlines())
 
         with file_lock:
@@ -245,11 +237,11 @@ def run_cmd(cmd, result_file):
                     # f.write(line + "\n")
                     pass
 
-        return proc.returncode == 0
+        return True
 
     except Exception as e:
         print(f"[ERROR] {e}")
-    return False
+        return False
 
 # -----------------------------
 # construct task list based on input directory and existing results, supports resuming
@@ -309,18 +301,23 @@ def main():
             fut = executor.submit(run_cmd, cmd, result_file)
             futures[fut] = (cmd, result_file)
 
-        done, _ = wait(futures.keys(), timeout=0, return_when=FIRST_COMPLETED)
+        done, _ = wait(futures.keys(), timeout=0.5, return_when=FIRST_COMPLETED)
 
         finished = 0
         for fut in done:
             finished += 1
-            result = fut.result()
+            try:
+                result = fut.result()
+            except Exception as e:
+                print(f"[FUTURE ERROR] {e}")
+                result = False
+
             cmd, result_file = futures.pop(fut)
 
-            # if failed, re-append to task list for retry, but only for OOM or killed cases
-            if result == "KILLED":
-                tasks.append((cmd, result_file))
-            elif result is False:
+            # retry logic: if OOM or killed, retry the task later
+            if result in ("KILLED", False):
+                finished -= 1
+                print(f"[RETRY] {cmd}")
                 tasks.append((cmd, result_file))
 
         # congestion control
