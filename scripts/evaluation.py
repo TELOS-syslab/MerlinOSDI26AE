@@ -264,7 +264,11 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
             if not policies_params:
                 continue
             for po_eparams in policies_params:
-                po, eparams = po_eparams
+                if len(po_eparams) == 1:
+                    po = po_eparams[0]
+                    eparams = None
+                else:
+                    po, eparams = po_eparams[:2]
                 for ratio in ["0.003,0.01","0.03,0.1","0.2,0.4"]:
                     cmd = f"{root_dir}/bin/cachesim {input_file} oracleGeneral {po} {ratio} --num-thread 2 --outputdir {out_dir} {ignoreobj}"
                     tasks.append((cmd, result_file))

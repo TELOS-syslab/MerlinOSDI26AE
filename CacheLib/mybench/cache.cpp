@@ -16,6 +16,9 @@
 
 #include "request.h"
 #include "cache.h"
+#include <cstdio>
+#include <cstdlib>
+#include <time.h>
 
 
 static void print_config(Cache::Config &config) {
@@ -126,7 +129,7 @@ int cache_set(Cache *cache, PoolId pool, struct request *req, int thread_id) {
   cache->insertOrReplace(item_handle, thread_id);
 
   #ifdef BACKEND_TIME
-  // sleep(BACKEND_LATENCY);
+  sleep(BACKEND_LATENCY);
   #endif
 
   return 0;

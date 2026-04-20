@@ -5,7 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 # option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
-option (FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+option(FORCE_COLORED_OUTPUT "Always produce ANSI-colored output (GNU/Clang only)." TRUE)
+
+option(BACKEND_TIME "Enable backend timing" OFF)
 
 if (${FORCE_COLORED_OUTPUT})
     if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -14,6 +16,10 @@ if (${FORCE_COLORED_OUTPUT})
         add_compile_options (-fcolor-diagnostics)
     endif ()
 endif ()
+
+if(${BACKEND_TIME})
+    add_compile_definitions(BACKEND_TIME)
+endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cachelib/cmake/")
 # set(CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../opt/cachelib/lib/cmake/")

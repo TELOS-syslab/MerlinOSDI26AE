@@ -21,44 +21,50 @@ Congratulations! Now you have installed libCacheSim and CacheLib.
 
 ## Reproduce the results and figures
 We required you to install some python librarys to run the experiments and plot the figures.
-> pandas, numpy, matplotlib. 
-
-
-### Figure 11, Hit rate of evaluated algorithms.
-The provided results are in [/data/HR/withobjsize](./data/HR/withobjsize/).
-#### Plot the figures using the results
+```bash
+# Please install pip first.
+pip install pandas, numpy, matplotlib, psutil
 ```
+
+
+### Figure 11~13, 
+> **Warning** These experiment for Figure 11 to 13 takes long time to finish, we don't expect reviewers to finish them within the deadline. So we provide already computed results so that reviewers can spot check and plot them.
+
+The provided results are in [/data/HR](./data/HR) and [/data/RHR](./data/RHR/).
+#### Plot the figures using the results
+```bash
+# Hit rate of evaluated algorithms.
 python scripts/plot/hit_rate.py 
-```
-This generates `hit_rate.pdf` which is Figure 11.
 
-
-
-### Figure 12, Byte hit rate of evaluated algorithms. 
-The provided results are in [/data/HR/withobjsize](./data/HR/withobjsize/).
-```
+# Byte hit rate of evaluated algorithms. 
 python scripts/plot/byte_hit_rate.py 
-```
 
-This generates `byte_hit_rate.pdf` which is Figure 12.
-
-
-### Figure 13, Relative hit rate compared to the dominant algorithm.
-The provided results are in [/data/RHR/withoutobjsize](./data/RHR/withoutobjsize/).
-
-#### Plot the figures using the results
-```
+# Relative hit rate compared to the dominant algorithm.
 python scripts/plot/relative_hit_ratio.py 
 ```
-This generates `relative_hit_ratio.pdf` which is Figure 13.
+This generates `hit_rate.pdf` which is Figure 11, `byte_hit_rate.pdf` which is Figure 12, and `relative_hit_ratio.pdf` which is Figure 13.
+
+#### Run the simulator
+```
+python scripts/evaluation.py --root_dir ./libCacheSim/_build/ --input_dir /path/to/all_trace --output_dir results --ignore_obj
+```
+**Note:** The `path/to/all_trace` 
 
 
 ### Figure 14, throughput of the evaluated algorithms.
-```python
+#### Reproduce the results
+```bash
+# Generate the trace.
 python CacheLib/mybench/data_genmix.py --bin-output ./raw_data/mix.oracleGeneral.bin 
+
+# Run the experiment with backend
+docker run --rm --cap-add=SYS_NICE -it -v "$(pwd)":/Merlin -w /Merlin cachelib-ae /bin/bash -lc "bash scripts/with_backend.sh && bash scripts/without_backend.sh"
+
+# Process the results
+
 ```
 #### Plot the figures using the results
-```
+```bash
 python3 scripts/plot/throughput.py
 ```
 This generates `throughput.pdf` which is Figure 14.
