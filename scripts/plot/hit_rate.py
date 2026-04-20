@@ -3,20 +3,9 @@ import re
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from common import get_style
 
 DATA_DIR = "data/HR/withoutobjsize"
-
-# ========= 样式（接近论文） =========
-STYLE_MAP = {
-    "merlin": dict(marker="^", color="#8B0000"),
-    "S3FIFO": dict(marker="x", color="green"),
-    "ARC": dict(marker="*", color="royalblue"),
-    "Cacheus": dict(marker="s", color="orange", facecolors='none', linewidths=2),
-    "LeCaR": dict(marker="s", color="teal"),
-    "LIRS": dict(marker="^", color="skyblue", facecolors='none'),
-    "WTinyLFU": dict(marker="o", color="dodgerblue"),
-    "GDSF": dict(marker="o", color="black", facecolors='none', linewidths=2),
-}
 
 # ========= 读取数据 =========
 def load_dat(file_path):
@@ -95,15 +84,22 @@ def plot():
 
         # 画点
         for j, alg in enumerate(headers):
-            style = STYLE_MAP.get(alg, dict(marker="o"))
+            style = get_style(alg)
+            scatter_sty = {
+                "color": style["color"],
+                "marker": style["marker"],
+                "label": style["label"] if i == 0 else None,  # 只在第一列显示 legend label
+                "linewidth": style["linewidth"],
+                "facecolor": style.get("markerfacecolor", style["color"]),
+                "edgecolor": style.get("markeredgecolor", style["color"]),
+            }
 
             ax.scatter(
                 data[:, j],
                 y_pos,
                 s=80,
-                label=alg if i == 0 else None,
                 zorder=3,
-                **style
+                **scatter_sty
             )
 
         # y轴

@@ -13,8 +13,8 @@ def main(path):
         if not os.path.isfile(file_path):
             continue
 
-        # flex
-        cmd1 = ["bash", "run.sh", "flex", "4000", "21", file_path]
+        # merlin
+        cmd1 = ["bash", "run.sh", "merlin", "4000", "21", file_path]
         with open("results/" + fname + ".txt", "a") as f:
             subprocess.run(cmd1, stdout=f)
 
@@ -22,6 +22,14 @@ def main(path):
         cmd2 = ["bash", "run.sh", "s3fifo", "4000", "21", file_path]
         with open("results/" + fname + ".txt", "a") as f:
             subprocess.run(cmd2, stdout=f)
+
+        cmd3 = ["bash", "run.sh", "arc", "4000", "21", file_path]
+        with open("results/" + fname + ".txt", "a") as f:
+            subprocess.run(cmd3, stdout=f)
+        
+        cmd4 = ["bash", "run.sh", "lru", "4000", "21", file_path]
+        with open("results/" + fname + ".txt", "a") as f:
+            subprocess.run(cmd4, stdout=f)
 
         print(f"Finished {fname}")
 

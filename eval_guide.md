@@ -33,6 +33,7 @@ python scripts/plot/hit_rate.py
 This generates `hit_rate.pdf` which is Figure 11.
 
 
+
 ### Figure 12, Byte hit rate of evaluated algorithms. 
 The provided results are in [/data/HR/withobjsize](./data/HR/withobjsize/).
 ```
@@ -53,6 +54,9 @@ This generates `relative_hit_ratio.pdf` which is Figure 13.
 
 
 ### Figure 14, throughput of the evaluated algorithms.
+```python
+python CacheLib/mybench/data_genmix.py --bin-output ./raw_data/mix.oracleGeneral.bin 
+```
 #### Plot the figures using the results
 ```
 python3 scripts/plot/throughput.py

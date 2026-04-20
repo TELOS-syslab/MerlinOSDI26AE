@@ -127,7 +127,7 @@ if __name__ == "__main__":
     ap.add_argument("-m", type=int, default=1000000, help="Number of objects")
     ap.add_argument("-n",
                     type=int,
-                    default=100000000,
+                    default=200000000,
                     help="Number of requests")
     ap.add_argument("--alpha", type=float, default=1.0, help="Zipf parameter")
     ap.add_argument("--bin-output",

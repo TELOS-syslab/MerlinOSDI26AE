@@ -1,26 +1,14 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from common import get_style
 
 DATA_DIR = "data/RHR/withoutobjsize"
 
 # ========= 固定布局 =========
 TRACES = ["alibabaBlock", "tencentBlock", "cloudphysics"]
 WSS = ["0.01", "0.03", "0.1"]
-
-# ========= 算法样式 =========
-STYLE_MAP = {
-    "merlin": dict(color="#8B0000", marker="^", linestyle="-"),
-    "S3FIFO": dict(color="green", marker="x", linestyle="--"),
-    "ARC": dict(color="royalblue", marker="*", linestyle=":"),
-    "Cacheus": dict(color="orange", marker="s", linestyle="--"),
-    "LeCaR": dict(color="teal", marker="P", linestyle="-."),
-    "LIRS": dict(color="skyblue", marker="^", linestyle=":"),
-    "WTinyLFU": dict(color="dodgerblue", marker="o", linestyle="-"),
-    "GDSF": dict(color="black", marker="o", linestyle="--"),
-    "CAR": dict(color="purple", marker="d", linestyle=":"),
-    "GLCache": dict(color="brown", marker="h", linestyle="-."),
-}
+SKIP_ALGOS = {"CAR", "GLCACHE"}
 
 # ========= 读取数据 =========
 def load_dat(file_path):
@@ -65,14 +53,14 @@ def plot_all():
             x_pos = np.arange(len(real_x))
 
             for alg in headers:
-                style = STYLE_MAP.get(alg, dict(marker="o", linestyle="-"))
+                alg_name = alg.upper()
+                if alg_name in SKIP_ALGOS:
+                    continue
+                style = get_style(alg_name)
 
                 ax.plot(
                     x_pos,
                     data[alg],
-                    label=alg,
-                    linewidth=1.8,
-                    markersize=6,
                     **style
                 )
 

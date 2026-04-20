@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import matplotlib.pyplot as plt
+from common import get_style
 
 # ========= 路径 =========
 DIR_WITH = "data/throughput/wback"
@@ -8,14 +9,6 @@ DIR_WITHOUT = "data/throughput/woback"
 
 # ========= 算法顺序（论文顺序） =========
 ALGS = ["MERLIN", "S3FIFO", "ARC", "LRU"]
-
-# ========= 样式（尽量贴论文） =========
-STYLE_MAP = {
-    "MERLIN": dict(color="#8B0000", marker="^", linestyle="-"),
-    "S3FIFO": dict(color="green", marker="x", linestyle="--"),
-    "ARC": dict(color="royalblue", marker="*", linestyle=":"),
-    "LRU": dict(color="orange", marker="s", linestyle="--", markerfacecolor="none"),
-}
 
 # ========= 读取单个算法 =========
 def load_file(filepath):
@@ -47,15 +40,12 @@ def plot_one(ax, directory, title):
         # 👉 等间距 x（关键，和论文一致）
         x_pos = np.arange(len(threads))
 
-        style = STYLE_MAP.get(alg, {})
+        style = get_style(alg_name, ps=1.5)
 
         ax.plot(
             x_pos,
             thr,
-            label=alg.upper(),
-            linewidth=2,
-            markersize=8,
-            **style
+            **style,
         )
 
     # ===== x轴 =====
@@ -68,9 +58,6 @@ def plot_one(ax, directory, title):
 
     # ===== 标题 =====
     ax.set_title(title, fontsize=16)
-
-    # ===== 网格 & 背景 =====
-    ax.set_facecolor("#f2f2f2")
     ax.grid(True, linestyle=":", alpha=0.6)
 
     # ===== 去掉右上边框（论文风）=====

@@ -3,20 +3,9 @@ import re
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from common import get_style
 
 DATA_DIR = "data/HR/withobjsize"
-
-# ========= 样式（接近论文） =========
-STYLE_MAP = {
-    "merlin": dict(marker="^", color="#8B0000"),
-    "S3FIFO": dict(marker="x", color="green"),
-    "ARC": dict(marker="*", color="royalblue"),
-    "Cacheus": dict(marker="s", color="orange", facecolors='none', linewidths=2),
-    "LeCaR": dict(marker="s", color="teal"),
-    "LIRS": dict(marker="^", color="skyblue", facecolors='none'),
-    "WTinyLFU": dict(marker="o", color="dodgerblue"),
-    "GDSF": dict(marker="o", color="black", facecolors='none', linewidths=2),
-}
 
 # ========= 读取数据 =========
 def load_dat(file_path):
@@ -95,15 +84,23 @@ def plot():
 
         # 画点
         for j, alg in enumerate(headers):
-            style = STYLE_MAP.get(alg, dict(marker="o"))
+            alg_name = alg.lower()
+            style = get_style(alg_name, ps=1.5)
+            scatter_style = {
+                "marker": style["marker"],
+                "label": style["label"],
+                "color": style["color"],
+                "facecolors": style.get("markerfacecolor", style["color"]),
+                "edgecolors": style.get("markeredgecolor", style["color"]),
+                "linewidth": style.get("markeredgewidth", 1.0),
+            }
 
             ax.scatter(
                 data[:, j],
                 y_pos,
                 s=80,
-                label=alg if i == 0 else None,
                 zorder=3,
-                **style
+                **scatter_style
             )
 
         # y轴
