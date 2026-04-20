@@ -57,11 +57,12 @@ def plot_all():
                 if alg_name in SKIP_ALGOS:
                     continue
                 style = get_style(alg_name)
-
+                z = 5 if alg_name == "MERLIN" else 3
                 ax.plot(
                     x_pos,
                     data[alg],
-                    **style
+                    zorder=z,
+                    **style,
                 )
 
             # ===== 标题（只在第一行显示）=====

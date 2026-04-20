@@ -78,10 +78,6 @@ def plot():
 
         y_pos = np.arange(len(datasets))
 
-        # 灰色条背景（论文关键）
-        for y in y_pos:
-            ax.axhline(y, color="gray", linewidth=1, alpha=0.6, zorder=0)
-
         # 画点
         for j, alg in enumerate(headers):
             style = get_style(alg)
@@ -94,11 +90,12 @@ def plot():
                 "edgecolor": style.get("markeredgecolor", style["color"]),
             }
 
+            z = 5 if alg.lower() == "merlin" else 3
             ax.scatter(
                 data[:, j],
                 y_pos,
                 s=80,
-                zorder=3,
+                zorder=z,
                 **scatter_sty
             )
 
@@ -123,9 +120,6 @@ def plot():
         elif "0.1" in file:
             title = "(c) Cache size: 10% WSS"
         ax.set_title(title, fontsize=13)
-
-        # 灰底
-        ax.set_facecolor("#f5f5f5")
 
     # legend（顶部）
     handles, labels = axes[0].get_legend_handles_labels()

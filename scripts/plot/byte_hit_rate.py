@@ -92,14 +92,16 @@ def plot():
                 "color": style["color"],
                 "facecolors": style.get("markerfacecolor", style["color"]),
                 "edgecolors": style.get("markeredgecolor", style["color"]),
-                "linewidth": style.get("markeredgewidth", 1.0),
+                "linewidths": style.get("markeredgewidth", 1.0),
             }
+
+            z = 5 if alg.lower() == "merlin" else 3
 
             ax.scatter(
                 data[:, j],
                 y_pos,
                 s=80,
-                zorder=3,
+                zorder=z,
                 **scatter_style
             )
 
@@ -124,9 +126,6 @@ def plot():
         elif "0.1" in file:
             title = "(c) Cache size: 10% WSS"
         ax.set_title(title, fontsize=13)
-
-        # 灰底
-        ax.set_facecolor("#f5f5f5")
 
     # legend（顶部）
     handles, labels = axes[0].get_legend_handles_labels()
