@@ -12,7 +12,7 @@ popd
 
 # CacheLib
 pushd CacheLib
-docker build -t cachelib-ae .
+sudo docker build -t cachelib-ae .
 sudo mkdir -p build-fbthrift/thrift/conformance/if
 docker run --rm --cap-add=SYS_NICE -it -v "$(pwd)":/Merlin -w /Merlin cachelib-ae /bin/bash -lc "cd CacheLib/mybench && bash build.sh"
 popd
