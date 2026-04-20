@@ -171,9 +171,11 @@ static cache_obj_t *SR_LRU_find(cache_t *cache, const request_t *req,
     copy_cache_obj_to_request(params->req_local, obj_SR);
     obj_R = R->insert(R, params->req_local);
     //heritage state
+    #ifdef TRACK_PARAMETERS
     obj_R->SR_LRU.fromlfughost = obj_SR->SR_LRU.fromlfughost;
     obj_R->SR_LRU.fromlrughost = obj_SR->SR_LRU.fromlrughost;
     obj_R->SR_LRU.accessed = obj_SR->SR_LRU.accessed;
+    #endif
     SR->remove(SR, req->obj_id);
 
     // If R list is full, move obj from R to SR.
@@ -187,9 +189,11 @@ static cache_obj_t *SR_LRU_find(cache_t *cache, const request_t *req,
         obj_in_SR->SR_LRU.demoted = true;
       }
       //heritage state
+      #ifdef TRACK_PARAMETERS
       obj_in_SR->SR_LRU.fromlfughost = obj_from_R->SR_LRU.fromlfughost;
       obj_in_SR->SR_LRU.fromlrughost = obj_from_R->SR_LRU.fromlrughost;
       obj_in_SR->SR_LRU.accessed = obj_from_R->SR_LRU.accessed;
+      #endif
       R->evict(R, req);
     }
   }
