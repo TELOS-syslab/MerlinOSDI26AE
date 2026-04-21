@@ -266,7 +266,7 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
                 continue
             for policy in policies:
                 for ratio in ["0.003,0.01","0.03,0.1","0.2,0.4"]:
-                    cmd = f"{root_dir}/bin/cachesim {input_file} oracleGeneral {po} {ratio} --num-thread 2 --outputdir {out_dir} {ignoreobj}"
+                    cmd = f"{root_dir}/bin/cachesim {input_file} oracleGeneral {policy} {ratio} --num-thread 2 --outputdir {out_dir} {ignoreobj}"
                     tasks.append((cmd, result_file))
     return tasks
 
