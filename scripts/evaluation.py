@@ -169,14 +169,15 @@ def get_available_workers():
 # recover from existing result file, only run the policies that are not done yet
 # -----------------------------
 def get_policy_todo(result_file):
-    if not os.path.exists(result_file):
-        return policy_list[:]
     done = set()
-    with open(result_file) as f:
-        for line in f:
-            parts = line.strip().split()
-            if len(parts) > 1:
-                done.add(parts[1])
+    if not os.path.exists(result_file):
+        pass
+    else:
+        with open(result_file) as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) > 1:
+                    done.add(parts[1])
     todo = []
     for i, name in enumerate(policy_name):
         if name not in done:
@@ -260,15 +261,10 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
         for file in os.listdir(dataset_path):
             input_file = os.path.join(dataset_path, file)
             result_file = os.path.join(out_dir, file)
-            policies_params = get_policy_todo(result_file)
-            if not policies_params:
+            policies = get_policy_todo(result_file)
+            if not policies:
                 continue
-            for po_eparams in policies_params:
-                if len(po_eparams) == 1:
-                    po = po_eparams[0]
-                    eparams = None
-                else:
-                    po, eparams = po_eparams[:2]
+            for policy in policies:
                 for ratio in ["0.003,0.01","0.03,0.1","0.2,0.4"]:
                     cmd = f"{root_dir}/bin/cachesim {input_file} oracleGeneral {po} {ratio} --num-thread 2 --outputdir {out_dir} {ignoreobj}"
                     tasks.append((cmd, result_file))
@@ -337,7 +333,6 @@ def main():
         else:
             next_sleep -= check_interval
             next_sleep = max(check_interval, next_sleep)
-        
         global oom_happen, oom_time
         if oom_happen and time.time() - oom_time > 600:
             oom_happen = False
