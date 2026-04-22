@@ -112,6 +112,16 @@ int cache_get(Cache *cache, PoolId pool, struct request *req,int thread_id) {
   }
 }
 
+inline void busy_wait_us(uint64_t us) {
+    auto start = std::chrono::high_resolution_clock::now();
+    while (true) {
+        auto now = std::chrono::high_resolution_clock::now();
+        if (std::chrono::duration_cast<std::chrono::microseconds>(now - start).count() >= us)
+            break;
+        asm volatile("pause");
+    }
+}
+
 int cache_set(Cache *cache, PoolId pool, struct request *req, int thread_id) {
 
   auto key = gen_key(req);
@@ -128,8 +138,8 @@ int cache_set(Cache *cache, PoolId pool, struct request *req, int thread_id) {
   //std::memcpy(item_handle->getMemory(), req->val, req->val_len+1);
   cache->insertOrReplace(item_handle, thread_id);
 
-  #ifdef BACKEND_TIME
-  sleep(BACKEND_LATENCY);
+  #ifdef ENABLE_BACKEND_LATENCY
+  busy_wait_us(BACKEND_LATENCY);
   #endif
 
   return 0;

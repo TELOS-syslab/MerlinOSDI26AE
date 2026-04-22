@@ -173,6 +173,9 @@ void trace_replay_run_mt(struct bench_data *bdata, bench_opts_t *opts) {
         report_bench_result(bdata, opts);
     }
   }
+  if(counter >= 600){//10 minutes timeout
+        break;
+    }
   aggregate_results(bdata, opts, res);
   report_bench_result(bdata, opts);
   // wait for all threads to finish

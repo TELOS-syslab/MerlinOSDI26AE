@@ -295,7 +295,6 @@ namespace facebook::cachelib
         {
             assert(total_thread_num <= THREAD_NUM);
             assert(total_thread_num * 2 <= QUEUE_NUM);
-            printf("Merlin received thread num %d\n", total_thread_num);
             for (int i = 0; i < QUEUE_NUM; i++)
             {
                 queue_info_[i].filterfifo_ = std::make_unique<ADList>(compressor);

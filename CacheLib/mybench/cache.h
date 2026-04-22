@@ -4,8 +4,8 @@
 #include "log.h"
 
 using namespace facebook::cachelib;
-#define BACKEND_LATENCY 0.01
-#define BACKEND_TIME
+#define BACKEND_LATENCY 10
+//#define ENABLE_BACKEND_LATENCY
 #if defined(USE_LRU) || defined(USE_STRICTLRU)
 using Cache = facebook::cachelib::LruAllocator;
 #elif defined(USE_CLOCK)
