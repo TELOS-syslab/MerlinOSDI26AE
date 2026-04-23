@@ -51,6 +51,13 @@ typedef struct ARCfix_params {
   bool curr_obj_in_L2_ghost;
   int64_t vtime_last_req_in_ghost;
   request_t *req_local;
+  #ifdef TRACK_PARAMETERS
+      #ifdef OUTPUT_GAP
+          int outputgap = OUTPUT_GAP;
+      #else
+          int outputgap = 10000;
+      #endif
+  #endif
 
   int64_t n_byte_write_in_L2_data;
 } ARCfix_params_t;
@@ -190,11 +197,11 @@ static void ARCfix_free(cache_t *cache) {
  */
 static bool ARCfix_get(cache_t *cache, const request_t *req) {
 #ifdef TRACK_PARAMETERS
-  ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
-  if (abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req % 1000000) == 0) {
-    params->track_p = params->p;
-    printf("%ld ARCfix p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
-  }
+    ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
+    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%outputgap)==0){
+        params->track_p = params->p;
+        printf("%ld ARCfix p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
+    }
 #endif
 #ifdef DEBUG_MODE
   return ARCfix_get_debug(cache, req);
