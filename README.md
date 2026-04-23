@@ -63,6 +63,9 @@ These instructions are intended to check the basic functionality of the artifact
 within a short time frame. They regenerate figures from the precomputed result
 files and do not require downloading the full trace datasets.
 
+Estimated runtime for this section: about 10-30 minutes end-to-end on a common
+desktop/server CPU.
+
 Clone the repository with submodules:
 
 ```bash
@@ -111,6 +114,13 @@ of their runtime and storage cost.
 
 ### Build Dependencies and Binaries
 
+Estimated runtime and resources:
+
+- Runtime: about [TO_FILL_MIN_INSTALL] minutes
+- CPU: moderate to high during compilation
+- Memory: recommend >= [TO_FILL_RAM_INSTALL]
+- Additional disk: about [TO_FILL_DISK_INSTALL] (build artifacts + Docker image)
+
 On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
 
 ```bash
@@ -129,6 +139,11 @@ The same script also builds the Docker image `cachelib-ae` and compiles the
 CacheLib microbenchmark in `CacheLib/mybench/`.
 
 ### Trace Dataset Layout
+
+Estimated resource cost:
+
+- Download size (full set): about 2 TB
+- Download time: about a few hors to  afew days (depends on network bandwidth)
 
 The Figure 11-13 simulations use public traces from the cache-dataset archive:
 
@@ -156,6 +171,10 @@ The full dataset is large. For spot checks, download only the traces needed for
 the experiment you want to inspect.
 
 ### Figure 11-13: Hit Rate, Byte Hit Rate, and Relative Hit Ratio
+Estimated runtime and resources:
+- Aabout 1 million CPU-hours in aggregate
+- Memory: recommend >= 1 TB for parallel execution
+- Disk: traces up to about 2 TB + outputs about 500 MB
 
 The precomputed results are already included in:
 
@@ -220,6 +239,10 @@ python3 scripts/getRHRcdf.py \
 ```
 
 ### Figure 14: Throughput
+Estimated runtime and resources:
+- CPU: high
+- Memory: [TO_FILL_RAM_FIG14]
+- Disk: [TO_FILL_DISK_FIG14_RERUN]
 
 The precomputed throughput results are in:
 
@@ -247,6 +270,10 @@ show the exact algorithm, cache-size, hash-power, and thread-count settings used
 for the throughput experiment.
 
 ### Figure 15: Flash-Cache Hit Rate and Write Bytes
+Estimated runtime and resources:
+- CPU: high
+- Memory: [TO_FILL_RAM_FIG14]
+- Disk: [TO_FILL_DISK_FIG14_RERUN]
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
@@ -308,12 +335,16 @@ commands for inspecting Merlin and baselines on individual traces are:
 
 ## Notes for Reviewers
 
-- The quick-start path regenerates all provided figures from bundled data.
-- The full trace-driven evaluation is reproducible but expensive; we recommend
-  spot-checking representative traces unless sufficient compute is available.
+- The quick-start path regenerates all provided figures from bundled data and is
+  the recommended AE baseline due to low resource cost.
+- The full trace-driven evaluation is reproducible but very expensive in CPU
+  time, memory, and storage; we recommend spot-checking representative traces
+  unless sufficient compute is available.
 - The scripts are resumable in the sense that they inspect existing output files
   and skip completed policy results when possible.
 - No private datasets are required. The large traces are publicly available from
   the URLs listed above.
 - The artifact does not intentionally perform destructive operations. The
   installation scripts do use `sudo apt`, `sudo make install`, and Docker.
+- The repository does not include the full trace corpus. This keeps the artifact
+  package small and relies on the public dataset archive listed below.
