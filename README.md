@@ -1,134 +1,319 @@
-# Merlin OSDI26 Artifact Evaluation Guide
-The artifact of the OSDI'26 paper "Merlin: An Efficient Adaptive Cache Eviction
-Algorithm via Fine-Grained Characterization".
+# Merlin OSDI'26 Artifact Evaluation Guide
 
-Thanks for your willingness to evaluate our code and reproduce the claims in the paper.
+This artifact accompanies the OSDI'26 paper, "Merlin: An Efficient Adaptive
+Cache Eviction Algorithm via Fine-Grained Characterization."
 
-## Setup
-An x86-64 machine with an Ubuntu 22.04 LTS is suffice. We've tested Merlin on an AMD machine with 384 cores (two Epyc 9965 processors).
+The artifact contains the Merlin implementation, the modified libCacheSim and
+CacheLib evaluation harnesses, scripts for reproducing the paper figures, and
+precomputed result files for the large experiments. The full trace-driven
+evaluation is intentionally optional because it requires very large public trace
+datasets and substantial compute time.
 
-```
+## Artifact Claims
+
+This artifact supports the main evaluation claims in the paper:
+
+- Merlin improves hit rate and byte hit rate over existing cache eviction
+  algorithms across diverse traces.
+- Merlin improves the relative hit ratio compared with the dominant algorithm
+  on representative traces.
+- Merlin achieves competitive throughput in the CacheLib-based implementation.
+- Merlin reduces flash write amplification while preserving hit rate in the
+  CloudPhysics flash-cache experiment.
+
+The repository includes precomputed results under `data/` so that reviewers can
+quickly regenerate the figures. The scripts under `scripts/` and
+`CacheLib/mybench/` document how the corresponding results were produced.
+
+## Hardware and Software Requirements
+
+We recommend an x86-64 machine running Ubuntu 22.04 LTS. We tested the artifact
+on an AMD server with 384 hardware threads (two AMD EPYC 9965 processors).
+
+For the quick checks, a normal Linux machine with Python 3 is sufficient. Full
+trace-driven reproduction needs much more storage and compute:
+
+- The public traces are approximately 2 TB if downloaded in full.
+- Reproducing all Figure 11-13 simulations can take roughly 1 million CPU hours.
+- The simulator runs experiments in parallel, but each job can require
+  significant memory. If memory is limited, reduce parallelism or run individual
+  experiments manually.
+
+The main software dependencies are Python 3, `pip`, `pandas`, `numpy`,
+`matplotlib`, `psutil`, Docker, CMake, libCacheSim dependencies, and CacheLib
+dependencies. The helper scripts in `scripts/install_dependency.sh` and
+`scripts/install.sh` install and build the required components on Ubuntu 22.04.
+
+## Repository Layout
+
+- `README.md`: this artifact evaluation guide.
+- `scripts/`: installation, evaluation, post-processing, and plotting scripts.
+- `data/`: precomputed data used by the plotting scripts.
+- `data/HR/`: hit-rate and byte-hit-rate summaries for Figure 11 and Figure 12.
+- `data/RHR/`: relative-hit-ratio summaries for Figure 13.
+- `data/throughput/`: throughput results for Figure 14.
+- `data/flash/`: flash-cache results for Figure 15.
+- `libCacheSim/`: the modified libCacheSim code used for simulation.
+- `CacheLib/`: the modified CacheLib code used for throughput evaluation.
+- `CacheLib/mybench/`: CacheLib microbenchmark and trace-generation scripts.
+
+## Getting Started Instructions
+
+These instructions are intended to check the basic functionality of the artifact
+within a short time frame. They regenerate figures from the precomputed result
+files and do not require downloading the full trace datasets.
+
+Clone the repository with submodules:
+
+```bash
 git clone --recursive https://github.com/TELOS-syslab/MerlinOSDI26AE.git
 cd MerlinOSDI26AE
 ```
 
-The following guide will assume that you are in the MerlinOSDI26AE directory.
+Install the Python packages needed by the plotting scripts:
 
-## Install Dependency
-We use libCacheSim and CacheLib to perform evaluations, which can be installed using the following commands.
-
-This may take XXX minutes.
+```bash
+python3 -m pip install pandas numpy matplotlib psutil
 ```
+
+Regenerate the figures from the provided results:
+
+```bash
+# Figure 11: hit rate
+python3 scripts/plot/hit_rate.py
+
+# Figure 12: byte hit rate
+python3 scripts/plot/byte_hit_rate.py
+
+# Figure 13: relative hit ratio
+python3 scripts/plot/relative_hit_ratio.py
+
+# Figure 14: throughput
+python3 scripts/plot/throughput.py
+
+# Figure 15: flash-cache hit rate and normalized write bytes
+python3 scripts/plot/flash.py
+```
+
+The expected output files are:
+
+- `hit_rate.pdf`
+- `byte_hit_rate.pdf`
+- `relative_hit_ratio.pdf`
+- `throughput.pdf`
+- `flash.pdf`
+
+## Detailed Instructions
+
+This section describes how to rebuild the artifact and reproduce the results in
+more detail. The full experiments are optional for artifact evaluation because
+of their runtime and storage cost.
+
+### Build Dependencies and Binaries
+
+On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
+
+```bash
 bash ./scripts/install_dependency.sh
 bash ./scripts/install.sh
 ```
 
-Congratulations! Now you have installed libCacheSim and CacheLib. 
+`scripts/install_dependency.sh` installs the system packages and builds zstd,
+XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
 
-## Reproduce the results and figures
-> **Note** 
-> It requires a lot of time and disk space to finish the whole evaluation, so we will provide you with the results to plot figures.
-> The full dataset is large (about 2 TB), so we recommend you to download traces you need only.
-> It will take a long time (about 1 million CPU hours) to finish the whole evaluation. Although libCacheSim could run experiments in parallel, it needs large memory. 
-> If you would like to reduce DRAM usase, you can run single experiment each time.
+- `libCacheSim/_build/`: normal build for the main simulations.
+- `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for parameter
+  tracking experiments.
 
+The same script also builds the Docker image `cachelib-ae` and compiles the
+CacheLib microbenchmark in `CacheLib/mybench/`.
 
-```bash
-# Please install pip for evaluation and plotting figures.
-pip install pandas, numpy, matplotlib, psutil
+### Trace Dataset Layout
+
+The Figure 11-13 simulations use public traces from the cache-dataset archive:
+
+<https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/>
+
+Place the downloaded traces under `CacheTrace/` or pass another directory with
+`--input_dir`. The expected layout is:
+
+```text
+CacheTrace/
+  alibabaBlock/
+  cloudphysics/
+  fiu/
+  metaCDN/
+  metaKV/
+  msr/
+  systor/
+  tencentBlock/
+  tencentPhoto/
+  twitter/
+  wikimedia/
 ```
 
+The full dataset is large. For spot checks, download only the traces needed for
+the experiment you want to inspect.
 
-### Figure 11~13, 
-> **Note** We hope you download datasets in directory CacheTrace, or you could replace the input dir to `path/to/all/dataset` in the following commands.
-> The traces used in this experiment can be downloaded at [cacheDatasets](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/)
->
-> We construct the datasets directory as, please ignore the sampled datasets and traces too small in datasets.
->  CacheTrace
-> - [alibabaBlock/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/alibabaBlock/old/)
-> - [cloudphysics/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/)
-> - [fiu/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/fiu/)
-> -	[metaCDN/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/metaCDN/)
-> - [metaKV/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/metaKV/)
-> - [msr/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/msr/)
-> - [systor/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/systor/)
-> - [tencentBlock/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/tencentBlock/old/)
-> - [tencentPhoto/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/tencentPhoto/)
-> - [twitter/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/twitter/)
-> -	[wiki/](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/wiki/)
+### Figure 11-13: Hit Rate, Byte Hit Rate, and Relative Hit Ratio
 
-The provided results are in [/data/HR](./data/HR) and [/data/RHR](./data/RHR/).
-#### Plot the figures using the results
+The precomputed results are already included in:
+
+- `data/HR/withoutobjsize/`
+- `data/HR/withobjsize/`
+- `data/RHR/withoutobjsize/`
+- `data/RHR/withobjsize/`
+
+To regenerate the figures from these results, run:
+
 ```bash
-# Hit rate of evaluated algorithms.
-python scripts/plot/hit_rate.py 
-
-# Byte hit rate of evaluated algorithms. 
-python scripts/plot/byte_hit_rate.py 
-
-# Relative hit rate compared to the dominant algorithm.
-python scripts/plot/relative_hit_ratio.py 
-```
-This generates `hit_rate.pdf` which is Figure 11, `byte_hit_rate.pdf` which is Figure 12, and `relative_hit_ratio.pdf` which is Figure 13.
-
-#### [Optional] Verify the simulation results
-Running evaluation (Estimate evaluation time: 1 million CPU hours)
-```bash
-#running evaluation commands python scripts/evaluation.py --root_dir <root/dir/of/libcCacheSim> --input_dir <path/to/all/dataset> --output_dir <outputdir> 
-
-#--ignore_obj controls whether to consider the object size
-python scripts/evaluation.py --root_dir ./libCacheSim/_build/ --input_dir ./CacheTrace --output_dir ./results/evaligobj --ignore_obj
-
-python scripts/evaluation.py --root_dir ./libCacheSim/_build/ --input_dir ./CacheTrace --output_dir ./results/evalobj
+python3 scripts/plot/hit_rate.py
+python3 scripts/plot/byte_hit_rate.py
+python3 scripts/plot/relative_hit_ratio.py
 ```
 
-Processing results
+To rerun the full simulation, use:
+
 ```bash
-#Collect evaluation results in different cache size
-python scripts/readeval.py --input_dir ./results/evaligobj --output_dir ./dataresult/withoutobjsize/ --normalize_policy
+# Object size ignored: used for the hit-rate figure.
+python3 scripts/evaluation.py \
+  --root_dir ./libCacheSim/_build \
+  --input_dir ./CacheTrace \
+  --output_dir ./results/eval_ignore_obj \
+  --ignore_obj
 
-python scripts/readeval.py --input_dir ./results/evalobj --output_dir ./dataresult/withobjsize/ --normalize_policy
-
-#Calculate the relative hit improvement 
-python scripts/getHR.py --input_dir ./dataresult/withoutobjsize/ --output_dir ./data/HR/withoutobjsize
-
-python scripts/getHR.py --input_dir ./dataresult/withobjsize/ --output_dir ./data/HR/withobjsize
+# Object size considered: used for the byte-hit-rate figure.
+python3 scripts/evaluation.py \
+  --root_dir ./libCacheSim/_build \
+  --input_dir ./CacheTrace \
+  --output_dir ./results/eval_with_obj
 ```
 
-### Figure 14, throughput of the evaluated algorithms.
-#### Plot the figures using the results
+Post-process the simulation outputs:
+
+```bash
+python3 scripts/readeval.py \
+  --input_dir ./results/eval_ignore_obj \
+  --output_dir ./dataresult/withoutobjsize \
+  --normalize_policy
+
+python3 scripts/readeval.py \
+  --input_dir ./results/eval_with_obj \
+  --output_dir ./dataresult/withobjsize \
+  --normalize_policy
+
+python3 scripts/getHR.py \
+  --input_dir ./dataresult/withoutobjsize \
+  --output_dir ./data/HR/withoutobjsize
+
+python3 scripts/getHR.py \
+  --input_dir ./dataresult/withobjsize \
+  --output_dir ./data/HR/withobjsize
+
+python3 scripts/getRHRcdf.py \
+  --input_dir ./dataresult/withoutobjsize \
+  --output_dir ./data/RHR/withoutobjsize
+
+python3 scripts/getRHRcdf.py \
+  --input_dir ./dataresult/withobjsize \
+  --output_dir ./data/RHR/withobjsize
+```
+
+### Figure 14: Throughput
+
+The precomputed throughput results are in:
+
+- `data/throughput/wback/`
+- `data/throughput/woback/`
+
+Regenerate the figure:
+
 ```bash
 python3 scripts/plot/throughput.py
 ```
 
-This generates `throughput.pdf` which is Figure 14.
+To reproduce the throughput data, first generate the synthetic mixed trace:
 
-#### [Optional] Reproduce the results
-(Estimate evaluation time: )
 ```bash
-# Generate the trace.
-python ./CacheLib/mybench/data_genmix.py -m 1000000 -n 100000000 --bin-output ./mix.oracleGeneral.bin
-
-# Run the experiment with backend
-docker run --rm --cap-add=SYS_NICE -it -v "$(pwd)":/Merlin -w /Merlin cachelib-ae /bin/bash -lc "bash scripts/with_backend.sh && bash scripts/without_backend.sh"
-
-# Process the results
+python3 ./CacheLib/mybench/data_genmix.py \
+  -m 1000000 \
+  -n 100000000 \
+  --bin-output ./mix.oracleGeneral.bin
 ```
 
-### Figure 15, write bytes (normalized to trace size) and hit rate in Cloudphysics.
-The traces used in this experiment can be downloaded at [Cloudphysics](https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/). 
+Then run the CacheLib microbenchmark inside the `cachelib-ae` Docker image
+created by `scripts/install.sh`. The benchmark scripts in `CacheLib/mybench/`
+show the exact algorithm, cache-size, hash-power, and thread-count settings used
+for the throughput experiment.
 
-```
+### Figure 15: Flash-Cache Hit Rate and Write Bytes
 
-```
+The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
-### Figure 16
 ```bash
-./_build2/bin/cachesim ./CacheTrace/twitter/cluster8.oracleGeneral.zst oracleGeneral merlin 0.1 --ignore-obj-size=true
-./_build2/bin/cachesim ./CacheTrace/twitter/cluster8.oracleGeneral.zst oracleGeneral cacheus 0.1 --ignore-obj-size=true
-./_build2/bin/cachesim ./CacheTrace/twitter/cluster8.oracleGeneral.zst oracleGeneral arc 0.1 --ignore-obj-size=true
-
-./_build2/bin/cachesim ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst oracleGeneral merlin 0.2 --ignore-obj-size=true
-./_build2/bin/cachesim ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst oracleGeneral cacheus 0.2 --ignore-obj-size=true
-./_build2/bin/cachesim ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst oracleGeneral arc 0.2 --ignore-obj-size=true
+python3 scripts/plot/flash.py
 ```
+
+To reproduce the raw flash-cache measurements, download the CloudPhysics traces:
+
+<https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/>
+
+Place the traces under:
+
+```text
+CacheTrace/cloudphysics/
+```
+
+Then run:
+
+```bash
+MAX_JOBS=2 bash scripts/flash.sh
+```
+
+`MAX_JOBS` controls the number of concurrent flash-cache jobs. Increase it only
+if the machine has enough CPU and memory. The script writes raw outputs under
+`data/flash/<cache-size>/`. Use `scripts/process_flash.py` to summarize raw
+outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
+
+### Parameter-Tracking
+
+The parameter-tracking build is created under `libCacheSim/_build2/`. Example
+commands for inspecting Merlin and baselines on individual traces are:
+
+```bash
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
+  oracleGeneral merlin 0.1 --ignore-obj-size=true
+
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
+  oracleGeneral cacheus 0.1 --ignore-obj-size=true
+
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
+  oracleGeneral arc 0.1 --ignore-obj-size=true
+
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
+  oracleGeneral merlin 0.2 --ignore-obj-size=true
+
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
+  oracleGeneral cacheus 0.2 --ignore-obj-size=true
+
+./libCacheSim/_build2/bin/cachesim \
+  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
+  oracleGeneral arc 0.2 --ignore-obj-size=true
+```
+
+## Notes for Reviewers
+
+- The quick-start path regenerates all provided figures from bundled data.
+- The full trace-driven evaluation is reproducible but expensive; we recommend
+  spot-checking representative traces unless sufficient compute is available.
+- The scripts are resumable in the sense that they inspect existing output files
+  and skip completed policy results when possible.
+- No private datasets are required. The large traces are publicly available from
+  the URLs listed above.
+- The artifact does not intentionally perform destructive operations. The
+  installation scripts do use `sudo apt`, `sudo make install`, and Docker.
