@@ -53,6 +53,8 @@ typedef struct Cacheus_params {
     #endif
 #endif
 
+static const char *DEFAULT_CACHE_PARAMS =
+    "w-lru=0.5";
 // ***********************************************************************
 // ****                                                               ****
 // ****                   function declarations                       ****

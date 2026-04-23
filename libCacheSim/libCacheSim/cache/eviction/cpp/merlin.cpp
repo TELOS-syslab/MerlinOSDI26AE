@@ -89,7 +89,7 @@ namespace eviction
 } // namespace eviction
 
 #ifdef TRACK_PARAMETERS
-    #ifndefOUTPUT_GAP
+    #ifndef OUTPUT_GAP
         #define OUTPUT_GAP 10000
     #endif
 #endif

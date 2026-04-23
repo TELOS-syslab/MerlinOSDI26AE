@@ -143,7 +143,7 @@ CacheLib microbenchmark in `CacheLib/mybench/`.
 Estimated resource cost:
 
 - Download size (full set): about 2 TB
-- Download time: about a few hors to  afew days (depends on network bandwidth)
+- Download time: about a few hors to a few days (depends on network bandwidth)
 
 The Figure 11-13 simulations use public traces from the cache-dataset archive:
 
@@ -268,6 +268,11 @@ Then run the CacheLib microbenchmark inside the `cachelib-ae` Docker image
 created by `scripts/install.sh`. The benchmark scripts in `CacheLib/mybench/`
 show the exact algorithm, cache-size, hash-power, and thread-count settings used
 for the throughput experiment.
+
+```bash
+bash scripts/throughput.sh woback
+bash scripts/throughput.sh wback
+```
 
 ### Figure 15: Flash-Cache Hit Rate and Write Bytes
 Estimated runtime and resources:

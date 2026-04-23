@@ -51,6 +51,7 @@ typedef struct ARCfix_params {
   bool curr_obj_in_L2_ghost;
   int64_t vtime_last_req_in_ghost;
   request_t *req_local;
+
   int64_t n_byte_write_in_L2_data;
 } ARCfix_params_t;
 

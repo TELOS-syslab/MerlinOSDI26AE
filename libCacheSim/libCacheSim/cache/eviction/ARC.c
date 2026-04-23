@@ -53,10 +53,10 @@ typedef struct ARC_params {
   request_t *req_local;
   //used for analysis
     #ifdef TRACK_PARAMETERS
-    int objt1ghost;
+    int fromt1g;
     int hitt1;
     int hitobjt1;
-    int objt2ghost;
+    int fromt2g;
     int hitt2;
     int hitobjt2;
     #endif
@@ -67,6 +67,7 @@ typedef struct ARC_params {
         #define OUTPUT_GAP 10000
     #endif
 #endif
+
 // ***********************************************************************
 // ****                                                               ****
 // ****                   function declarations                       ****
