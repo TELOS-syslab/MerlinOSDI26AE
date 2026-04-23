@@ -8,6 +8,22 @@
 #include <map>
 #define MAXFREQ 7
 
+/*
+ * Merlin is implemented as a composite eviction policy built from four FIFO
+ * queues:
+ *
+ *   filter  : first-touch admission area for newly seen objects.
+ *   staging : probationary area for objects that look promising but are not
+ *             hot enough to protect in the core cache yet.
+ *   core    : protected area for objects whose observed popular and hotness passes the
+ *             adaptive guard threshold.
+ *   ghost   : metadata-only history of recently evicted candidates.
+ *
+ * A minimal-increment counting Bloom filter (CBF) provides a compact
+ * epoch signal across epochs. The adaptive guard frequency is derived from
+ * hotdistribution[] and controls whether an object should be promoted into the
+ * protected core or stay in the probationary path.
+ */
 namespace eviction
 {
     typedef struct
@@ -18,6 +34,7 @@ namespace eviction
         cache_t *core;
         cache_t *staging;
         cache_t *ghost;
+        // Byte budgets for the four internal queues.
         uint64_t filter_limit;
         uint64_t core_limit;
         uint64_t staging_limit;
@@ -25,21 +42,24 @@ namespace eviction
         double filter_size_ratio;
         double staging_size_ratio;
         double ghost_size_ratio;
+        // Compact history used to compare candidates and age past evidence.
         struct minimalIncrementCBF *CBF;
         int32_t epoch_count;
         int32_t epoch_update;
         double sketch_scale;
-        //
+        // Adaptive admission state.
         int32_t guard_freq;
         int32_t track_freq;
+        // hotdistribution[f] stores the number of objects with frequency >= f.
         std::vector<int32_t> hotdistribution;
         int32_t evictobj_num;
         int32_t seq_miss;
+        // Sticky state set by merlin_find() and consumed by merlin_insert().
         int32_t ghost_freq;
         int32_t hit_on_ghost;
         int32_t move_to_core;
         request_t *req_staging;
-        //
+        // Counters used for debugging and evaluation.
         int32_t filter_hitnum;
         int32_t staging_hitnum;
         int32_t core_hitnum;
@@ -133,6 +153,8 @@ extern "C"
             merlin_parse_params(cache, cache_specific_params);
         }
 
+        // Split the user-visible cache budget among Merlin's internal queues.
+        // The ghost queue stores history and can be sized independently.
         params->filter_limit = MAX(1, (uint64_t)(params->filter_size_ratio * ccache_params.cache_size));
         params->staging_limit = MAX(1, (uint64_t)(params->staging_size_ratio * ccache_params.cache_size));
         params->core_limit = ccache_params.cache_size - params->filter_limit - params->staging_limit;
@@ -160,6 +182,8 @@ extern "C"
         params->CBF =
             (struct minimalIncrementCBF *)malloc(sizeof(struct minimalIncrementCBF));
         params->CBF->ready = 0;
+        // The sketch is capped to avoid excessive memory use on very large
+        // cache configurations.
         int cbf_size = MIN(ccache_params.cache_size * params->sketch_scale, 1<<30);
         int ret = minimalIncrementCBF_init(params->CBF, cbf_size, 0.001);
         if (ret != 0)
@@ -254,6 +278,8 @@ extern "C"
         cache_obj_t *obj = NULL;
         if (!update_cache)
         {
+            // Lookup-only path: do not update frequencies, hit counters, or
+            // ghost-hit state.
             obj = params->filter->find(params->filter, req, update_cache);
             if (obj != NULL)
             {
@@ -274,6 +300,8 @@ extern "C"
 
         params->timer += 1;
 
+        // Search real cache partitions first. A hit increases the object's
+        // bounded frequency and updates the cumulative frequency histogram.
         obj = params->filter->find(params->filter, req, update_cache);
         if (obj != NULL)
         {
@@ -313,6 +341,9 @@ extern "C"
             checkhit(cache, obj);
             return obj;
         }
+        // Ghost hits are misses from the user's point of view, but they carry
+        // useful history. merlin_insert() consumes this state to decide whether
+        // the returning object enters staging or core.
         obj = params->ghost->find(params->ghost, req, false);
         if (obj != NULL)
         {
@@ -335,6 +366,8 @@ extern "C"
     
     static void decreasepop(std::vector<int32_t> &hotdistribution, int32_t ori_freq, int32_t dest_freq)
     {
+        // hotdistribution is cumulative: moving an object from ori_freq to
+        // dest_freq removes it from every threshold it no longer satisfies.
         for (int i = ori_freq; i > dest_freq; i--)
         {
             hotdistribution[i]--;
@@ -347,7 +380,8 @@ extern "C"
         cache_obj_t *obj = NULL;
         if (params->staging->get_occupied_byte(params->staging) == 0 && params->filter->get_occupied_byte(params->filter) == 0)
         {
-            // warmup
+            // Warmup: before the admission queues contain enough signal, admit
+            // directly to core so the cache can start serving hits immediately.
             obj = params->core->insert(params->core, req);
             params->n_byte_admit_to_core += obj -> obj_size;
             obj->MERLIN.freq = 0;
@@ -360,6 +394,8 @@ extern "C"
                 params->hit_on_ghost = 0;
                 if (params->move_to_core)
                 {
+                    // A returning ghost object whose historical frequency has
+                    // crossed guard_freq is treated as hot and protected.
                     params->ghost2core++;
                     params->move_to_core = 0;
                     obj = params->core->insert(params->core, req);
@@ -372,6 +408,9 @@ extern "C"
                 }
                 else
                 {
+                    // A ghost hit below the guard threshold is promising but
+                    // still probationary, so it enters staging and is tracked
+                    // in the sketch.
                     params->ghost2staging++;
                     minimalIncrementCBF_add(params->CBF, (void *)&req->obj_id, sizeof(obj_id_t));
                     obj = params->staging->insert(params->staging, req);
@@ -388,7 +427,8 @@ extern "C"
             }
             else
             {
-                // new obj
+                // First-seen objects enter the filter. They must earn further
+                // protection through hits or sketch evidence.
                 obj = params->filter->insert(params->filter, req);
                 obj->MERLIN.freq = 0;
                 params->hotdistribution[0]++;
@@ -429,6 +469,8 @@ extern "C"
     static void adjust_core(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
+        // If core exceeds its budget, demote its FIFO victims to staging. This
+        // preserves their metadata while making room for newly promoted items.
         while (params->core_limit < params->core->get_occupied_byte(params->core))
         {
             cache_obj_t *obj_to_evict = params->core->to_evict(params->core, NULL);
@@ -451,6 +493,8 @@ extern "C"
     static void evict_staging(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
+        // Staging eviction drops probationary objects and removes their
+        // contribution from the cumulative hotness distribution.
         cache_obj_t *staging_to_evict = params->staging->to_evict(params->staging, NULL);
         int ori_freq = staging_to_evict->MERLIN.freq;
         decreasepop(params->hotdistribution, ori_freq, -1);
@@ -467,6 +511,9 @@ extern "C"
         if(staging_to_evict->MERLIN.freq > 0){
             return 0;
         }
+        // Compare the oldest filter candidate with the oldest cold staging
+        // candidate using sketch estimates. A higher sketch value means the
+        // filter object has stronger recent history and can replace staging.
         int filter_value = minimalIncrementCBF_estimate(params->CBF, (void *)&filter_to_evict->obj_id,
                                                           sizeof(filter_to_evict->obj_id));
         if(filter_value > params->epoch_update){//false positive
@@ -475,7 +522,8 @@ extern "C"
         int staging_value = minimalIncrementCBF_estimate(params->CBF, (void *)&staging_to_evict->obj_id,
                                                           sizeof(staging_to_evict->obj_id));
         if ( filter_value > staging_value){
-            //add filter to staging and ghost (?)
+            // The filter candidate wins: move it into staging and remember it
+            // in ghost so a future return can reuse this frequency state.
             params->compareguard++;
             minimalIncrementCBF_add(params->CBF, (void *)&filter_to_evict->obj_id, sizeof(obj_id_t));
             copy_cache_obj_to_request(params->req_staging, filter_to_evict);
@@ -502,10 +550,13 @@ extern "C"
         {
             cache_obj_t *obj_to_evict = params->staging->to_evict(params->staging, NULL);
             if(obj_to_evict->MERLIN.freq==0){
+                // Stop at the first cold staging object. The caller can evict
+                // it or compare it against a filter candidate.
                 return 1;
                 break;
             }
-            // move object from staging to core
+            // Hot staging objects graduate to core. Frequency is decremented by
+            // one to charge a promotion cost and avoid over-protecting bursts.
             int ori_freq = obj_to_evict->MERLIN.freq;
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
             if(obj_to_evict->MERLIN.inghost){
@@ -535,15 +586,16 @@ extern "C"
         auto params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
         int has_evicted = 0;
 
+        // Make room in filter. Hot filter victims bypass staging and enter
+        // core; cold victims are either compared against staging or recorded in
+        // ghost before being removed.
         while (!has_evicted && params->filter->get_occupied_byte(params->filter) > 0)
         {
             cache_obj_t *obj_to_evict = params->filter->to_evict(params->filter, NULL);
             int ori_freq = obj_to_evict->MERLIN.freq;
             copy_cache_obj_to_request(params->req_local, obj_to_evict);
-            // add to cbf
             if (ori_freq >= params->guard_freq)
             {
-                // move to core
                 params->filter2core++;
                 cache_obj_t *new_obj = params->core->insert(params->core, params->req_local);
                 new_obj->MERLIN.freq = 0;
@@ -554,13 +606,14 @@ extern "C"
                 has_evicted = 1;
                 int ret = compare(cache);
                 if(ret == 1){
-                    //filter wins compare, evict staging
-                    //object movement done in compare
+                    // compare() has already moved the filter candidate; evict
+                    // the losing staging candidate to complete the swap.
                     params->filter2staging++;
                     evict_staging(cache);
                     return has_evicted;
                 }else{
-                    //evict filter
+                    // The filter candidate loses or cannot be compared; keep
+                    // only its metadata in ghost.
                     params->filter2ghost++;
                     cache_obj_t *new_obj = addtoghost(cache, params->req_local, ori_freq);                    
                 }
@@ -574,6 +627,7 @@ extern "C"
     static void adjust_ghost(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
+        // Bound ghost memory and remove stale metadata from hotdistribution.
         while (params->ghost->get_occupied_byte(params->ghost) > params->ghost_limit)
         {
             cache_obj_t *obj_to_evict = params->ghost->to_evict(params->ghost, NULL);
@@ -587,9 +641,10 @@ extern "C"
     static void merlin_adjustguard(cache_t *cache)
     {
         auto params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
-        // todo adjust guard_freq
+        // Choose the smallest frequency threshold whose population roughly
+        // matches the protected core population. This adapts the promotion
+        // boundary as the workload gets hotter or colder.
         int guradfreq = params->guard_freq;
-        // int guardthreshold = params->core_limit;
         int guardthreshold = params->core->get_n_obj(params->core);
         if (params->hotdistribution[guradfreq] > guardthreshold)
         {
@@ -644,6 +699,8 @@ extern "C"
         params->evictobj_num += 1;
         if (params->evictobj_num == cache->get_n_obj(cache))
         {
+            // Treat one full-cache worth of evictions as an epoch. Periodic
+            // sketch decay prevents old popularity from dominating forever.
             params->evictobj_num = 0;
             params->epoch_count += 1;
             if ((params->epoch_count >= params->epoch_update))
@@ -656,16 +713,19 @@ extern "C"
         merlin_adjustguard(cache);
 
         if(params->filter->get_occupied_byte(params->filter) + req->obj_size > params->filter_limit){
-            //evict filter
+            // New insert would overflow filter, so free space from the
+            // first-touch admission path.
             adjust_filter(cache);
         }else{
-            //evict staging
+            // Otherwise free space from staging. Hot staging objects may be
+            // promoted first, which can in turn require core demotion.
             int ret = 0;
             while(ret == 0){
                 adjust_core(cache);
                 ret = adjust_staging(cache);
             }
-            // is compareing needed?
+            // Give an old filter candidate one chance to replace the cold
+            // staging victim before evicting staging.
             compare(cache);
             evict_staging(cache);
         }
@@ -721,8 +781,7 @@ extern "C"
 
         while (params_str != NULL && params_str[0] != '\0')
         {
-            /* different parameters are separated by comma,
-             * key and value are separated by = */
+            /* Parameters are encoded as comma-separated key=value pairs. */
             char *key = strsep((char **)&params_str, "=");
             char *value = strsep((char **)&params_str, ",");
 
