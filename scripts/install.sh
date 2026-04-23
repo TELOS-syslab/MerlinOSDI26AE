@@ -4,7 +4,7 @@ set -ue
 
 # libCacheSim
 pushd libCacheSim
-mkdir _build
+mkdir -p _build
 cd _build
 cmake ..
 make -j

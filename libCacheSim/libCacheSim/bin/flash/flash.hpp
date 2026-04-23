@@ -1,11 +1,11 @@
 
-#include "../../../../include/libCacheSim/cache.h"
-#include "../../../../include/libCacheSim/reader.h"
+#include "../../include/libCacheSim/cache.h"
+#include "../../include/libCacheSim/reader.h"
 #include <vector>
-#include "../../../../utils/include/mymath.h"
-#include "../../../../utils/include/mystr.h"
-#include "../../../../utils/include/mysys.h"
-#include "../../../cachesim/internal.h"
+#include "../../utils/include/mymath.h"
+#include "../../utils/include/mystr.h"
+#include "../../utils/include/mysys.h"
+#include "../cachesim/internal.h"
 
 typedef struct {
   cache_t *ram;

@@ -46,6 +46,13 @@ static void pin_thread_to_core(int core_id) {
 #endif
 }
 
+static inline int cache_thread_id_for_op(int thread_id) {
+  if (bench_use_private_bdata_per_thread()) {
+    return 1;
+  }
+  return thread_id;
+}
+
 static void trace_replay_run_thread(struct bench_data *bdata,
                                     bench_opts_t *opts, int thread_id,
                                     struct thread_res *res) {
@@ -66,13 +73,15 @@ static void trace_replay_run_thread(struct bench_data *bdata,
     ;
   }
 
+  const int cache_thread_id = cache_thread_id_for_op(thread_id);
+
   LOG(INFO) << "thread " << thread_id << " start";
   while (read_trace(reader, req) == 0) {
     if (res->n_get % 1000000 == 0 && thread_id == 1) {
       util::setCurrentTimeSec(req->timestamp);
     }
     status = cache_go(bdata->cache, bdata->pool, req, &res->n_get, &res->n_set,
-                      &res->n_del, &res->n_get_miss, thread_id);
+                      &res->n_del, &res->n_get_miss, cache_thread_id);
 
     if (res->n_get % 1000000 == 0) {
       if (STOP_FLAG.load()) {

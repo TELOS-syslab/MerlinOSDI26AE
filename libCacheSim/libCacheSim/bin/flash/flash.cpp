@@ -4,7 +4,7 @@
 
 #include <unordered_set>
 
-#include "../../../../include/libCacheSim/evictionAlgo.h"
+#include "../../include/libCacheSim/evictionAlgo.h"
 #include "flash.hpp"
 
 #define REPORT_INTERVAL (4 * 3600)

@@ -31,7 +31,7 @@ int main(int argc, char *argv[]) {
     if (bench_use_private_bdata_per_thread()) {
       for (int i = 0; i < opts.n_thread; i++) {
         mycache_init(opts.cache_size_in_mb / opts.n_thread, opts.hashpower,
-                     &bench_data[i].cache, &bench_data[i].pool, opts.n_thread);
+                     &bench_data[i].cache, &bench_data[i].pool, 1);
       }
     } else {
       mycache_init(opts.cache_size_in_mb, opts.hashpower, &bench_data[0].cache,
