@@ -115,6 +115,9 @@ struct S3FIFOCacheTrait {
 };
 
 struct MerlinCacheTrait {
+  // Cache allocator trait used by the Merlin benchmark build. MMMerlin supplies
+  // the memory-management policy; the standard chained hash table remains the
+  // access container.
   using MMType = MMMerlin;
   using AccessType = ChainedHashTable;
   using AccessTypeLocks = SharedMutexBuckets;

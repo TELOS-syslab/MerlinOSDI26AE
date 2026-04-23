@@ -32,6 +32,8 @@ const int MM2Q::kId = 2;
 const int MMTinyLFU::kId = 3;
 const int MMWTinyLFU::kId = 4;
 const int MMS3FIFO::kId = 5;
+// Merlin's MMType id is serialized with allocator state, so it must remain
+// stable for snapshots created with this artifact.
 const int MMMerlin::kId = 6;
 const int MMARC::kId = 7;
 const int MMCAR::kId = 8;

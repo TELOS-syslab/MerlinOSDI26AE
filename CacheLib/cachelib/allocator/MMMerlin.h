@@ -22,8 +22,15 @@
 
 namespace facebook::cachelib
 {
+    /*
+     * MMMerlin adapts MerlinList to CacheLib's memory-management policy
+     * interface. CacheLib expects each MMType to expose hooks, a Container, an
+     * eviction iterator, serialization, and stats methods. The actual Merlin
+     * admission/eviction state machine lives in datastruct/MerlinList.h; this
+     * wrapper translates CacheLib item lifecycle events into MerlinList calls.
+     */
     class MMMerlin
-    {// work with interface in CacheLib
+    {
     public:
         // unique identifier per MMType
         static const int kId;
@@ -34,7 +41,8 @@ namespace facebook::cachelib
         using SerializationConfigType = serialization::MMMerlinConfig;
         using SerializationTypeContainer = serialization::MMMerlinCollection;
 
-        // This is not applicable for MMLru, just for compile of cache allocator
+        // Resident location used for stats/debugging. MerlinList stores the
+        // actual queue state in item flags.
         enum LruType
         {
             Filter,
@@ -43,7 +51,9 @@ namespace facebook::cachelib
             NumTypes
         };
 
-        // Config class for MMLru
+        // Config class for CacheLib's MMType plumbing. updateOnRead and
+        // updateOnWrite control whether recordAccess() updates Merlin's
+        // frequency signal for reads and writes.
         struct Config
         {
             // create from serialized config
@@ -76,16 +86,14 @@ namespace facebook::cachelib
             template <typename... Args>
             void addExtraConfig(Args...) {}
 
-            // whether the lru needs to be updated on writes for recordAccess. If
-            // false, accessing the cache for writes does not promote the cached item
-            // to the head of the lru.
+            // Whether writes should update Merlin frequency on recordAccess().
             bool updateOnWrite{false};
 
-            // whether the lru needs to be updated on reads for recordAccess. If
-            // false, accessing the cache for reads does not promote the cached item
-            // to the head of the lru.
+            // Whether reads should update Merlin frequency on recordAccess().
             bool updateOnRead{true};
 
+            // Number of worker shards used by MerlinList. Each worker also has
+            // a paired cuckoo shard to reduce insertion contention.
             int total_thread_num{1};
 
             // Minimum interval between reconfigurations. If 0, reconfigure is never
@@ -96,11 +104,10 @@ namespace facebook::cachelib
             bool useCombinedLockForIterators{false};
         };
 
-        // The container object which can be used to keep track of objects of type
-        // T. T must have a public member of type Hook. This object is wrapper
-        // around DList, is thread safe and can be accessed from multiple threads.
-        // The current implementation models an LRU using the above DList
-        // implementation.
+        // CacheLib MM container wrapper. T must expose a MerlinFIFOHook member.
+        // The container is thread safe through CacheLib's combining lock for
+        // top-level operations, while MerlinList uses sharded FIFO queues and
+        // per-queue head locks internally.
         template <typename T, Hook<T> T::*HookPtr>
         struct Container
         {
@@ -116,8 +123,7 @@ namespace facebook::cachelib
         public:
             Container() = default;
             Container(Config c, PtrCompressor compressor)
-                : // : compressor_(std::move(compressor)),
-                  merlinlist_(std::move(compressor), c.total_thread_num),
+                : merlinlist_(std::move(compressor), c.total_thread_num),
                   config_(std::move(c))
             {
             }
@@ -127,10 +133,9 @@ namespace facebook::cachelib
             Container &operator=(const Container &) = delete;
             void dump(std::ostream& out) {}
 
-            // context for iterating the MM container. At any given point of time,
-            // there can be only one iterator active since we need to lock the cache for
-            // iteration. we can support multiple iterators at same time, by using a
-            // shared ptr in the context for the lock holder in the future.
+            // Eviction iterator expected by CacheLib. For Merlin, advancing the
+            // iterator asks MerlinList for the next candidate from the calling
+            // thread's shard; it is not a linear traversal over one list.
             class LockedIterator
             {
             public:
@@ -144,6 +149,8 @@ namespace facebook::cachelib
                 // LockedIterator has reached the end is undefined.
                 LockedIterator &operator++()
                 {
+                    // Recompute the next candidate because Merlin may promote,
+                    // demote, or reinsert several objects while searching.
                     candidate_ = merlinlist_->getEvictionCandidate(thread_id_);
                     return *this;
                 }
@@ -192,17 +199,16 @@ namespace facebook::cachelib
                 friend Container<T, HookPtr>;
             };
 
-            // records the information that the node was accessed. This could bump up
+            // Records item access by increasing Merlin's bounded frequency.
             //
             // @param node  node that we want to mark as relevant/accessed
             // @param mode  the mode for the access operation.
             //
-            // @return      True if the information is recorded and bumped the node
-            //              to the head of the lru, returns false otherwise
+            // @return      True if the access updated Merlin state.
             bool recordAccess(T &node, AccessMode mode, int thread_id = 0) noexcept;
 
-            // adds the given node into the container and marks it as being present in
-            // the container. The node is added to the head of the lru.
+            // Adds a node into Merlin. MerlinList decides whether the node goes
+            // to filter, staging, or core based on ghost history.
             //
             // @param node  The node to be added to the container.
             // @return  True if the node was successfully added to the container. False
@@ -210,7 +216,7 @@ namespace facebook::cachelib
             //          is unchanged.
             bool add(T &node, int thread_id = 0) noexcept;
 
-            // removes the node from the lru and sets it previous and next to nullptr.
+            // Removes the node from whichever Merlin queue currently owns it.
             //
             // @param node  The node to be removed from the container.
             // @return  True if the node was successfully removed from the container.
@@ -238,8 +244,7 @@ namespace facebook::cachelib
             bool replace(T &oldNode, T &newNode) noexcept;
 
             // Obtain an iterator that start from the tail and can be used
-            // to search for evictions. This iterator holds a lock to this
-            // container and only one such iterator can exist at a time
+            // to search for evictions.
             LockedIterator getEvictionIterator(int thread_id = 0) noexcept;
 
             // Execute provided function under container lock. Function gets
@@ -294,6 +299,8 @@ namespace facebook::cachelib
 
             LruType getLruType(const T &node) noexcept
             {
+                // CacheLib callers may ask for the resident class even though
+                // Merlin is not an LRU policy.
                 if (isFilter(node))
                     return LruType::Filter;
                 if (isCore(node))
@@ -315,19 +322,15 @@ namespace facebook::cachelib
                 (node.*HookPtr).setUpdateTime(time);
             }
 
-            // remove node from lru and adjust insertion points
+            // Remove node from MerlinList and clear the CacheLib MM membership
+            // bit.
             //
             // @param node          node to remove
             // @param doRebalance     whether to do rebalance in this remove
             void removeLocked(T &node, int thread_id) noexcept;
 
-            // Bit MM_BIT_1 is used to record if the item has been accessed since
-            // being written in cache. Unaccessed items are ignored when determining
-            // projected update time.
-
             void incFreq(T &node, int thread_id) noexcept
             {
-                //node.template setFlag<RefFlags::kMMFlag2>();
                 merlinlist_.incFreq(node, thread_id);
                 return;
             }
@@ -340,7 +343,7 @@ namespace facebook::cachelib
             }
 
             mutable folly::cacheline_aligned<Mutex> Mutex_;
-            // the merlin cache
+            // Sharded Merlin queues and metadata.
             LIST merlinlist_{};
             Config config_{};
         };
@@ -369,6 +372,8 @@ namespace facebook::cachelib
         // check if the node is still being memory managed
         if (node.isInMMContainer())
         {
+            // Merlin does not move the item on every hit. It only increments
+            // the encoded frequency; queue movement happens during eviction.
             incFreq(node, thread_id);
             setUpdateTime(node, curr);
             return true;
@@ -389,6 +394,8 @@ namespace facebook::cachelib
     MMMerlin::Container<T, HookPtr>::getEvictionAgeStatLocked(
         uint64_t projectedLength) const noexcept
     {
+        // Merlin's eviction decision is not a single LRU tail age, so the
+        // CacheLib age-stat interface is intentionally left empty.
         EvictionAgeStat stat{};
         const auto currTime = static_cast<Time>(util::getCurrentTimeSec());
         return stat;
@@ -416,7 +423,8 @@ namespace facebook::cachelib
         {
             return false;
         }
-        //resetFreq(node);
+        // MerlinList performs admission using ghost history and sets the item
+        // flags that identify filter/staging/core placement.
         merlinlist_.add(node, thread_id);
         node.markInMMContainer();
         setUpdateTime(node, currTime);
@@ -441,7 +449,7 @@ namespace facebook::cachelib
     template <typename F>
     void MMMerlin::Container<T, HookPtr>::withContainerLock(F &&fun)
     {
-        // LockHolder l(lruMutex_);
+        // MerlinList handles its own sharded synchronization for the hot path.
         fun();
     }
 
@@ -468,6 +476,8 @@ namespace facebook::cachelib
     template <typename T, MMMerlin::Hook<T> T::*HookPtr>
     void MMMerlin::Container<T, HookPtr>::remove(LockedIterator &it, int thread_id) noexcept
     {
+        // CacheLib calls this after consuming the eviction candidate. MerlinList
+        // already unlinked the candidate while producing it.
         T &node = *it;
         XDCHECK(node.isInMMContainer());
         node.unmarkInMMContainer();
@@ -493,6 +503,8 @@ namespace facebook::cachelib
     serialization::MMMerlinObject MMMerlin::Container<T, HookPtr>::saveState()
         const noexcept
     {
+        // Persist resident queues and basic config. Ghost/sketch metadata is
+        // runtime-only and is rebuilt lazily by MerlinList after restore.
         serialization::MMMerlinConfig configObject;
         *configObject.updateOnWrite() = config_.updateOnWrite;
         *configObject.updateOnRead() = config_.updateOnRead;

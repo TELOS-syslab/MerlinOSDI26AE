@@ -160,6 +160,8 @@ struct MMMerlinConfig {
   4: bool updateOnRead = true,
 }
 
+// Serialized wrapper for MMMerlin. The resident queues are stored in
+// MerlinListObject; transient ghost/sketch metadata is rebuilt on demand.
 struct MMMerlinObject {
   1: required MMMerlinConfig config,
   8: required MerlinListObject merlinlist,
