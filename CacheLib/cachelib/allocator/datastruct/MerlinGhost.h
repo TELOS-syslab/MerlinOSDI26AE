@@ -15,6 +15,13 @@ namespace facebook
 {
     namespace cachelib
     {
+        /*
+         * MerlinGhost is a compact metadata-only history for recently evicted
+         * items. It stores a 32-bit hash, a logical insertion time, and a small
+         * bounded frequency in each slot. A future insertion can query this
+         * table to distinguish true first-touch objects from objects that were
+         * recently evicted but are becoming hot again.
+         */
         class MerlinGhost
         {
         public:
@@ -50,7 +57,9 @@ namespace facebook
 
             int contains(uint32_t key) noexcept
             {
-                // return the freq if found, otherwise return 0
+                // Return the updated historical frequency if the key is found;
+                // otherwise return 0. Expired entries are opportunistically
+                // cleared while probing.
                 uint32_t bucketIdx = getBucketIdx(key);
                 int64_t currTime = numInserts_.load();
                 for(int i = 0; i < nItemPerBucket_; i++){
@@ -64,7 +73,8 @@ namespace facebook
 
                     if (age > fifoSize_)
                     {
-                        //outdated, attempt to clean
+                        // Entry is older than the ghost window; try to reclaim
+                        // the slot and remove its frequency contribution.
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, 0, std::memory_order_relaxed);
                         if(ret){
                             int ori_freq = getFreq(valInTable);
@@ -79,8 +89,8 @@ namespace facebook
                     }
                     if (matchKey(valInTable, key))
                     {
-                        //found, attempt to increase freq by 1
-                        //hit in ghost
+                        // Ghost hit: increase the stored frequency so the
+                        // caller can decide between staging and core admission.
                         int ori_freq = getFreq(valInTable);
                         if(ori_freq == MAX_FREQ){
                             return MAX_FREQ;
@@ -104,8 +114,9 @@ namespace facebook
 
             void insert(uint32_t key, int freq = 0) noexcept
             {
-                // insert or update the freq of the key
-                // if freq = 0, it means a new key, otherwise it's an update with the given freq increment
+                // Insert or update a ghost entry. freq is the resident
+                // frequency observed at eviction time, so the stored value
+                // preserves part of the object's history.
                 int64_t currTime = numInserts_;
                 freq++;
                 // reset if overflow
@@ -115,10 +126,10 @@ namespace facebook
                     currTime = 0;
                 }
                 size_t bucketIdx = getBucketIdx(key);
-                // find and increase
+                // Probe the bucket for a matching key or an available slot.
                 int empty_slot = -1;
                 for (int i = 0; i < nItemPerBucket_; i++)
-                {//find a match or an empty slot
+                {
                     uint64_t valInTable = hashTable_[bucketIdx + i].load(std::memory_order_relaxed);
                     if (valInTable == 0)
                     {
@@ -131,7 +142,7 @@ namespace facebook
 
                     if (age > fifoSize_)
                     {
-                        //outdated, attempt to clean
+                        // Opportunistically recycle expired ghost slots.
                         int ret = hashTable_[bucketIdx + i].compare_exchange_weak(valInTable, 0, std::memory_order_relaxed);
                         if (ret)
                         {
@@ -148,7 +159,8 @@ namespace facebook
                     }
                     if (matchKey(valInTable, key))
                     {
-                        //found, attempt to increase freq by the given freq increment
+                        // Refresh an existing ghost entry and merge frequency
+                        // evidence from the newly evicted item.
                         int overflow = 0;
                         int ori_freq = getFreq(valInTable);
                         if (ori_freq == MAX_FREQ)
@@ -170,13 +182,14 @@ namespace facebook
                         return;
                     }
                 }
-                // not find, insert
+                // No existing entry was found. Insert into an empty slot, or
+                // replace a deterministic victim if the bucket is full.
                 freq--;
                 currTime = numInserts_++;
                 uint64_t hashTableVal = genHashtableVal(key, static_cast<uint32_t>(currTime), freq);
                 // attempt only once
                 if (empty_slot == -1)
-                {//random evict
+                {
                     size_t evictIdx = key % numElem_;
                     bool success = false;
                     uint64_t valInTable = hashTable_[evictIdx].load(std::memory_order_relaxed);
@@ -255,6 +268,8 @@ namespace facebook
             constexpr static uint64_t MAX_VALUE = 0x0FFFFFFF;
 
         public:
+            // Cumulative ghost frequency counters consumed by MerlinList's
+            // adaptive threshold calculation.
             alignas(64) std::atomic<int64_t> freq_distribution_[MAX_FREQ + 1];
 
             alignas(64) std::atomic<bool> initialized_{false};

@@ -13,6 +13,15 @@ namespace facebook
 {
     namespace cachelib
     {
+        /*
+         * MerlinSketch is a lightweight approximate counter table. Merlin uses
+         * it to compare a filter victim with a cold staging victim: the item
+         * with the larger sketch estimate has stronger recent evidence and may
+         * keep the probationary slot.
+         *
+         * The table is intentionally simple and lock-free. Counts are aged by
+         * periodically halving one slot, spreading decay cost over insertions.
+         */
         class MerlinSketch
         {
         public:
@@ -50,19 +59,20 @@ namespace facebook
 
             uint64_t getEstimate(uint32_t key) noexcept
             {
+                // Single-hash approximate count. Collisions are tolerated
+                // because the sketch is only used for relative comparisons.
                 size_t bucketIdx = getBucketIdx(key);
                 return hashTable_[bucketIdx].load(std::memory_order_relaxed);
             }
 
             void estimate(uint32_t key) noexcept
             {
-                // increase the count of the key by 1
+                // Increase the approximate count and perform incremental aging
+                // so stale popularity fades without a full-table scan.
                 size_t bucketIdx = getBucketIdx(key);
                 hashTable_[bucketIdx].fetch_add(1, std::memory_order_relaxed);
                 int id = numInserts_++;
                 if((id & 0x1f) == 0x1f) {
-                    //periodically clean the outdated entries in the sketch
-                    //clean one entry every 32 inserts, so the cleaning overhead is low and can be ignored
                     int cleanid = ((id >> 5) % numElem_);
                     int val = hashTable_[cleanid].load(std::memory_order_relaxed);
                     val /= 2;

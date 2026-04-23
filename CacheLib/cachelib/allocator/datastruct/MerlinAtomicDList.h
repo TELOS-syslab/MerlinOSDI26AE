@@ -19,6 +19,9 @@
 namespace facebook {
 namespace cachelib {
 
+// Older atomic intrusive list variant kept for Merlin-related experiments.
+// MerlinList currently uses MerlinFIFO for the resident filter/staging/core
+// queues, but this hook/list pair follows the same compressed-pointer pattern.
 template <typename T>
 struct CACHELIB_PACKED_ATTR MerlinAtomicDListHook {
   using Time = uint32_t;
@@ -67,8 +70,7 @@ struct CACHELIB_PACKED_ATTR MerlinAtomicDListHook {
   Time updateTime_{0};
 };
 
-// uses a double linked list to implement an LRU. T must be have a public
-// member of type Hook and HookPtr must point to that.
+// Intrusive atomic doubly linked list variant for Merlin experiments.
 template <typename T, MerlinAtomicDListHook<T> T::*HookPtr>
 class MerlinAtomicDList {
  public:
@@ -623,4 +625,3 @@ typename MerlinAtomicDList<T, HookPtr>::Iterator MerlinAtomicDList<T, HookPtr>::
 }
 } // namespace cachelib
 } // namespace facebook
-

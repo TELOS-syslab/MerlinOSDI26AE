@@ -62,6 +62,8 @@ struct S3FIFOListObject {
   2: required AtomicDListObject mfifo;
 }
 
+// Persistent state for CacheLib's Merlin queues. The ghost and sketch tables
+// are runtime-only metadata and are rebuilt lazily after restore.
 struct MerlinListObject {
   1: required list<MerlinFIFOObject> filterfifo;
   2: required list<MerlinFIFOObject> corefifo;

@@ -19,6 +19,8 @@
 namespace facebook {
 namespace cachelib {
 
+// Intrusive hook used by MerlinFIFO. The list stores compressed next/prev
+// pointers inside the cache item, avoiding per-node allocation.
 template <typename T>
 struct CACHELIB_PACKED_ATTR MerlinFIFOHook {
   using Time = uint32_t;
@@ -49,7 +51,8 @@ struct CACHELIB_PACKED_ATTR MerlinFIFOHook {
     return compressor.unCompress(prev_);
   }
 
-  // set and get the time when the node was updated in the lru.
+  // Kept for compatibility with CacheLib list hooks. MerlinFIFO itself uses
+  // FIFO order and does not promote on hit.
   void setUpdateTime(Time time) noexcept { updateTime_ = time; }
 
   Time getUpdateTime() const noexcept {
@@ -67,8 +70,10 @@ struct CACHELIB_PACKED_ATTR MerlinFIFOHook {
   Time updateTime_{0};
 };
 
-// uses a double linked list to implement an LRU. T must be have a public
-// member of type Hook and HookPtr must point to that.
+// Minimal intrusive FIFO list used by Merlin's filter, staging, and core
+// queues. New nodes are linked at the head; eviction removes from the tail.
+// The separate head spin lock lets Merlin try a paired cuckoo queue when the
+// preferred queue is contended.
 template <typename T, MerlinFIFOHook<T> T::*HookPtr>
 class MerlinFIFO {
  public:
@@ -132,7 +137,8 @@ class MerlinFIFO {
   }
 
   bool try_lock_head() noexcept{
-    // return true if succeed，return false if failed
+    // Return false instead of blocking so Merlin can fall back to the paired
+    // cuckoo queue under contention.
     return !flag_.test_and_set(std::memory_order_acquire);
   }
   void unlock_head() noexcept{
@@ -147,12 +153,12 @@ class MerlinFIFO {
     }
   }
 
-  // Links the passed node to the head of the double linked list
+  // Links the passed node to the head of the FIFO list.
   // @param node node to be linked at the head
   void linkAtHead(T& node) noexcept;
 
-  // Links the passed node to the head of the double linked list
-  // @param node node to be linked at the head
+  // Removes and returns the FIFO tail, which is Merlin's eviction candidate
+  // within an internal queue.
   T* removeTail() noexcept;
 
   // removes the node completely from the linked list and cleans up the node
@@ -524,4 +530,3 @@ typename MerlinFIFO<T, HookPtr>::Iterator MerlinFIFO<T, HookPtr>::rend()
 }
 } // namespace cachelib
 } // namespace facebook
-
