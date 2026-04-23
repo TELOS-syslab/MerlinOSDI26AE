@@ -28,14 +28,14 @@ MEM_SAFE_GB = 100
 policy_list = [
     "fifo","arc","cacheus","car","lhd","gdsf","twoq","slru","hyperbolic",
     "lecar","tinyLFU","belady","clock","lirs","fifomerge",
-    "s3fifo","qdlp","lru","lfu","GLCache","sieve","merlin"
+    "s3fifo","qdlp","lru","lfu","sieve","merlin"
 ]
 
 policy_name = [
     "FIFO","ARC","Cacheus","CAR","LHD","GDSF","TwoQ","S4LRU(25:25:25:25)",
     "Hyperbolic","LeCaR","WTinyLFU-w0.01-SLRU","Belady","Clock",
     "LIRS","FIFO_Merge_FREQUENCY","S3FIFO-0.1000-2",
-    "QDLP-0.1000-0.9000-Clock2-1","LRU","LFU","GLCache","Sieve","merlin-0.10-0.05-1.00-32-1.0"
+    "QDLP-0.1000-0.9000-Clock2-1","LRU","LFU","Sieve","merlin-0.10-0.05-1.00-32-1.0"
 ]
 
 # =============================

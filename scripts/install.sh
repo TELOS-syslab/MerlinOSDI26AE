@@ -10,6 +10,14 @@ cmake ..
 make -j
 popd
 
+# libCacheSim for parameter tracking
+pushd libCacheSim
+mkdir -p _build2
+cd _build2
+cmake -DCMAKE_CXX_FLAGS="-DTRACK_PARAMETERS" -DCMAKE_C_FLAGS="-DTRACK_PARAMETERS" ..
+make -j
+popd
+
 # CacheLib
 pushd CacheLib
 sudo docker build -t cachelib-ae .
