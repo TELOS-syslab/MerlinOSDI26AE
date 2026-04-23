@@ -14,6 +14,9 @@ typedef struct SR_LRU_params {
   uint64_t C_new;      // count of new item in history
   cache_t *other_cache;
   request_t *req_local;
+  double p;
+
+  int64_t n_byte_write_in_R;
 } SR_LRU_params_t;
 
 typedef struct CR_LFU_params {

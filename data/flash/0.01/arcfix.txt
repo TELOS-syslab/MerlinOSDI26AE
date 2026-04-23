@@ -1,0 +1,9 @@
+[0mw01.oracleGeneral.bin.zst                    ARCfix-0.0010 miss ratio 0.8781 byte miss ratio 0.7985, write_amp 0.0000
+[0mw01.oracleGeneral.bin.zst                    ARCfix-0.0100 miss ratio 0.8583 byte miss ratio 0.7823, write_amp 0.0000
+[0mw01.oracleGeneral.bin.zst                    ARCfix-0.1000 miss ratio 0.8356 byte miss ratio 0.7638, write_amp 0.0000
+[0mw02.oracleGeneral.bin.zst                    ARCfix-0.0010 miss ratio 0.9368 byte miss ratio 0.9851, write_amp 0.0000
+[0mw02.oracleGeneral.bin.zst                    ARCfix-0.0100 miss ratio 0.9367 byte miss ratio 0.9852, write_amp 0.0000
+[0mw02.oracleGeneral.bin.zst                    ARCfix-0.1000 miss ratio 0.9367 byte miss ratio 0.9853, write_amp 0.0000
+[0mw03.oracleGeneral.bin.zst                    ARCfix-0.0010 miss ratio 0.6255 byte miss ratio 0.8478, write_amp 0.0000
+[0mw03.oracleGeneral.bin.zst                    ARCfix-0.0100 miss ratio 0.6199 byte miss ratio 0.8409, write_amp 0.0000
+[0mw03.oracleGeneral.bin.zst                    ARCfix-0.1000 miss ratio 0.6109 byte miss ratio 0.8317, write_amp 0.0000

@@ -1,0 +1,9 @@
+[0mw01.oracleGeneral.bin.zst    merlin-0.00-0.05-1.00-32-1.00 miss ratio 0.8828 byte miss ratio 0.8038, write_amp 0.0131
+[0mw01.oracleGeneral.bin.zst    merlin-0.01-0.05-1.00-32-1.00 miss ratio 0.8598 byte miss ratio 0.7843, write_amp 0.0133
+[0mw01.oracleGeneral.bin.zst    merlin-0.10-0.05-1.00-32-1.00 miss ratio 0.8355 byte miss ratio 0.7635, write_amp 0.0145
+[0mw02.oracleGeneral.bin.zst    merlin-0.00-0.05-1.00-32-1.00 miss ratio 0.8651 byte miss ratio 0.9435, write_amp 0.0403
+[0mw02.oracleGeneral.bin.zst    merlin-0.01-0.05-1.00-32-1.00 miss ratio 0.8677 byte miss ratio 0.9430, write_amp 0.0443
+[0mw02.oracleGeneral.bin.zst    merlin-0.10-0.05-1.00-32-1.00 miss ratio 0.8803 byte miss ratio 0.9466, write_amp 0.0504
+[0mw03.oracleGeneral.bin.zst    merlin-0.00-0.05-1.00-32-1.00 miss ratio 0.6234 byte miss ratio 0.8478, write_amp 0.1082
+[0mw03.oracleGeneral.bin.zst    merlin-0.01-0.05-1.00-32-1.00 miss ratio 0.6150 byte miss ratio 0.8387, write_amp 0.1173
+[0mw03.oracleGeneral.bin.zst    merlin-0.10-0.05-1.00-32-1.00 miss ratio 0.6062 byte miss ratio 0.8299, write_amp 0.1246

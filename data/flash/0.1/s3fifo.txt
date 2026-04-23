@@ -1,0 +1,8 @@
+[0mw01.oracleGeneral.bin.zst                  S3FIFO-0.0010-2 miss ratio 0.8259 byte miss ratio 0.7513, write_amp 0.0300
+[0mw01.oracleGeneral.bin.zst                  S3FIFO-0.0100-2 miss ratio 0.8259 byte miss ratio 0.7513, write_amp 0.0300
+[0mw01.oracleGeneral.bin.zst                  S3FIFO-0.1000-2 miss ratio 0.8259 byte miss ratio 0.7513, write_amp 0.0300
+[0mw02.oracleGeneral.bin.zst                  S3FIFO-0.0010-2 miss ratio 0.6117 byte miss ratio 0.5798, write_amp 0.0290
+[0mw02.oracleGeneral.bin.zst                  S3FIFO-0.0100-2 miss ratio 0.6157 byte miss ratio 0.5911, write_amp 0.0351
+[0mw02.oracleGeneral.bin.zst                  S3FIFO-0.1000-2 miss ratio 0.7145 byte miss ratio 0.7097, write_amp 0.0437
+[0mw03.oracleGeneral.bin.zst                  S3FIFO-0.0010-2 miss ratio 0.5487 byte miss ratio 0.7522, write_amp 0.0818
+[0mw03.oracleGeneral.bin.zst                  S3FIFO-0.0100-2 miss ratio 0.5456 byte miss ratio 0.7477, write_amp 0.0876

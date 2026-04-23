@@ -32,31 +32,8 @@ typedef struct Cacheus_params {
 
   uint64_t update_interval;
   request_t *req_local;
-  #ifdef TRACK_PARAMETERS
-    //used for analysis
-    obj_id_t lasthitobjid;
-    int hitonlrughost;
-    int hitonlfughost;
-
-    int objfromlrughost;
-    int hitlrug;
-    int hitobjlrug;
-    int objfromlfughost;
-    int hitlfug;
-    int hitobjlfug;
-  #endif
 } Cacheus_params_t;
 
-#ifdef TRACK_PARAMETERS
-    #ifdef OUTPUT_GAP
-        int outputgap = OUTPUT_GAP;
-    #else
-        int outputgap = 10000;
-    #endif
-#endif
-
-static const char *DEFAULT_CACHE_PARAMS =
-    "w-lru=0.5";
 // ***********************************************************************
 // ****                                                               ****
 // ****                   function declarations                       ****
@@ -74,8 +51,6 @@ static bool Cacheus_remove(cache_t *cache, const obj_id_t obj_id);
 
 static inline int64_t Cacheus_get_occupied_byte(const cache_t *cache);
 static inline int64_t Cacheus_get_n_obj(const cache_t *cache);
-static void Cacheus_parse_params(cache_t *cache,
-                                 const char *cache_specific_params);
 
 /* internal functions */
 static void update_weight(cache_t *cache, const request_t *req);
@@ -132,16 +107,12 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
 
   params->w_lru = 0.5;
   params->w_lfu = 1 - params->w_lru;  // weights for LRU and LFU
-  Cacheus_parse_params(cache, DEFAULT_CACHE_PARAMS);
-  if (cache_specific_params != NULL) {
-    Cacheus_parse_params(cache, cache_specific_params);
-  }
   params->track_wlru = params->w_lru;
   params->num_hit = 0;
   params->hit_rate_prev = 0;
   params->req_local = new_request();
 
-  params->LRU = SR_LRU_init(ccache_params, NULL);
+  params->LRU = SR_LRU_init(ccache_params, cache_specific_params);
   params->LFU = CR_LFU_init(ccache_params, NULL);
   SR_LRU_params_t *SR_LRU_params =
       (SR_LRU_params_t *)(params->LRU->eviction_params);
@@ -159,18 +130,8 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
   params->LRU_g = LRU_init(ccache_params_g, NULL);  // LRU_history
   params->LFU_g = LRU_init(ccache_params_g, NULL);  // LFU_history
 
-  #ifdef TRACK_PARAMETERS
-    params->lasthitobjid = 0;
-    params->hitonlfughost = 0;
-    params->hitonlrughost = 0;
+  snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "Cacheus-%.4lf", SR_LRU_params->p);
 
-    params->objfromlrughost = 0;
-    params->hitlrug = 0;
-    params->hitobjlrug = 0;
-    params->objfromlfughost = 0;
-    params->hitlfug = 0;
-    params->hitobjlfug = 0;
-  #endif
   return cache;
 }
 
@@ -219,15 +180,11 @@ static bool Cacheus_get(cache_t *cache, const request_t *req) {
 
     #ifdef TRACK_PARAMETERS
     bool track = params->track_wlru - params->w_lru > 0.02 || params->track_wlru - params->w_lru < -0.02;
-  if (track || (cache->n_req%outputgap)==0) {
+  if (track || (cache->n_req%1000000)==0) {
     if(track){
         params->track_wlru = params->w_lru;
     }
     printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
-    printf("#req %ld, object from lru ghost %d, average hit %lf, precision %lf, object from lfu ghost %d, average hit %lf, precision %lf\n",
-          cache->n_req,
-        params->objfromlrughost, params->hitobjlrug==0?0:(double)params->hitlrug/params->hitobjlrug, params->objfromlrughost==0?0:(double)params->hitobjlrug/params->objfromlrughost,
-        params->objfromlfughost, params->hitobjlfug==0?0:(double)params->hitlfug/params->hitobjlfug, params->objfromlfughost==0?0:(double)params->hitobjlfug/params->objfromlfughost);
   }
   #endif
 
@@ -275,22 +232,6 @@ static cache_obj_t *Cacheus_find(cache_t *cache, const request_t *req,
   } else {
     // If hit, update the data structure and increment num_hit counter
     params->num_hit += 1;
-    #ifdef TRACK_PARAMETERS
-    if(obj_lru->SR_LRU.fromlrughost){
-        params->hitlrug += 1;
-        if(obj_lru->SR_LRU.accessed==0){
-            params->hitobjlrug += 1;
-            obj_lru->SR_LRU.accessed = 1;
-        }
-    }
-    if(obj_lru->SR_LRU.fromlfughost){
-        params->hitlfug += 1;
-        if(obj_lru->SR_LRU.accessed==0){
-            params->hitobjlfug += 1;
-            obj_lru->SR_LRU.accessed = 1;
-        }
-    }
-    #endif
   }
 
   // TODO: this is weird because the object is in two caches
@@ -316,20 +257,7 @@ static cache_obj_t *Cacheus_insert(cache_t *cache, const request_t *req) {
     return NULL;
   }
   params->LFU->insert(params->LFU, req);
-  cache_obj_t * obj = params->LRU->insert(params->LRU, req);
-  #ifdef TRACK_PARAMETERS
-  if(req->obj_id == params->lasthitobjid){
-    if(params->hitonlrughost){
-        params->objfromlrughost +=1;
-        obj->SR_LRU.fromlrughost = 1;
-    }
-    if(params->hitonlfughost){
-        params->objfromlfughost +=1;
-        obj->SR_LRU.fromlfughost = 1;
-    }
-    params->lasthitobjid = req->obj_id;
-  }
-  #endif
+  params->LRU->insert(params->LRU, req);
 
   /* the cached obj is stored twice, so we cannot really return an object */
   return NULL;
@@ -455,14 +383,18 @@ static void update_weight(cache_t *cache, const request_t *req) {
   // normalize
   params->w_lru = params->w_lru / (params->w_lru + params->w_lfu);
   params->w_lfu = 1 - params->w_lru;
+          #ifdef TRACK_PARAMETERS
 
-    #ifdef TRACK_PARAMETERS
     if(params->track_wlru - params->w_lru > 0.02|| params->w_lru - params->track_wlru > 0.02){
         params->track_wlru = params->w_lru;
         printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
     }
-  #endif
+    if(params->w_lru -0.5>0.1||0.5 - params->w_lru >0.1){
+        //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
+    }
   
+  #endif
+  //printf("%ld Cacheus w_lru: %.4lf w_lfu: %.4lf learning_rate: %.4lf\n", cache->n_req, params->w_lru, params->w_lfu, params->lr);
   return;
 }
 
@@ -512,36 +444,6 @@ static void update_lr(cache_t *cache, const request_t *req) {
   return;
 }
 
-static void Cacheus_parse_params(cache_t *cache,
-                                const char *cache_specific_params) {
-  Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
-
-  char *params_str = strdup(cache_specific_params);
-  char *old_params_str = params_str;
-
-  while (params_str != NULL && params_str[0] != '\0') {
-    /* different parameters are separated by comma,
-     * key and value are separated by = */
-    char *key = strsep((char **)&params_str, "=");
-    char *value = strsep((char **)&params_str, ",");
-
-    // skip the white space
-    while (params_str != NULL && *params_str == ' ') {
-      params_str++;
-    }
-
-    if (strcasecmp(key, "w-lru") == 0) {
-      params->w_lru = strtod(value, NULL);
-      params->w_lfu = 1.0 - params->w_lru;
-    } else {
-      ERROR("%s does not have parameter %s\n", cache->cache_name, key);
-      exit(1);
-    }
-  }
-
-  free(old_params_str);
-}
-
 // Update weight and history, only called in cache miss.
 static void check_and_update_history(cache_t *cache, const request_t *req) {
   Cacheus_params_t *params = (Cacheus_params_t *)(cache->eviction_params);
@@ -551,11 +453,6 @@ static void check_and_update_history(cache_t *cache, const request_t *req) {
   DEBUG_ASSERT((hit_lru_g ? 1 : 0) + (hit_lfu_g ? 1 : 0) <= 1);
 
   update_weight(cache, req);
-  #ifdef TRACK_PARAMETERS
-    params->hitonlrughost = hit_lru_g;
-    params->hitonlfughost = hit_lfu_g;
-    params->lasthitobjid = req->obj_id;
-  #endif
 
   params->LRU_g->remove(params->LRU_g, req->obj_id);
   params->LFU_g->remove(params->LFU_g, req->obj_id);

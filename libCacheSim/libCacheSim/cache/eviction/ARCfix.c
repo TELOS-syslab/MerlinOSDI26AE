@@ -51,18 +51,11 @@ typedef struct ARCfix_params {
   bool curr_obj_in_L2_ghost;
   int64_t vtime_last_req_in_ghost;
   request_t *req_local;
+
+  int64_t n_byte_write_in_L2_data;
 } ARCfix_params_t;
 
-#ifdef TRACK_PARAMETERS
-    #ifdef OUTPUT_GAP
-        int outputgap = OUTPUT_GAP;
-    #else
-        int outputgap = 10000;
-    #endif
-#endif
-
-static const char *DEFAULT_CACHE_PARAMS =
-    "p=0.5";
+static const char *DEFAULT_CACHE_PARAMS = "p=0.5";
 
 // ***********************************************************************
 // ****                                                               ****
@@ -73,8 +66,7 @@ static const char *DEFAULT_CACHE_PARAMS =
 static void ARCfix_parse_params(cache_t *cache, const char *cache_specific_params);
 static void ARCfix_free(cache_t *cache);
 static bool ARCfix_get(cache_t *cache, const request_t *req);
-static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req,
-                             const bool update_cache);
+static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req, const bool update_cache);
 static cache_obj_t *ARCfix_insert(cache_t *cache, const request_t *req);
 static cache_obj_t *ARCfix_to_evict(cache_t *cache, const request_t *req);
 static void ARCfix_evict(cache_t *cache, const request_t *req);
@@ -85,8 +77,7 @@ static bool ARCfix_remove(cache_t *cache, const obj_id_t obj_id);
 /* this is the case IV in the paper */
 static void _ARCfix_evict_miss_on_all_queues(cache_t *cache, const request_t *req);
 static void _ARCfix_replace(cache_t *cache, const request_t *req);
-static cache_obj_t *_ARCfix_to_evict_miss_on_all_queues(cache_t *cache,
-                                                     const request_t *req);
+static cache_obj_t *_ARCfix_to_evict_miss_on_all_queues(cache_t *cache, const request_t *req);
 static cache_obj_t *_ARCfix_to_replace(cache_t *cache, const request_t *req);
 
 /* debug functions */
@@ -109,10 +100,8 @@ static bool ARCfix_get_debug(cache_t *cache, const request_t *req);
  * @param cache_specific_params cache specific parameters, see parse_params
  * function or use -e "print" with the cachesim binary
  */
-cache_t *ARCfix_init(const common_cache_params_t ccache_params,
-                  const char *cache_specific_params) {
-  cache_t *cache =
-      cache_struct_init("ARCfix", ccache_params, cache_specific_params);
+cache_t *ARCfix_init(const common_cache_params_t ccache_params, const char *cache_specific_params) {
+  cache_t *cache = cache_struct_init("ARCfix", ccache_params, cache_specific_params);
   cache->cache_init = ARCfix_init;
   cache->cache_free = ARCfix_free;
   cache->get = ARCfix_get;
@@ -159,8 +148,7 @@ cache_t *ARCfix_init(const common_cache_params_t ccache_params,
   params->vtime_last_req_in_ghost = -1;
   params->req_local = new_request();
 
-  snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "ARCfix-%.4lf",
-           params->p);
+  snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "ARCfix-%.4lf", params->p);
 
 #ifdef USE_BELADY
   snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "ARCfix_Belady");
@@ -201,13 +189,13 @@ static void ARCfix_free(cache_t *cache) {
  * @return true if cache hit, false if cache miss
  */
 static bool ARCfix_get(cache_t *cache, const request_t *req) {
-        #ifdef TRACK_PARAMETERS
-        ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
-    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%outputgap)==0){
-        params->track_p = params->p;
-        printf("%ld ARCfix p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
-    }
-    #endif
+#ifdef TRACK_PARAMETERS
+  ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
+  if (abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req % 1000000) == 0) {
+    params->track_p = params->p;
+    printf("%ld ARCfix p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
+  }
+#endif
 #ifdef DEBUG_MODE
   return ARCfix_get_debug(cache, req);
 #else
@@ -217,9 +205,7 @@ static bool ARCfix_get(cache_t *cache, const request_t *req) {
     printf(
         "l1 data size: %lu, %.4lf, l1 ghost size: %lu, l2 data size: %lu, l2 "
         "ghost size: %lu\n",
-        params->L1_data_size,
-        params->L1_data_size /
-            (double)(params->L1_data_size + params->L2_data_size),
+        params->L1_data_size, params->L1_data_size / (double)(params->L1_data_size + params->L2_data_size),
         params->L1_ghost_size, params->L2_data_size, params->L2_ghost_size);
   }
 #endif
@@ -243,8 +229,7 @@ static bool ARCfix_get(cache_t *cache, const request_t *req) {
  *  and if the object is expired, it is removed from the cache
  * @return the object or NULL if not found
  */
-static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req,
-                             const bool update_cache) {
+static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req, const bool update_cache) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
 
   cache_obj_t *obj = cache_find_base(cache, req, update_cache);
@@ -272,18 +257,16 @@ static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req,
       params->curr_obj_in_L1_ghost = true;
       // case II: x in L1_ghost
       DEBUG_ASSERT(params->L1_ghost_size >= 1);
-      double delta =
-          MAX((double)params->L2_ghost_size / params->L1_ghost_size, 1);
-      //params->p = MIN(params->p + delta, cache->cache_size);
+      double delta = MAX((double)params->L2_ghost_size / params->L1_ghost_size, 1);
+      // params->p = MIN(params->p + delta, cache->cache_size);
       params->L1_ghost_size -= obj->obj_size + cache->obj_md_size;
       remove_obj_from_list(&params->L1_ghost_head, &params->L1_ghost_tail, obj);
     } else {
       params->curr_obj_in_L2_ghost = true;
       // case III: x in L2_ghost
       DEBUG_ASSERT(params->L2_ghost_size >= 1);
-      double delta =
-          MAX((double)params->L1_ghost_size / params->L2_ghost_size, 1);
-      //params->p = MAX(params->p - delta, 0);
+      double delta = MAX((double)params->L1_ghost_size / params->L2_ghost_size, 1);
+      // params->p = MAX(params->p - delta, 0);
       params->L2_ghost_size -= obj->obj_size + cache->obj_md_size;
       remove_obj_from_list(&params->L2_ghost_head, &params->L2_ghost_tail, obj);
     }
@@ -305,12 +288,13 @@ static cache_obj_t *ARCfix_find(cache_t *cache, const request_t *req,
 
 #if defined(TRACK_DEMOTION)
       obj->misc.next_access_vtime = req->next_access_vtime;
-      printf("%ld keep %ld %ld\n", cache->n_req, obj->create_time,
-             obj->misc.next_access_vtime);
+      printf("%ld keep %ld %ld\n", cache->n_req, obj->create_time, obj->misc.next_access_vtime);
 #endif
 
       params->L1_data_size -= obj->obj_size + cache->obj_md_size;
       params->L2_data_size += obj->obj_size + cache->obj_md_size;
+
+      params->n_byte_write_in_L2_data += obj->obj_size + cache->obj_md_size;
     } else {
       // move to LRU2 head
       move_obj_to_head(&params->L2_data_head, &params->L2_data_tail, obj);
@@ -342,6 +326,8 @@ static cache_obj_t *ARCfix_insert(cache_t *cache, const request_t *req) {
     obj->ARC.lru_id = 2;
     prepend_obj_to_head(&params->L2_data_head, &params->L2_data_tail, obj);
     params->L2_data_size += req->obj_size + cache->obj_md_size;
+    
+    params->n_byte_write_in_L2_data += req->obj_size + cache->obj_md_size;
 
     params->curr_obj_in_L1_ghost = false;
     params->curr_obj_in_L2_ghost = false;
@@ -389,8 +375,8 @@ static cache_obj_t *ARCfix_to_evict(cache_t *cache, const request_t *req) {
  */
 static void ARCfix_evict(cache_t *cache, const request_t *req) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
-  if(params->p < 1){
-        params->p *= cache->occupied_byte;
+  if (params->p < 1) {
+    params->p *= cache->occupied_byte;
   }
   if (params->vtime_last_req_in_ghost == cache->n_req &&
       (params->curr_obj_in_L1_ghost || params->curr_obj_in_L2_ghost)) {
@@ -457,8 +443,7 @@ static cache_obj_t *_ARCfix_to_replace(cache_t *cache, const request_t *req) {
 
   bool cond1 = params->L1_data_size > 0;
   bool cond2 = params->L1_data_size > params->p;
-  bool cond3 =
-      params->L1_data_size == params->p && params->curr_obj_in_L2_ghost;
+  bool cond3 = params->L1_data_size == params->p && params->curr_obj_in_L2_ghost;
   bool cond4 = params->L2_data_size == 0;
 
   if ((cond1 && (cond2 || cond3)) || cond4) {
@@ -479,8 +464,7 @@ static void _ARCfix_evict_L1_data(cache_t *cache, const request_t *req) {
   DEBUG_ASSERT(obj != NULL);
 
 #if defined(TRACK_DEMOTION)
-  printf("%ld demote %ld %ld\n", cache->n_req, obj->create_time,
-         obj->misc.next_access_vtime);
+  printf("%ld demote %ld %ld\n", cache->n_req, obj->create_time, obj->misc.next_access_vtime);
 #endif
 
   cache_evict_base(cache, obj, false);
@@ -498,8 +482,7 @@ static void _ARCfix_evict_L1_data_no_ghost(cache_t *cache, const request_t *req)
   DEBUG_ASSERT(obj != NULL);
 
 #if defined(TRACK_DEMOTION)
-  printf("%ld demote %ld %ld\n", cache->n_req, obj->create_time,
-         obj->misc.next_access_vtime);
+  printf("%ld demote %ld %ld\n", cache->n_req, obj->create_time, obj->misc.next_access_vtime);
 #endif
 
   remove_obj_from_list(&params->L1_data_head, &params->L1_data_tail, obj);
@@ -549,11 +532,9 @@ static void _ARCfix_evict_L2_ghost(cache_t *cache, const request_t *req) {
 static void _ARCfix_replace(cache_t *cache, const request_t *req) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
 
-
   bool cond1 = params->L1_data_size > 0;
   bool cond2 = params->L1_data_size > params->p;
-  bool cond3 =
-      params->L1_data_size == params->p && params->curr_obj_in_L2_ghost;
+  bool cond3 = params->L1_data_size == params->p && params->curr_obj_in_L2_ghost;
   bool cond4 = params->L2_data_size == 0;
 
   if ((cond1 && (cond2 || cond3)) || cond4) {
@@ -567,13 +548,11 @@ static void _ARCfix_replace(cache_t *cache, const request_t *req) {
 
 /* finding the eviction candidate in _ARCfix_evict_miss_on_all_queues, but do not
  * perform eviction */
-static cache_obj_t *_ARCfix_to_evict_miss_on_all_queues(cache_t *cache,
-                                                     const request_t *req) {
+static cache_obj_t *_ARCfix_to_evict_miss_on_all_queues(cache_t *cache, const request_t *req) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
 
   int64_t incoming_size = +req->obj_size + cache->obj_md_size;
-  if (params->L1_data_size + params->L1_ghost_size + incoming_size >
-      cache->cache_size) {
+  if (params->L1_data_size + params->L1_ghost_size + incoming_size > cache->cache_size) {
     // case A: L1 = T1 U B1 has exactly c pages
     if (params->L1_ghost_size > 0) {
       return _ARCfix_to_replace(cache, req);
@@ -588,13 +567,11 @@ static cache_obj_t *_ARCfix_to_evict_miss_on_all_queues(cache_t *cache,
 }
 
 /* this is the case IV in the paper */
-static void _ARCfix_evict_miss_on_all_queues(cache_t *cache,
-                                          const request_t *req) {
+static void _ARCfix_evict_miss_on_all_queues(cache_t *cache, const request_t *req) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
 
   int64_t incoming_size = req->obj_size + cache->obj_md_size;
-  if (params->L1_data_size + params->L1_ghost_size + incoming_size >
-      cache->cache_size) {
+  if (params->L1_data_size + params->L1_ghost_size + incoming_size > cache->cache_size) {
     // case A: L1 = T1 U B1 has exactly c pages
     if (params->L1_ghost_size > 0) {
       // if T1 < c (ghost is not empty),
@@ -609,10 +586,8 @@ static void _ARCfix_evict_miss_on_all_queues(cache_t *cache,
       return _ARCfix_evict_L1_data_no_ghost(cache, req);
     }
   } else {
-    DEBUG_ASSERT(params->L1_data_size + params->L1_ghost_size <
-                 cache->cache_size);
-    if (params->L1_data_size + params->L1_ghost_size + params->L2_data_size +
-            params->L2_ghost_size >=
+    DEBUG_ASSERT(params->L1_data_size + params->L1_ghost_size < cache->cache_size);
+    if (params->L1_data_size + params->L1_ghost_size + params->L2_data_size + params->L2_ghost_size >=
         cache->cache_size * 2) {
       // delete the LRU end of the L2 ghost
       if (params->L2_ghost_size > 0) {
@@ -635,8 +610,7 @@ static const char *ARCfix_current_params(ARCfix_params_t *params) {
   return params_str;
 }
 
-static void ARCfix_parse_params(cache_t *cache,
-                             const char *cache_specific_params) {
+static void ARCfix_parse_params(cache_t *cache, const char *cache_specific_params) {
   ARCfix_params_t *params = (ARCfix_params_t *)(cache->eviction_params);
 
   char *params_str = strdup(cache_specific_params);
@@ -733,16 +707,14 @@ static void _ARCfix_sanity_check(cache_t *cache, const request_t *req) {
     DEBUG_ASSERT(params->L2_ghost_tail != NULL);
   }
 
-  DEBUG_ASSERT(params->L1_data_size + params->L2_data_size ==
-               cache->occupied_byte);
+  DEBUG_ASSERT(params->L1_data_size + params->L2_data_size == cache->occupied_byte);
   // DEBUG_ASSERT(params->L1_data_size + params->L2_data_size +
   //                  params->L1_ghost_size + params->L2_ghost_size <=
   //              cache->cache_size * 2);
   DEBUG_ASSERT(cache->occupied_byte <= cache->cache_size);
 }
 
-static inline void _ARCfix_sanity_check_full(cache_t *cache,
-                                          const request_t *req) {
+static inline void _ARCfix_sanity_check_full(cache_t *cache, const request_t *req) {
   // if (cache->n_req < 13200000) return;
 
   _ARCfix_sanity_check(cache, req);
@@ -802,7 +774,6 @@ static inline void _ARCfix_sanity_check_full(cache_t *cache,
 }
 
 static bool ARCfix_get_debug(cache_t *cache, const request_t *req) {
-
   cache->n_req += 1;
 
   _ARCfix_sanity_check_full(cache, req);
@@ -822,8 +793,7 @@ static bool ARCfix_get_debug(cache_t *cache, const request_t *req) {
     return false;
   }
 
-  while (cache->occupied_byte + req->obj_size + cache->obj_md_size >
-         cache->cache_size) {
+  while (cache->occupied_byte + req->obj_size + cache->obj_md_size > cache->cache_size) {
     cache->evict(cache, req);
   }
 
