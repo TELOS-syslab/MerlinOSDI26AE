@@ -2,7 +2,11 @@
 # -*- coding: utf-8 -*-
 
 """
-Common plotting styles converted from the gnuplot script.
+Shared plotting styles for the artifact figures.
+
+The paper figures were originally styled with gnuplot. This module centralizes
+the equivalent Matplotlib styles so all Python plotting scripts use consistent
+colors, markers, and line widths.
 
 Gnuplot usage examples:
     with linespoints ls 1 pt 9 ps 1
@@ -195,7 +199,12 @@ def get_style_by_ls(ls: int, ps: float = 1.0, pt=None):
 
 def get_style(name: str, ps: float = 1.0):
     """
-    Get style by algorithm name.
+    Return a Matplotlib style dictionary by algorithm name.
+
+    Args:
+        name: Policy name as it appears in .dat files.
+        ps: Marker-size multiplier matching gnuplot's point-size convention.
+
     Example:
         get_style("merlin", ps=1.5)
     """

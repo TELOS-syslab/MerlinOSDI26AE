@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Run Merlin sensitivity sweeps over epoch-update and sketch-scale values.
+
+This script mirrors evaluation.py but only runs Merlin with a grid of eviction
+parameters. It is intended for parameter-sensitivity experiments rather than the
+main Figure 11-13 policy comparison.
+"""
 import os
 import subprocess
 import time
@@ -10,7 +16,7 @@ import re
 import signal
 
 # =============================
-# global state
+# Global process state shared by worker threads.
 # =============================
 file_lock = threading.Lock()
 oom_happen = False
@@ -23,7 +29,7 @@ running_lock = threading.Lock()
 MEM_SAFE_GB = 100
 
 # -----------------------------
-# config: policies to run
+# The sensitivity sweep only changes Merlin's eviction parameters.
 # -----------------------------
 policy_list = [
     "merlin"
@@ -45,7 +51,7 @@ def is_oom(stderr):
     return "killed" in s or "out of memory" in s or "oom" in s
 
 # =============================
-# kill shortest job
+# Kill short-running jobs under memory/CPU pressure; they are cheaper to retry.
 # =============================
 def kill_shortest_jobs_until_safe():
     killed = 0
@@ -139,12 +145,12 @@ def convert_to_bytes(size_str):
     return int(float(size_str))
 
 # =============================
-# resource check
+# Estimate how many new worker jobs can be submitted safely.
 # =============================
 def get_available_workers():
     cpu_total = psutil.cpu_count()
     cpu_usage = psutil.cpu_percent(interval=0.5)
-    cpu_usage += 15  # add some buffer
+    cpu_usage += 15  # Conservative buffer for background activity.
     cpu_free = cpu_total * (1 - cpu_usage/100) // 2
 
     mem_free = get_available_memory_gb()
@@ -159,8 +165,8 @@ def get_available_workers():
     return max(0, workers)
 
 # -----------------------------
-# policy todo list
-# recover from existing result file, only run the policies that are not done yet
+# Recover from existing result files and only schedule parameter points that are
+# not already present in the output.
 # -----------------------------
 def get_policy_todo(result_file):
     done = set()
@@ -172,7 +178,8 @@ def get_policy_todo(result_file):
                 parts = line.strip().split()
                 if len(parts) > 1:
                     done.add(parts[1])
-    #--eviction-params filter-size-ratio=0.10,staging-size-ratio=0.05,ghost-size-ratio=1.00,epoch-update=32,sketch-scale=1.0
+    # Keep the first three ratios fixed and sweep the two parameters that affect
+    # aging cadence and sketch capacity.
     filter_size_ratio = "0.10"
     staging_size_ratio = "0.05"
     ghost_size_ratio = "1.00"
@@ -190,7 +197,7 @@ def get_policy_todo(result_file):
     return todo
 
 # -----------------------------
-# execute command with retry and OOM handling
+# Execute one cachesim command. The caller retries False/"KILLED" results.
 # -----------------------------
 def run_cmd(cmd, result_file):
     global oom_happen, oom_time
@@ -201,7 +208,7 @@ def run_cmd(cmd, result_file):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            preexec_fn=os.setsid   # execute in a new process group
+            preexec_fn=os.setsid   # Run in a new process group for cleanup.
         )
 
         with running_lock:
@@ -239,7 +246,8 @@ def run_cmd(cmd, result_file):
         with file_lock:
             with open(result_file, "a") as f:
                 for line in lines:
-                    # not used, since we re-define output to files
+                    # Not used because cachesim writes detailed output files via
+                    # --outputdir. Keep parsing here for optional debugging.
                     # f.write(line + "\n")
                     pass
 
@@ -250,7 +258,8 @@ def run_cmd(cmd, result_file):
         return False
 
 # -----------------------------
-# construct task list based on input directory and existing results, supports resuming
+# Construct tasks from the dataset tree. Expected layout:
+# input_dir/<dataset>/<trace files>.
 # -----------------------------
 def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
     tasks = []
@@ -277,7 +286,7 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
     return tasks
 
 # -----------------------------
-# main loop
+# Main adaptive scheduling loop.
 # -----------------------------
 def main():
     parser = argparse.ArgumentParser()
@@ -326,7 +335,8 @@ def main():
                 print(f"[RETRY] {cmd}")
                 tasks.append((cmd, result_file))
 
-        # congestion control
+        # Simple congestion control: slow down submissions when few jobs finish
+        # and speed up when the system is making progress.
         if finished <= 1:
             kill_shortest_jobs_until_safe()
             next_sleep += check_interval * 5
@@ -349,6 +359,8 @@ def main():
     executor.shutdown(wait=True)
     print("[INFO] All tasks completed.")
 
-#python sensitivity.py   --root_dir /pathto/libCacheSim/_build   --input_dir /pathto/CacheTrace   --output_dir /pathtooutput   --ignore_obj
+# Example:
+# python3 scripts/sensitivity.py --root_dir ./libCacheSim/_build \
+#   --input_dir ./CacheTrace --output_dir ./results/sensitivity --ignore_obj
 if __name__ == "__main__":
     main()

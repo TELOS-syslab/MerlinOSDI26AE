@@ -1,3 +1,8 @@
+"""Plot Figure 12 from precomputed byte-hit-rate summary files.
+
+Input:  data/HR/withobjsize/size_*.dat
+Output: byte_hit_rate.pdf
+"""
 import os
 import re
 import glob
@@ -7,7 +12,8 @@ from common import get_style
 
 DATA_DIR = "data/HR/withobjsize"
 
-# ========= 读取数据 =========
+# Load one size_*.dat file. The first column is dataset name; remaining columns
+# are policy scores.
 def load_dat(file_path):
     with open(file_path) as f:
         lines = f.readlines()
@@ -27,9 +33,8 @@ def load_dat(file_path):
     return datasets, headers, data
 
 
-# ========= 排序（按论文） =========
+# Reorder datasets to match the paper figure.
 def sort_data(datasets, headers, data):
-    # 论文固定顺序
     target_order = [
         "CloudPhysics",
         "Alibaba",
@@ -45,10 +50,9 @@ def sort_data(datasets, headers, data):
     ]
     
 
-    # 建立映射：dataset -> index
+    # Map dataset name to row index for stable reordering.
     index_map = {name: i for i, name in enumerate(datasets)}
 
-    # 按论文顺序重排
     ordered_indices = [index_map[name] for name in target_order if name in index_map]
 
     datasets = [datasets[i] for i in ordered_indices]
@@ -57,14 +61,14 @@ def sort_data(datasets, headers, data):
     return datasets, data
 
 def extract_size(f):
-    # 从文件名提取 0.01 / 0.03 / 0.1
+    # Extract cache-size ratio from file names such as size_0.01.dat.
     return float(re.search(r"size_(\d+\.?\d*)", f).group(1))
 
-# ========= 主绘图 =========
+# Main plotting routine.
 def plot():
     files = sorted(glob.glob(os.path.join(DATA_DIR, "size_*.dat")))
 
-    # 只保留需要的三个
+    # The paper figure shows these three representative cache sizes.
     wanted = ["0.01", "0.03", "0.1"]
     files = [f for f in files if any(w in f for w in wanted)]
 
@@ -78,11 +82,11 @@ def plot():
 
         y_pos = np.arange(len(datasets))
 
-        # 灰色条背景（论文关键）
+        # Light horizontal guides make per-dataset comparisons easier.
         for y in y_pos:
             ax.axhline(y, color="gray", linewidth=1, alpha=0.6, zorder=0)
 
-        # 画点
+        # Draw one marker per dataset/policy pair.
         for j, alg in enumerate(headers):
             alg_name = alg.lower()
             style = get_style(alg_name, ps=1.5)
@@ -105,7 +109,7 @@ def plot():
                 **scatter_style
             )
 
-        # y轴
+        # Y-axis labels are shown only on the first panel.
         ax.set_yticks(y_pos)
         if i == 0:
             ax.set_yticklabels(datasets)
@@ -113,11 +117,11 @@ def plot():
             ax.set_yticklabels([])
         ax.invert_yaxis()
 
-        # x轴
+        # X-axis starts at zero to show absolute relative improvements.
         ax.set_xlim(0, None)
         ax.grid(axis="x", linestyle=":", alpha=0.5)
 
-        # 标题
+        # Panel titles follow the paper's cache-size notation.
         title = ""
         if "0.01" in file:
             title = "(a) Cache size: 1% WSS"
@@ -127,7 +131,7 @@ def plot():
             title = "(c) Cache size: 10% WSS"
         ax.set_title(title, fontsize=13)
 
-    # legend（顶部）
+    # Shared legend at the top of the figure.
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(
         handles,

@@ -1,4 +1,16 @@
 #!/usr/bin/env python3
+"""Convert raw cachesim outputs into per-dataset CSV summaries.
+
+Input:
+    results/<dataset>/<trace-output-file>
+
+Output:
+    dataresult/<mode>/<dataset>/<cache-ratio>.csv
+
+Each output CSV contains one row per trace and one column per policy. The value
+stored here is byte miss ratio, which later scripts convert into hit-rate style
+metrics.
+"""
 import os
 import re
 import argparse
@@ -6,6 +18,8 @@ from collections import defaultdict
 
 XTICK = ["0.003", "0.01", "0.03", "0.1", "0.2", "0.4"]
 
+# Parse lines emitted by cachesim. The cache size can be printed as a raw byte
+# count or with KiB/MiB/GiB suffixes depending on the trace.
 pattern = re.compile(
     r"(.+?)\s+([A-Za-z0-9\(\)_\.\-]+)\s+cache size\s+(\d+(?:\.\d+)?(?:[KMG]iB)?),\s+\d+\s+req,\s+miss ratio\s+[\d.]+,\s+byte miss ratio\s+([\d.]+)"
 )
@@ -24,6 +38,7 @@ enable_normalize_policy = True
 # normalize policy name
 # =============================
 def normalize_policy(name):
+    """Map verbose cachesim policy names to the names used in plots."""
     if not enable_normalize_policy:
         return name
     for key, value in normalize_policy_map.items():
@@ -35,6 +50,7 @@ def normalize_policy(name):
 # size to byte
 # =============================
 def convert_size(size):
+    """Normalize cache-size strings to bytes so files sort consistently."""
     if size.endswith("KiB"):
         return int(float(size[:-3]) * 1024)
     if size.endswith("MiB"):
@@ -47,6 +63,7 @@ def convert_size(size):
 # parse file and return list of (size, {policy: bmr})
 # =============================
 def parse_file(filepath):
+    """Parse one raw result file into sorted cache-size buckets."""
     size_dict = defaultdict(dict)
     policy_set = set()
     with open(filepath) as f:
@@ -63,14 +80,15 @@ def parse_file(filepath):
     if not size_dict:
         return None
 
-    # sort by size
+    # Sort sizes so XTICK[i] maps to the intended cache/WSS ratio.
     sorted_sizes = sorted(size_dict.keys())
 
-    # discard files with less than 6 sizes, as they are likely too small to be meaningful
+    # Discard files with fewer than six configured cache ratios. These usually
+    # correspond to traces that were too small or incomplete.
     if len(sorted_sizes) < 6:
         print(f"[WARN] {filepath} has only {len(sorted_sizes)} sizes, expected 6. Skipping.")
         return None
-    # check empty value
+    # Keep columns aligned even if one policy is missing for a size.
     for size in sorted_sizes:
         if len(size_dict[size]) < len(policy_set):
             for policy in policy_set:
@@ -86,7 +104,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input_dir", required=True)
     parser.add_argument("--output_dir", required=True)
-    parser.add_argument("--normalize_policy", action="store_true", help="是否启用policy归一化")
+    parser.add_argument("--normalize_policy", action="store_true", help="normalize policy names for plotting")
     args = parser.parse_args()
     global enable_normalize_policy
     enable_normalize_policy = args.normalize_policy
@@ -121,7 +139,8 @@ def main():
         os.makedirs(outdir, exist_ok=True)
         for ratio in bucket[dataset]:
             outfile = os.path.join(outdir, f"{ratio}.csv")
-            # collect all policies for this dataset and ratio
+            # Collect all policies for this dataset/ratio before writing the
+            # header so rows can have consistent columns.
             all_policies = set()
             for row in bucket[dataset][ratio]:
                 all_policies.update(row.keys())
@@ -140,6 +159,8 @@ def main():
 
             print(f"[DONE] {dataset} - {ratio}")
 
-#python3 readeval.py --input_dir /pathtodatasetoutput --output_dir /pathtodata --normalize_policy
+# Example:
+# python3 scripts/readeval.py --input_dir ./results/eval_ignore_obj \
+#   --output_dir ./dataresult/withoutobjsize --normalize_policy
 if __name__ == "__main__":
     main()

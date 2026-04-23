@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Build relative-hit-ratio CDF summaries for Figure 13.
+
+For each trace and cache size, policies are compared against the row-wise best
+policy. The script writes selected percentile points as .dat files consumed by
+scripts/plot/relative_hit_ratio.py.
+"""
 import os
 import argparse
 import numpy as np
@@ -48,6 +54,7 @@ def parse_args():
 # utils
 # =============================
 def clean_df(df):
+    """Remove non-policy columns before computing relative ratios."""
     for col in DROP_COLUMNS:
         if col in df.columns:
             df = df.drop(columns=[col])
@@ -55,7 +62,7 @@ def clean_df(df):
 
 
 def get_relative(df):
-    """relative to row-wise minimum"""
+    """Compute hit ratio relative to the row-wise minimum miss ratio."""
     mindf = df.min(axis=1)
     result = pd.DataFrame()
 
@@ -66,6 +73,7 @@ def get_relative(df):
 
 
 def read_file(filepath):
+    """Read one per-dataset cache-ratio CSV and return relative ratios."""
     df = pd.read_csv(filepath, header=0, index_col=0)
     df = clean_df(df)
 
@@ -80,7 +88,7 @@ def read_file(filepath):
 # analysis functions
 # =============================
 def compute_cdf_tail(df, policies):
-    """compute percentile stats"""
+    """Compute selected lower-tail percentile stats for each policy."""
     df_sorted = df.apply(np.sort)
 
     if policies:
@@ -92,6 +100,7 @@ def compute_cdf_tail(df, policies):
     result = pd.DataFrame()
 
     for t in CDF_TARGET:
+        # Keep only a few CDF points so the plotting script can remain simple.
         idx = int(len(df_sorted.columns) * t)
         result[f"P{int(t * 100)}"] = df_sorted[idx]
 
@@ -100,7 +109,7 @@ def compute_cdf_tail(df, policies):
 
 
 def performance(df, policies):
-    """optional debug metric"""
+    """Optional debug metric: fraction of traces above fixed relative thresholds."""
     df_sorted = df.apply(np.sort)
 
     if policies:
@@ -146,10 +155,10 @@ def calculate(input_dir, output_dir, policies, datasets):
             if rel is None or len(rel) == 0:
                 continue
 
-            # aggregate global
+            # Aggregate across datasets for optional total_*.dat summaries.
             total_by_size.setdefault(cachesize, []).append(rel)
 
-            # only store meaningful data
+            # Skip tiny datasets where percentile estimates are unstable.
             if len(rel) > 100:
                 dfout = compute_cdf_tail(rel, policies)
 
@@ -161,7 +170,7 @@ def calculate(input_dir, output_dir, policies, datasets):
                 dfout.to_csv(outfile, sep=" ", float_format="%.3f")
 
     # =============================
-    # global aggregation
+    # Global aggregation across all selected datasets.
     # =============================
     for size, dfs in total_by_size.items():
         merged = pd.concat(dfs)

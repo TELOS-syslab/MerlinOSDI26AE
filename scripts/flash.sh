@@ -1,4 +1,9 @@
 #!/bin/bash
+# Run flash-cache experiments for Figure 15.
+#
+# Input traces are read from ./raw_data/cloudphysics. For each trace, this
+# script runs multiple policies, cache sizes, and DRAM ratios with bounded
+# concurrency controlled by MAX_JOBS.
 set -euo pipefail
 
 dir="./raw_data/cloudphysics"
@@ -7,6 +12,7 @@ flash_bin="./libCacheSim/_build/bin/flash"
 
 MAX_JOBS="${MAX_JOBS:-2}"
 
+# Avoid launching more concurrent jobs than available CPU cores.
 if command -v nproc >/dev/null 2>&1; then
     cpu_n=$(nproc)
     if [ "$MAX_JOBS" -gt "$cpu_n" ]; then
@@ -28,6 +34,8 @@ run_one() {
     local outfile
     outfile="$output_dir/${algo}.txt"
 
+    # The flash simulator prints a long log; the final line contains the summary
+    # consumed by process_flash.py.
     if [ -n "$extra_args" ]; then
         "$flash_bin" "$path" oracleGeneral "$algo" "$size" -e "$extra_args" \
             | tail -n 1 >> "$outfile"
@@ -43,6 +51,7 @@ export -f run_one
 pids=()
 
 wait_for_slot() {
+    # Keep at most MAX_JOBS background simulator processes alive.
     while [ "${#pids[@]}" -ge "$MAX_JOBS" ]; do
         local new_pids=()
         for pid in "${pids[@]}"; do
@@ -64,35 +73,34 @@ for path in "$dir"/*; do
     for size in 0.01 0.1; do
         mkdir -p "$output_root/${size}"
 
-        # FIFO
+        # FIFO has no DRAM-ratio parameter.
         wait_for_slot
         bash -c 'run_one "$1" "$2" "$3" "$4"' _ \
             "$path" "$size" "fifo" "" &
         pids+=("$!")
 
         for dram in 0.001 0.01 0.1; do
-            # s3fifo
+            # S3FIFO uses a FIFO admission region and ghost region.
             wait_for_slot
             bash -c 'run_one "$1" "$2" "$3" "$4"' _ \
                 "$path" "$size" "s3fifo" \
                 "fifo-size-ratio=$dram,ghost-size-ratio=0.90,move-to-main-threshold=2" &
             pids+=("$!")
 
-            # merlin
+            # Merlin uses the DRAM ratio as the filter-size ratio.
             wait_for_slot
             bash -c 'run_one "$1" "$2" "$3" "$4"' _ \
                 "$path" "$size" "merlin" \
                 "filter-size-ratio=$dram,staging-size-ratio=0.05,ghost-size-ratio=1.00" &
             pids+=("$!")
 
-            # arcfix
+            # ARCfix and Cacheus use p as the tunable DRAM/history parameter.
             wait_for_slot
             bash -c 'run_one "$1" "$2" "$3" "$4"' _ \
                 "$path" "$size" "arcfix" \
                 "p=$dram" &
             pids+=("$!")
 
-            # cacheus
             wait_for_slot
             bash -c 'run_one "$1" "$2" "$3" "$4"' _ \
                 "$path" "$size" "cacheus" \

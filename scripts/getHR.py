@@ -1,4 +1,10 @@
 #!/usr/bin/env python3
+"""Compute aggregate relative hit-rate improvement from readeval CSV files.
+
+The input CSVs contain byte miss ratios by policy. This script converts miss
+ratio to hit ratio, compares each policy against LRU, and writes .dat files used
+by the Figure 11 and Figure 12 plotting scripts.
+"""
 import os
 import argparse
 import numpy as np
@@ -39,7 +45,7 @@ DATASET_RENAME = ["Twitter", "MetaKV", "MetaCDN", "TencentPhoto", "Wikimedia", "
 # =============================
 
 def clean_df(df):
-    # drop useless columns
+    """Drop columns that are not plotted or not comparable as policies."""
     for col in DROP_COLUMNS:
         if col in df.columns:
             df = df.drop(columns=[col])
@@ -47,6 +53,9 @@ def clean_df(df):
 
 
 def get_relative_hr(df):
+    """Return per-trace hit-rate improvement relative to the LRU baseline."""
+    # Filter out degenerate rows where every policy misses almost everything or
+    # where the data is too close to 1.0 to produce stable relative ratios.
     df = df[df.max(axis=1) < 1.0]
     df = df[(df < 0.99).any(axis=1)]
     if BASELINE_POLICY not in df.columns:
@@ -56,16 +65,19 @@ def get_relative_hr(df):
     result = pd.DataFrame()
 
     for col in df.columns:
+        # Convert miss ratio to hit ratio, then divide by LRU hit ratio.
         result[col] = (1 - df[col]) / (1 - base)
     return result.fillna(1)
 
 
 def read_file(filepath):
+    """Read one cache-ratio CSV and return a geometric-mean score per policy."""
     df = pd.read_csv(filepath,header=0,index_col=0)
     df = clean_df(df)
     rel = get_relative_hr(df)
     if len(rel) == 0:
         return None
+    # Geometric mean prevents large traces from dominating the aggregate.
     score = rel.prod(axis=0) ** (1 / len(rel)) - 1
 
     return score
@@ -108,7 +120,7 @@ def calculate(input_dir, output_dir, policies, datasets):
     for dataset in result:
         df = pd.DataFrame(result[dataset])
         df = df.T  # cachesize as rows
-        df = df.sort_index() #sort by cachesize
+        df = df.sort_index() # Sort by cache size ratio.
         df.index.name = "#cachesize"
         if policies:
             df = df[[c for c in policies if c in df.columns]]
@@ -119,9 +131,8 @@ def calculate(input_dir, output_dir, policies, datasets):
             float_format="%.3f"
         )
 
-    # =============================
-    # output for cachesize
-    # =============================
+    # Also emit files grouped by cache size so each plotting panel can load one
+    # file containing all datasets.
     if not result:
         return
 
@@ -136,9 +147,9 @@ def calculate(input_dir, output_dir, policies, datasets):
         if policies:
             tmp = tmp.loc[[c for c in policies if c in tmp.index]]
 
-        tmp = tmp[datasets]  # reorder by dataset
+        tmp = tmp[datasets]  # Reorder by the paper's dataset order.
         tmp = tmp.T
-        #rename dataset to pretty name
+        # Rename dataset directories to plot-friendly labels.
         tmp.index = [DATASET_RENAME[DATASET.index(d)] if d in DATASET else d for d in tmp.index]
         tmp.index.name = "#dataset"
         tmp.to_csv(

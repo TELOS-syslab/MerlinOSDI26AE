@@ -1,10 +1,19 @@
+"""Summarize raw flash-cache experiment logs into plot-ready CSV files.
+
+Raw inputs are expected under directories named by cache size, for example:
+    0.01/merlin-0.01.txt
+
+Each output file is written as <algorithm>.txt with columns:
+    cache_size, dram_ratio, miss_ratio, write_amp
+"""
 import re
 import os
 from collections import defaultdict
 
 cache_sizes = [0.01, 0.1]
 
-# 你要处理哪些算法，就在这里开关
+# Enable or disable algorithms by editing this list. The checked-in data already
+# contains processed files, so this helper is mostly for reproducing raw runs.
 input_files = []
 for cache_size in cache_sizes:
     input_files.extend([
@@ -16,11 +25,12 @@ for cache_size in cache_sizes:
         # f"{cache_size}/s3fifo-{cache_size}.txt",
     ])
 
-# 数据结构：
+# Aggregation layout:
 # data[algo][cache_size][dram_ratio] = { "miss": [], "wa": [] }
 data = defaultdict(lambda: defaultdict(lambda: defaultdict(lambda: {"miss": [], "wa": []})))
 
-# 正则表达式
+# Regexes for the different policy output formats. The flash simulator prints
+# policy-specific names before the common miss-ratio/write-amp fields.
 patterns = {
     "ARCfix": re.compile(
         r"ARCfix-(?P<dram_ratio>[0-9.]+).*?miss ratio (?P<miss_ratio>[0-9.]+).*?write_amp (?P<write_amp>[0-9.]+)",
@@ -44,20 +54,21 @@ patterns = {
     )
 }
 
-# Flashield 特殊格式： w63.bin, dram_ratio, miss_ratio, write_amp
+# Flashield uses a CSV-like format:
+#     w63.bin, dram_ratio, miss_ratio, write_amp
 flashield_re = re.compile(
     r"[^,]+,\s*(?P<dram_ratio>[0-9.]+),\s*(?P<miss_ratio>[0-9.]+),\s*(?P<write_amp>[0-9.]+)"
 )
 
 for filename in input_files:
     if not os.path.exists(filename):
-        print(f"跳过不存在的文件: {filename}")
+        print(f"Skipping missing file: {filename}")
         continue
 
-    # 从路径里提取 cache_size，比如 "0.01/merlin-0.01.txt"
+    # Extract cache_size from paths such as "0.01/merlin-0.01.txt".
     cache_size = float(os.path.normpath(filename).split(os.sep)[0])
 
-    print(f"正在处理: {filename} (cache_size={cache_size})")
+    print(f"Processing: {filename} (cache_size={cache_size})")
 
     with open(filename, "r", encoding="utf-8") as f:
         for line in f:
@@ -65,7 +76,7 @@ for filename in input_files:
             if not line:
                 continue
 
-            # ---------- Flashield（CSV 格式） ----------
+            # Flashield has a CSV-like raw format.
             if "flashield" in filename.lower():
                 m = flashield_re.search(line)
                 if m:
@@ -76,7 +87,7 @@ for filename in input_files:
                     data["Flashield"][cache_size][dram]["wa"].append(wa)
                 continue
 
-            # ---------- S3FIFO ----------
+            # S3FIFO embeds DRAM ratio in the policy name.
             if "s3fifo" in filename.lower():
                 m = patterns["S3FIFO"].search(line)
                 if m:
@@ -88,11 +99,11 @@ for filename in input_files:
                     data["S3FIFO"][cache_size][dram]["wa"].append(wa)
                 continue
 
-            # ---------- 其他算法 ----------
+            # Other algorithms use regexes defined in patterns above.
             for algo_name, ptn in patterns.items():
                 m = ptn.search(line)
                 if m:
-                    # FIFO 没有 dram_ratio，给默认值
+                    # FIFO does not encode a DRAM ratio; use the default point.
                     if algo_name == "FIFO" and "dram_ratio" not in m.groupdict():
                         dram = 0.1
                     else:
@@ -107,7 +118,7 @@ for filename in input_files:
                     data[algo_name][cache_size][dram]["wa"].append(wa)
                     break
 
-# ---------- 写入输出文件 ----------
+# Write one averaged CSV-like file per algorithm.
 for algo in data.keys():
     output_name = f"{algo.lower()}.txt"
 
@@ -125,4 +136,4 @@ for algo in data.keys():
                 wa_avg = sum(wa_list) / len(wa_list)
                 f.write(f"{cache_size}, {dram}, {miss_avg:.4f}, {wa_avg:.4f}\n")
 
-print("处理完成！")
+print("Processing complete.")

@@ -1,10 +1,15 @@
+"""Plot Figure 15 from flash-cache summary files.
+
+Input:  data/flash/*.txt
+Output: flash.pdf
+"""
 import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.lines as mlines
 import numpy as np
 
-# ── Config ────────────────────────────────────────────────────────────────────
+# Plot configuration.
 
 DATA_DIR = "data/flash"
 
@@ -28,7 +33,7 @@ DRAM_COLORS = {
 CACHE_SIZES  = [0.01, 0.1]
 CACHE_LABELS = ["Cache size: 1% WSS", "Cache size: 10% WSS"]
 
-# ── Load data ─────────────────────────────────────────────────────────────────
+# Load all algorithm summary files.
 
 def load_data(data_dir: str) -> dict[str, pd.DataFrame]:
     frames = {}
@@ -45,7 +50,7 @@ def load_data(data_dir: str) -> dict[str, pd.DataFrame]:
     return frames
 
 
-# ── Plot ──────────────────────────────────────────────────────────────────────
+# Build the two-panel hit-rate/write-amplification figure.
 
 def make_figure(frames: dict[str, pd.DataFrame]) -> plt.Figure:
     fig, axes = plt.subplots(
@@ -118,9 +123,9 @@ def make_figure(frames: dict[str, pd.DataFrame]) -> plt.Figure:
 
     axes[0].set_ylabel("Write bytes (normalized)", fontsize=9)
 
-    # ── Legends (placed outside, to the right of the right subplot) ──────────
+    # Legends are placed outside the right subplot to avoid covering data.
 
-    # Algorithm legend — upper half
+    # Algorithm legend: marker shape encodes the policy.
     algo_handles = []
     for alg, (label, marker, ms) in ALGORITHMS.items():
         is_open = alg in OPEN_MARKERS
@@ -151,7 +156,7 @@ def make_figure(frames: dict[str, pd.DataFrame]) -> plt.Figure:
     )
     axes[1].add_artist(algo_leg)
 
-    # DRAM color legend — lower half
+    # DRAM legend: color encodes the DRAM/filter-size ratio.
     dram_handles = []
     for dram_val, (color, label) in DRAM_COLORS.items():
         h = mlines.Line2D(
@@ -184,7 +189,7 @@ def make_figure(frames: dict[str, pd.DataFrame]) -> plt.Figure:
     return fig
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
+# Entry point.
 
 if __name__ == "__main__":
     if not os.path.isdir(DATA_DIR):
