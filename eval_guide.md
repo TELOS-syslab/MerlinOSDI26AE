@@ -1,7 +1,7 @@
 # Artifact Evaluation Guide
 
 ## Setup
-An x86-64 machine with an arbitrary Linux install is suffice. We've tested Merlin on an AMD machine with 384 cores (two Epyc 9965 processors).
+An x86-64 machine with ubuntu22.04 install is suffice. We've tested Merlin on an AMD machine with 384 cores (two Epyc 9965 processors).
 
 ```
 git clone --recursive https://github.com/TELOS-syslab/MerlinOSDI26AE.git

@@ -1,3 +1,0 @@
-[0mw01.oracleGeneral.bin.zst                             FIFO miss ratio 0.8351 byte miss ratio 0.7765, write_amp 1.2911
-[0mw02.oracleGeneral.bin.zst                             FIFO miss ratio 0.9895 byte miss ratio 0.9980, write_amp 286.4492
-[0mw03.oracleGeneral.bin.zst                             FIFO miss ratio 0.6474 byte miss ratio 0.8452, write_amp 3.3687
