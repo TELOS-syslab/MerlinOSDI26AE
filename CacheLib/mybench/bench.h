@@ -52,6 +52,14 @@ static inline bench_opts_t create_default_bench_opts() {
   return opts;
 }
 
+static inline bool bench_use_private_bdata_per_thread() {
+#if defined(USE_MERLIN) || defined(USE_S3FIFO)
+  return true;
+#else
+  return false;
+#endif
+}
+
 static inline int cache_go(Cache *cache, PoolId pool, struct request *req,
                           int64_t *n_get, int64_t *n_set, int64_t *n_del,
                           int64_t *n_get_miss, int thread_id) {
@@ -86,7 +94,5 @@ static inline int cache_go(Cache *cache, PoolId pool, struct request *req,
 }
 
 void trace_replay_run(struct bench_data *bench_data, bench_opts_t *opts);
-
 void report_bench_result(struct bench_data *bench_data, bench_opts_t *opts);
-
 void trace_replay_run_mt(struct bench_data *bench_data, bench_opts_t *opts);
