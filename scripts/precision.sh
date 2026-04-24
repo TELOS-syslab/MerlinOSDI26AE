@@ -1,19 +1,25 @@
 #!/bin/bash
+# Run precision experiments for Merlin, Cacheus, and ARC and write CSV-style
+# summaries under data/precision.
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-
+# Keep generated precision tables in a dedicated output directory.
 mkdir -p "$ROOT/data/precision"
 
 init_out() {
   local out_file="$1"
+
+  # All precision outputs use the same three-column schema.
   printf 'algo, hit, precision\n' > "$out_file"
 }
 
 run_case() {
+  # Run one cache simulator configuration, capture the full log, then extract
+  # the algorithm-specific hit and precision fields into the requested output.
   local trace="$1"
   local algo="$2"
   local cache_ratio="$3"
@@ -31,6 +37,8 @@ import re
 import sys
 from pathlib import Path
 
+# Arguments are passed by the shell wrapper so the parser can stay independent
+# of any repository-relative paths.
 algo = sys.argv[1]
 log_path = Path(sys.argv[2])
 out_path = Path(sys.argv[3])
@@ -38,6 +46,9 @@ lines = [line.strip() for line in log_path.read_text().splitlines() if line.stri
 prec_lines = [line for line in lines if 'precision' in line and 'hit' in line]
 if not prec_lines:
     raise SystemExit(f'failed to find precision line in {log_path}')
+
+# The simulator may print multiple progress lines; the final matching line is
+# the summary for this run.
 line = prec_lines[-1]
 rows = []
 
@@ -47,6 +58,9 @@ if algo == 'merlin':
         raise SystemExit(f'failed to parse merlin line: {line}')
     rows.append(('merlin', m.group(1), m.group(2)))
 elif algo == 'cacheus':
+    # Cacheus reports separate precision values for objects promoted from the
+    # LRU and LFU ghost queues; emit one row for each source so the plotter can
+    # distinguish the recency and frequency components.
     matches = re.findall(r'object from (lru|lfu) ghost \d+, average hit ([0-9.]+), precision ([0-9.]+)', line)
     if len(matches) != 2:
         raise SystemExit(f'failed to parse cacheus line: {line}')
@@ -54,6 +68,8 @@ elif algo == 'cacheus':
     for src, hit, precision in matches:
         rows.append((name_map[src], hit, precision))
 elif algo == 'arc':
+    # ARC reports the same metric split by T1 and T2 ghost queues, matching the
+    # recency/frequency split used in the output labels.
     matches = re.findall(r'object from (t1|t2) ghost \d+, average hit ([0-9.]+), precision ([0-9.]+)', line)
     if len(matches) != 2:
         raise SystemExit(f'failed to parse arc line: {line}')
@@ -64,6 +80,7 @@ else:
     raise SystemExit(f'unsupported algo {algo}')
 
 with out_path.open('a') as f:
+    # Append rows so multiple algorithms can share one trace-level data file.
     for row in rows:
         f.write(f'{row[0]}, {row[1]}, {row[2]}\n')
 PY
@@ -75,10 +92,12 @@ FIU_OUT="$ROOT/data/precision/fiu.dat"
 init_out "$TWITTER_OUT"
 init_out "$FIU_OUT"
 
+# Twitter uses a 10% cache ratio for the Figure 16 precision comparison.
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" merlin 0.1 "$TWITTER_OUT"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" cacheus 0.1 "$TWITTER_OUT"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" arc 0.1 "$TWITTER_OUT"
 
+# FIU uses a larger 20% cache ratio to match the artifact experiment setup.
 run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" merlin 0.2 "$FIU_OUT"
 run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" cacheus 0.2 "$FIU_OUT"
 run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" arc 0.2 "$FIU_OUT"

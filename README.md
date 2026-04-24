@@ -53,6 +53,7 @@ dependencies. The helper scripts in `scripts/install_dependency.sh` and
 - `data/RHR/`: relative-hit-ratio summaries for Figure 13.
 - `data/throughput/`: throughput results for Figure 14.
 - `data/flash/`: flash-cache results for Figure 15.
+- `data/precision/`: tracking paramaters results for Figure 17.
 - `libCacheSim/`: the modified libCacheSim code used for simulation.
 - `CacheLib/`: the modified CacheLib code used for throughput evaluation.
 - `CacheLib/mybench/`: CacheLib microbenchmark and trace-generation scripts.
@@ -122,10 +123,10 @@ of their runtime and storage cost.
 
 Estimated runtime and resources:
 
-- Runtime: about [TO_FILL_MIN_INSTALL] minutes
+- Runtime: about 10 minutes
 - CPU: moderate to high during compilation
-- Memory: recommend >= [TO_FILL_RAM_INSTALL]
-- Additional disk: about [TO_FILL_DISK_INSTALL] (build artifacts + Docker image)
+- Memory: recommend >= 128GB
+- Additional disk: about 21GB (build artifacts + Docker image)
 
 On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
 
@@ -247,8 +248,8 @@ python3 scripts/getRHRcdf.py \
 ### Figure 14: Throughput
 Estimated runtime and resources:
 - CPU: high
-- Memory: [TO_FILL_RAM_FIG14]
-- Disk: [TO_FILL_DISK_FIG14_RERUN]
+- Memory: recommend >= 32GB
+- Disk: 6GB for the artificial trace. 
 
 The precomputed throughput results are in:
 
@@ -283,8 +284,8 @@ bash scripts/throughput.sh wback
 ### Figure 15: Flash-Cache Hit Rate and Write Bytes
 Estimated runtime and resources:
 - CPU: high
-- Memory: [TO_FILL_RAM_FIG14]
-- Disk: [TO_FILL_DISK_FIG14_RERUN]
+- Memory: recommend >= 32GB
+- Disk: 8.5GB for the `CloudPhysics` traces.
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
@@ -315,36 +316,10 @@ outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 
 ### Figure 17: Parameter-Tracking
 
-The parameter-tracking build is created under `libCacheSim/_build2/`. Example
-commands for inspecting Merlin and baselines on individual traces are:
+The parameter-tracking build is created under `libCacheSim/_build2/`. You need to prepare the traces `./CacheTrace/twitter/cluster8.oracleGeneral.bin.zst` and `./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst`. 
 
-```bash
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
-  oracleGeneral merlin 0.1 --ignore-obj-size=true
+Example commands for inspecting Merlin and baselines on individual traces are:
 
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
-  oracleGeneral cacheus 0.1 --ignore-obj-size=true
-
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/twitter/cluster8.oracleGeneral.zst \
-  oracleGeneral arc 0.1 --ignore-obj-size=true
-
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
-  oracleGeneral merlin 0.2 --ignore-obj-size=true
-
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
-  oracleGeneral cacheus 0.2 --ignore-obj-size=true
-
-./libCacheSim/_build2/bin/cachesim \
-  ./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst \
-  oracleGeneral arc 0.2 --ignore-obj-size=true
-```
-
-Or you can run the script
 ```bash
 bash scripts/precision.sh
 python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
