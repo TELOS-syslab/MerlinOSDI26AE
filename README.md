@@ -109,6 +109,8 @@ The expected output files are:
 - `relative_hit_ratio.pdf`
 - `throughput.pdf`
 - `flash.pdf`
+- `fiu.pdf`
+- `twitter.pdf`
 
 ## Detailed Instructions
 
