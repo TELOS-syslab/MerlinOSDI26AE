@@ -188,12 +188,17 @@ def get_policy_todo(result_file):
     epoch_tuple = (1,2,4,8,16,32,64,128)
     sketch_touple = ("0.50","1.00","2.00","4.00")
     todo = []
-    for epoch in epoch_tuple:
-        for sketch in sketch_touple:
-            eparams = f"filter-size-ratio={filter_size_ratio},staging-size-ratio={staging_size_ratio},ghost-size-ratio={ghost_size_ratio},epoch-update={epoch},sketch-scale={sketch}"
-            name = f"merlin-{filter_size_ratio}-{staging_size_ratio}-{ghost_size_ratio}-{epoch}-{sketch}"
-            if name not in done:
-                todo.append((f"merlin", eparams))
+    size_touple = ("0.01", "0.03", "0.05", "0.10", "0.15", "0.20")
+    filter_touple = ("0.05", "0.10", "0.15")
+    staging_touple = ("0.01", "0.05", "0.10")
+    ghost_touple = ("0.25", "0.50", "1.00", "2.00")
+    for filter_size_ratio in filter_touple:
+        for staging_size_ratio in staging_touple:
+            for ghost_size_ratio in ghost_touple:
+                eparams = f"filter-size-ratio={filter_size_ratio},staging-size-ratio={staging_size_ratio},ghost-size-ratio={ghost_size_ratio},epoch-update={epoch_update},sketch-scale={sketch_scale}"
+                name = f"merlin-{filter_size_ratio}-{staging_size_ratio}-{ghost_size_ratio}-{epoch_update}-{sketch_scale}"
+                if name not in done:
+                    todo.append((f"merlin", eparams))
     return todo
 
 # -----------------------------
