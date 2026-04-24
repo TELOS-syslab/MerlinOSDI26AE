@@ -53,7 +53,8 @@ dependencies. The helper scripts in `scripts/install_dependency.sh` and
 - `data/RHR/`: relative-hit-ratio summaries for Figure 13.
 - `data/throughput/`: throughput results for Figure 14.
 - `data/flash/`: flash-cache results for Figure 15.
-- `data/precision/`: tracking paramaters results for Figure 17.
+- `data/sensitivity/`: Merlin sensitivity evaluation summaries for Figure 16.
+- `data/precision/`: tracking parameters results for Figure 17.
 - `libCacheSim/`: the modified libCacheSim code used for simulation.
 - `CacheLib/`: the modified CacheLib code used for throughput evaluation.
 - `CacheLib/mybench/`: CacheLib microbenchmark and trace-generation scripts.
@@ -97,6 +98,10 @@ python3 scripts/plot/throughput.py
 
 # Figure 15: flash-cache hit rate and normalized write bytes
 python3 scripts/plot/flash.py
+
+# Figure 16: precomputed sensitivity-evaluation inputs are bundled in
+# data/sensitivity/
+# The repository does not currently include a dedicated plotting wrapper.
 
 # Figure 17: precision of access pattern identification.
 python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
@@ -150,7 +155,7 @@ CacheLib microbenchmark in `CacheLib/mybench/`.
 Estimated resource cost:
 
 - Download size (full set): about 2 TB
-- Download time: about a few hors to a few days (depends on network bandwidth)
+- Download time: about a few hours to a few days (depends on network bandwidth)
 
 The Figure 11-13 simulations use public traces from the cache-dataset archive:
 
@@ -179,7 +184,7 @@ the experiment you want to inspect.
 
 ### Figure 11-13: Hit Rate, Byte Hit Rate, and Relative Hit Ratio
 Estimated runtime and resources:
-- Aabout 1 million CPU-hours in aggregate
+- About 1 million CPU-hours in aggregate
 - Memory: recommend >= 1 TB for parallel execution
 - Disk: traces up to about 2 TB + outputs about 500 MB
 
@@ -313,6 +318,68 @@ MAX_JOBS=2 bash scripts/flash.sh
 if the machine has enough CPU and memory. The script writes raw outputs under
 `data/flash/<cache-size>/`. Use `scripts/process_flash.py` to summarize raw
 outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
+
+### Figure 16: Merlin Sensitivity Evaluation
+Estimated runtime and resources:
+- CPU: very high for the full evaluation
+- Memory: recommend >= 128GB, more if many jobs run concurrently
+- Disk: traces up to about 2 TB + outputs about a few hundred MB
+
+Figure 16 studies Merlin's sensitivity to three eviction parameters:
+`filter-size-ratio`, `staging-size-ratio`, and `ghost-size-ratio`. The
+evaluation fixes `epoch-update=32` and `sketch-scale=1.0`, and evaluates the
+following grid:
+
+- `filter-size-ratio`: `0.05`, `0.10`, `0.15`
+- `staging-size-ratio`: `0.01`, `0.05`, `0.10`
+- `ghost-size-ratio`: `0.25`, `0.50`, `1.00`, `2.00`
+
+The precomputed processed inputs used for Figure 16 are included in:
+
+- `data/sensitivity/`
+
+Each file is named as `<cache-size>-<ghost-size>.dat`. The columns contain the
+selected percentile points (`P10`, `P30`, `P50`, `P70`, `P90`) for Merlin's
+relative hit-ratio improvement over `LRU`, plus the corresponding
+`filtersize` and `stagingsize` values.
+
+To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
+same trace corpus used for Figure 11-13:
+
+```bash
+python3 scripts/sensitivity.py \
+  --root_dir ./libCacheSim/_build \
+  --input_dir ./CacheTrace \
+  --output_dir ./results/sensitivity \
+  --ignore_obj
+```
+
+The script writes raw simulator outputs under `./results/sensitivity/`. Convert
+them into cache-ratio CSVs with `scripts/readeval.py`:
+
+```bash
+python3 scripts/readeval.py \
+  --input_dir ./results/sensitivity \
+  --output_dir ./dataresult/sensitivity
+```
+
+Do not use `--normalize_policy` here, because the Merlin parameter suffixes are
+needed for Figure 16 and would otherwise be removed during preprocessing.
+
+Then merge the Merlin sensitivity-evaluation results with the `LRU` baseline from the main
+`withoutobjsize` results and generate the Figure 16 `.dat` files:
+
+```bash
+python3 scripts/getSen.py \
+  --input_dir ./dataresult/sensitivity \
+  --baseline_dir ./dataresult/withoutobjsize \
+  --output_dir ./data/sensitivity
+```
+
+`scripts/getSen.py` aggregates all selected datasets, computes relative hit
+ratio against `LRU`, and emits one `.dat` file per cache-size and ghost-size
+slice. The current repository includes these processed `.dat` files, but it
+does not include a dedicated plotting wrapper for Figure 16.
 
 ### Figure 17: Parameter-Tracking
 
