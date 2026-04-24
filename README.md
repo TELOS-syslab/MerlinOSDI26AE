@@ -96,6 +96,10 @@ python3 scripts/plot/throughput.py
 
 # Figure 15: flash-cache hit rate and normalized write bytes
 python3 scripts/plot/flash.py
+
+# Figure 17: precision of access pattern identification.
+python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
+python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 ```
 
 The expected output files are:
@@ -341,8 +345,8 @@ commands for inspecting Merlin and baselines on individual traces are:
 Or you can run the script
 ```bash
 bash scripts/precision.sh
-python scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
-python scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
+python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
+python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 ```
 
 
