@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Plot Figure 17 precision-vs-hit scatter points from .dat files.
+
+Each input file should contain columns named algo, hit, and precision. The
+script writes one PDF per input unless a single output path is provided.
+"""
 import os
 import math
 import argparse
@@ -89,7 +94,7 @@ def plot_one(dat_path, out_path=None):
 
     fig, ax = plt.subplots(figsize=(7.6, 4.2))
 
-    # 画点
+    # Plot one point per algorithm.
     for algo in ORDER:
         sub = df[df["algo"] == algo]
         if sub.empty:
@@ -100,6 +105,7 @@ def plot_one(dat_path, out_path=None):
         y = sub["hit"].iloc[0]
 
         if algo == "arc-f":
+            # ARC-F is drawn as a hollow marker with a small center dot.
             ax.scatter(
                 x, y,
                 s=style["size"],
@@ -196,7 +202,7 @@ def main():
     parser.add_argument(
         "inputs",
         nargs="+",
-        help="input .dat file(s), e.g. scripts/plot/precision.py *.dat"
+        help="input .dat file(s), e.g. data/precision/fiu.dat"
     )
     parser.add_argument(
         "-o", "--output",

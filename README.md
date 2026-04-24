@@ -3,11 +3,10 @@
 This artifact accompanies the OSDI'26 paper, "Merlin: An Efficient Adaptive
 Cache Eviction Algorithm via Fine-Grained Characterization."
 
-The artifact contains the Merlin implementation, the modified libCacheSim and
-CacheLib evaluation harnesses, scripts for reproducing the paper figures, and
-precomputed result files for the large experiments. The full trace-driven
-evaluation is intentionally optional because it requires very large public trace
-datasets and substantial compute time.
+The artifact includes the Merlin implementation, the modified libCacheSim and
+CacheLib evaluation harnesses, the plotting scripts, and precomputed result
+files for the large experiments. The full trace-driven evaluation is optional
+because it needs large public traces and substantial compute time.
 
 ## Artifact Claims
 
@@ -21,9 +20,9 @@ This artifact supports the main evaluation claims in the paper:
 - Merlin reduces flash write amplification while preserving hit rate in the
   CloudPhysics flash-cache experiment.
 
-The repository includes precomputed results under `data/` so that reviewers can
-quickly regenerate the figures. The scripts under `scripts/` and
-`CacheLib/mybench/` document how the corresponding results were produced.
+Precomputed results are bundled under `data/` so reviewers can regenerate the
+main figures quickly. The scripts under `scripts/` and `CacheLib/mybench/`
+document how the corresponding results were produced.
 
 ## Hardware and Software Requirements
 
@@ -44,29 +43,14 @@ The main software dependencies are Python 3, `pip`, `pandas`, `numpy`,
 dependencies. The helper scripts in `scripts/install_dependency.sh` and
 `scripts/install.sh` install and build the required components on Ubuntu 22.04.
 
-## Repository Layout
-
-- `README.md`: this artifact evaluation guide.
-- `scripts/`: installation, evaluation, post-processing, and plotting scripts.
-- `data/`: precomputed data used by the plotting scripts.
-- `data/HR/`: hit-rate and byte-hit-rate summaries for Figure 11 and Figure 12.
-- `data/RHR/`: relative-hit-ratio summaries for Figure 13.
-- `data/throughput/`: throughput results for Figure 14.
-- `data/flash/`: flash-cache results for Figure 15.
-- `data/sensitivity/`: Merlin sensitivity evaluation summaries for Figure 16.
-- `data/precision/`: tracking parameters results for Figure 17.
-- `libCacheSim/`: the modified libCacheSim code used for simulation.
-- `CacheLib/`: the modified CacheLib code used for throughput evaluation.
-- `CacheLib/mybench/`: CacheLib microbenchmark and trace-generation scripts.
-
 ## Getting Started Instructions
 
-These instructions are intended to check the basic functionality of the artifact
-within a short time frame. They regenerate figures from the precomputed result
-files and do not require downloading the full trace datasets.
+These instructions check the basic functionality of the artifact within a short
+time frame. They regenerate figures from the bundled results and do not require
+downloading the full trace datasets.
 
-Estimated runtime for this section: about 10-30 minutes end-to-end on a common
-desktop/server CPU.
+Estimated runtime: about 10-30 minutes end-to-end on a common desktop/server
+CPU.
 
 Clone the repository with submodules:
 
@@ -99,11 +83,8 @@ python3 scripts/plot/throughput.py
 # Figure 15: flash-cache hit rate and normalized write bytes
 python3 scripts/plot/flash.py
 
-# Figure 16: precomputed sensitivity-evaluation inputs are bundled in
-# data/sensitivity/
-# The repository does not currently include a dedicated plotting wrapper.
-
-# Figure 17: precision of access pattern identification.
+# Figure 16: precomputed sensitivity inputs are bundled in data/sensitivity/
+# Figure 17: precision of access pattern identification
 python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
 python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 ```
@@ -121,17 +102,14 @@ The expected output files are:
 ## Detailed Instructions
 
 This section describes how to rebuild the artifact and reproduce the results in
-more detail. The full experiments are optional for artifact evaluation because
-of their runtime and storage cost.
+more detail. The full experiments are optional because they are expensive in
+runtime, memory, and storage.
 
 ### Build Dependencies and Binaries
 
-Estimated runtime and resources:
-
-- Runtime: about 10 minutes
-- CPU: moderate to high during compilation
-- Memory: recommend >= 128GB
-- Additional disk: about 21GB (build artifacts + Docker image)
+Estimated cost: about 10 minutes, moderate-to-high CPU load, recommend
+`>=128GB` RAM, and about `21GB` of additional disk for build artifacts and the
+Docker image.
 
 On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
 
@@ -152,10 +130,8 @@ CacheLib microbenchmark in `CacheLib/mybench/`.
 
 ### Trace Dataset Layout
 
-Estimated resource cost:
-
-- Download size (full set): about 2 TB
-- Download time: about a few hours to a few days (depends on network bandwidth)
+Estimated resource cost: about `2TB` download size; download time depends on
+network bandwidth and can range from a few hours to a few days.
 
 The Figure 11-13 simulations use public traces from the cache-dataset archive:
 
@@ -183,10 +159,12 @@ The full dataset is large. For spot checks, download only the traces needed for
 the experiment you want to inspect.
 
 ### Figure 11-13: Hit Rate, Byte Hit Rate, and Relative Hit Ratio
-Estimated runtime and resources:
-- About 1 million CPU-hours in aggregate
-- Memory: recommend >= 1 TB for parallel execution
-- Disk: traces up to about 2 TB + outputs about 500 MB
+
+Recommended AE path: use the bundled results and plotting scripts.
+
+Estimated cost for a full rerun: about `1M CPU-hours` in aggregate, `>=1TB`
+RAM for aggressive parallel execution, and about `2TB` of trace storage plus
+small outputs.
 
 The precomputed results are already included in:
 
@@ -251,10 +229,11 @@ python3 scripts/getRHRcdf.py \
 ```
 
 ### Figure 14: Throughput
-Estimated runtime and resources:
-- CPU: high
-- Memory: recommend >= 32GB
-- Disk: 6GB for the artificial trace. 
+
+Recommended AE path: use the bundled results and `scripts/plot/throughput.py`.
+
+Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
+and about `6GB` disk for the synthetic trace.
 
 The precomputed throughput results are in:
 
@@ -277,9 +256,9 @@ python3 ./CacheLib/mybench/data_genmix.py \
 ```
 
 Then run the CacheLib microbenchmark inside the `cachelib-ae` Docker image
-created by `scripts/install.sh`. The benchmark scripts in `CacheLib/mybench/`
-show the exact algorithm, cache-size, hash-power, and thread-count settings used
-for the throughput experiment.
+created by `scripts/install.sh`. The helper script `scripts/throughput.sh`
+records the algorithm, cache-size, hash-power, and thread-count settings used
+for this experiment.
 
 ```bash
 bash scripts/throughput.sh woback
@@ -287,10 +266,11 @@ bash scripts/throughput.sh wback
 ```
 
 ### Figure 15: Flash-Cache Hit Rate and Write Bytes
-Estimated runtime and resources:
-- CPU: high
-- Memory: recommend >= 32GB
-- Disk: 8.5GB for the `CloudPhysics` traces.
+
+Recommended AE path: use the bundled results and `scripts/plot/flash.py`.
+
+Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
+and about `8.5GB` disk for the CloudPhysics traces.
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
@@ -320,28 +300,16 @@ if the machine has enough CPU and memory. The script writes raw outputs under
 outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 
 ### Figure 16: Merlin Sensitivity Evaluation
-Estimated runtime and resources:
-- CPU: very high for the full evaluation
-- Memory: recommend >= 128GB, more if many jobs run concurrently
-- Disk: traces up to about 2 TB + outputs about a few hundred MB
 
-Figure 16 studies Merlin's sensitivity to three eviction parameters:
-`filter-size-ratio`, `staging-size-ratio`, and `ghost-size-ratio`. The
-evaluation fixes `epoch-update=32` and `sketch-scale=1.0`, and evaluates the
-following grid:
+Recommended AE path: use the bundled processed inputs in `data/sensitivity/`.
 
-- `filter-size-ratio`: `0.05`, `0.10`, `0.15`
-- `staging-size-ratio`: `0.01`, `0.05`, `0.10`
-- `ghost-size-ratio`: `0.25`, `0.50`, `1.00`, `2.00`
+Estimated cost for the optional rerun: very high CPU load, recommend
+`>=128GB` RAM, and about `2TB` of trace storage plus outputs.
 
-The precomputed processed inputs used for Figure 16 are included in:
-
-- `data/sensitivity/`
-
-Each file is named as `<cache-size>-<ghost-size>.dat`. The columns contain the
-selected percentile points (`P10`, `P30`, `P50`, `P70`, `P90`) for Merlin's
-relative hit-ratio improvement over `LRU`, plus the corresponding
-`filtersize` and `stagingsize` values.
+Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
+`staging-size-ratio`, and `ghost-size-ratio` parameters. The precomputed
+`.dat` files already in `data/sensitivity/` contain the percentile summaries
+used by the paper.
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
 same trace corpus used for Figure 11-13:
@@ -366,7 +334,7 @@ python3 scripts/readeval.py \
 Do not use `--normalize_policy` here, because the Merlin parameter suffixes are
 needed for Figure 16 and would otherwise be removed during preprocessing.
 
-Then merge the Merlin sensitivity-evaluation results with the `LRU` baseline from the main
+Then merge the Merlin sensitivity results with the `LRU` baseline from the main
 `withoutobjsize` results and generate the Figure 16 `.dat` files:
 
 ```bash
@@ -376,16 +344,20 @@ python3 scripts/getSen.py \
   --output_dir ./data/sensitivity
 ```
 
-`scripts/getSen.py` aggregates all selected datasets, computes relative hit
+`scripts/getSen.py` aggregates the selected datasets, computes relative hit
 ratio against `LRU`, and emits one `.dat` file per cache-size and ghost-size
-slice. The current repository includes these processed `.dat` files, but it
-does not include a dedicated plotting wrapper for Figure 16.
+slice.
 
-### Figure 17: Parameter-Tracking
+### Figure 17: Access-Pattern Precision
 
-The parameter-tracking build is created under `libCacheSim/_build2/`. You need to prepare the traces `./CacheTrace/twitter/cluster8.oracleGeneral.bin.zst` and `./CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst`. 
+Recommended AE path: use the bundled `data/precision/*.dat` files and
+`scripts/plot/precision.py`.
 
-Example commands for inspecting Merlin and baselines on individual traces are:
+Estimated cost for the optional rerun: high CPU load, recommend `>=128GB` RAM,
+and the same trace storage needed for the precision traces.
+
+The parameter-tracking build is created under `libCacheSim/_build2/`. Prepare
+the Twitter and FIU traces listed below, then run:
 
 ```bash
 bash scripts/precision.sh
@@ -396,16 +368,9 @@ python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 
 ## Notes for Reviewers
 
-- The quick-start path regenerates all provided figures from bundled data and is
-  the recommended AE baseline due to low resource cost.
-- The full trace-driven evaluation is reproducible but very expensive in CPU
-  time, memory, and storage; we recommend spot-checking representative traces
-  unless sufficient compute is available.
-- The scripts are resumable in the sense that they inspect existing output files
-  and skip completed policy results when possible.
-- No private datasets are required. The large traces are publicly available from
-  the URLs listed above.
-- The artifact does not intentionally perform destructive operations. The
-  installation scripts do use `sudo apt`, `sudo make install`, and Docker.
-- The repository does not include the full trace corpus. This keeps the artifact
-  package small and relies on the public dataset archive listed below.
+- Use the Getting Started path for the lowest-cost AE check.
+- Full reproduction is available but expensive in CPU time, memory, and
+  storage.
+- The scripts are resumable and skip completed results when possible.
+- No private datasets are required; all large traces are publicly available.
+- The installation scripts use `sudo apt`, `sudo make install`, and Docker.
