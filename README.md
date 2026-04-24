@@ -84,6 +84,8 @@ python3 scripts/plot/throughput.py
 python3 scripts/plot/flash.py
 
 # Figure 16: precomputed sensitivity inputs are bundled in data/sensitivity/
+python3 scripts/plot/sensitivity.py
+
 # Figure 17: precision of access pattern identification
 python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
 python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
@@ -98,6 +100,7 @@ The expected output files are:
 - `flash.pdf`
 - `fiu.pdf`
 - `twitter.pdf`
+- `sensitivity.pdf`
 
 ## Detailed Instructions
 

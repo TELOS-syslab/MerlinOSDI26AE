@@ -1,12 +1,12 @@
 #!/bin/bash
 # Run flash-cache experiments for Figure 15.
 #
-# Input traces are read from ./raw_data/cloudphysics. For each trace, this
+# Input traces are read from ./CacheTrace/cloudphysics. For each trace, this
 # script runs multiple policies, cache sizes, and DRAM ratios with bounded
 # concurrency controlled by MAX_JOBS.
 set -euo pipefail
 
-dir="./raw_data/cloudphysics"
+dir="./CacheTrace/cloudphysics"
 output_root="./data/flash"
 flash_bin="./libCacheSim/_build/bin/flash"
 

@@ -151,7 +151,8 @@ def plot_one(dat_path, out_path=None):
     x_upper = nice_upper_bound(x_max * 1.08, 20)
     y_upper = nice_upper_bound(y_max * 1.08, 3)
 
-    x_upper = max(x_upper, 40)
+    # x_upper = max(x_upper, 40)
+    x_upper = 108
     y_upper = max(y_upper, 6)
 
     ax.set_xlim(0, x_upper)
@@ -174,7 +175,7 @@ def plot_one(dat_path, out_path=None):
     ax.tick_params(axis="both", direction="in", pad=12)
 
     ax.set_xlabel("Precision(%)", labelpad=10)
-    ax.set_ylabel("Hit(%)", labelpad=10)
+    ax.set_ylabel("Average Hit", labelpad=10)
 
     ax.legend(
         loc="center left",
