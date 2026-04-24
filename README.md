@@ -21,8 +21,8 @@ This artifact supports the main evaluation claims in the paper:
   CloudPhysics flash-cache experiment.
 
 Precomputed results are bundled under `data/` so reviewers can regenerate the
-main figures quickly. The scripts under `scripts/` and `CacheLib/mybench/`
-document how the corresponding results were produced.
+main figures quickly. The scripts under `scripts/` document how the
+corresponding results were produced.
 
 ## Hardware and Software Requirements
 
@@ -126,7 +126,7 @@ XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
   tracking experiments.
 
 The same script also builds the Docker image `cachelib-ae` and compiles the
-CacheLib microbenchmark in `CacheLib/mybench/`.
+throughput benchmark binaries used by `scripts/throughput.sh`.
 
 ### Trace Dataset Layout
 
@@ -249,7 +249,7 @@ python3 scripts/plot/throughput.py
 To reproduce the throughput data, first generate the synthetic mixed trace:
 
 ```bash
-python3 ./CacheLib/mybench/data_genmix.py \
+python3 ./scripts/data_genmix.py \
   -m 1000000 \
   -n 100000000 \
   --bin-output ./mix.oracleGeneral.bin

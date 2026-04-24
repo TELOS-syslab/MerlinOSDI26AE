@@ -1,14 +1,13 @@
 #!/bin/bash
-# Run CacheLib mybench throughput experiments and write plot-ready summaries.
+# Run throughput experiments and write plot-ready summaries.
 #
 # Input:
-#   - CacheLib/mybench sources and build scripts
-#   - trace file (default: CacheTrace/mix.oracleGeneral.bin)
+#   - throughput trace file (default: CacheTrace/mix.oracleGeneral.bin)
 # Output:
 #   - data/throughput/woback/*.dat or data/throughput/wback/*.dat
 #
-# Keep mybench logic in CacheLib/mybench and call it through this wrapper to
-# avoid maintaining duplicated benchmark scripts in multiple directories.
+# This wrapper keeps one stable AE entrypoint while invoking the benchmark
+# binaries in the expected build directory.
 set -euo pipefail
 
 MODE=${1:-woback}
@@ -49,7 +48,6 @@ sudo docker run --rm --cap-add=SYS_NICE \
   -e OUT_DIR="$OUT_DIR" \
   cachelib-ae /bin/bash -lc '
 set -euo pipefail
-# Build and run inside the container so toolchain/runtime are consistent.
 cd /Merlin/CacheLib/mybench
 bash "$BUILD_SCRIPT"
 mkdir -p "/Merlin/$OUT_DIR"
@@ -62,7 +60,6 @@ for algo in $ALGOS; do
     log="/tmp/${MODE}_${algo}_${thread}.log"
     echo "[RUN] $algo threads=$thread trace=$TRACE cache=${cache_mb}MB hashpower=$hashpower"
     numactl --membind=0 "./_build/$algo" "/Merlin/$TRACE" "$cache_mb" "$hashpower" "$thread" | tee "$log"
-    # Parse the final summary line emitted by the benchmark binary.
     last=$(grep "^cachelib " "$log" | tail -n 1 || true)
     if [ -z "$last" ]; then
       echo "failed to parse result for $algo thread $thread" >&2

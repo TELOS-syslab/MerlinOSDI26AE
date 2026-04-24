@@ -1,12 +1,15 @@
 #!/bin/bash
 # Build libCacheSim and the CacheLib benchmark environment for the artifact.
 #
+# Output:
+#   - libCacheSim/_build
+#   - libCacheSim/_build2
+#   - Docker image: cachelib-ae
+#
 # This script intentionally builds two libCacheSim variants: one normal build
 # for the main evaluation and one TRACK_PARAMETERS build for parameter-tracking
 # experiments.
 set -ue
-
-# Install libCacheSim and CacheLib
 
 # Normal libCacheSim build used by evaluation.py and flash.sh.
 pushd libCacheSim
