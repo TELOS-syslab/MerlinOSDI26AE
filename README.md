@@ -338,6 +338,14 @@ commands for inspecting Merlin and baselines on individual traces are:
   oracleGeneral arc 0.2 --ignore-obj-size=true
 ```
 
+Or you can run the script
+```bash
+bash scripts/precision.sh
+python scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
+python scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
+```
+
+
 ## Notes for Reviewers
 
 - The quick-start path regenerates all provided figures from bundled data and is
