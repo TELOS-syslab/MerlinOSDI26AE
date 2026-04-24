@@ -63,10 +63,8 @@ typedef struct ARC_params {
 } ARC_params_t;
 
 #ifdef TRACK_PARAMETERS
-    #ifdef OUTPUT_GAP
-        int outputgap = OUTPUT_GAP;
-    #else
-        int outputgap = 10000;
+    #ifndef OUTPUT_GAP
+        #define OUTPUT_GAP 10000
     #endif
 #endif
 // ***********************************************************************
@@ -207,7 +205,7 @@ static void ARC_free(cache_t *cache) {
 static bool ARC_get(cache_t *cache, const request_t *req) {
         #ifdef TRACK_PARAMETERS
         ARC_params_t *params = (ARC_params_t *)(cache->eviction_params);
-    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%outputgap)==0){
+    if(abs(params->track_p - params->p) > 0.02 * cache->n_obj || (cache->n_req%OUTPUT_GAP)==0){
         params->track_p = params->p;
         printf("%ld ARC p: %.4lf percent: %.4lf\n", cache->n_req, params->p, params->p / cache->n_obj);
         printf("#req %d, object from t1 ghost %d, average hit %lf, precision %lf, object from t2 ghost %d, average hit %lf, precision %lf\n",

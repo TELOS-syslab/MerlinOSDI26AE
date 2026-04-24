@@ -32,10 +32,8 @@ typedef struct Cacheusfix_params {
 } Cacheusfix_params_t;
 
 #ifdef TRACK_PARAMETERS
-    #ifdef OUTPUT_GAP
-        int outputgap = OUTPUT_GAP;
-    #else
-        int outputgap = 10000;
+    #ifndef OUTPUT_GAP
+        #define OUTPUT_GAP 10000
     #endif
 #endif
 
@@ -193,7 +191,7 @@ static bool Cacheusfix_get(cache_t *cache, const request_t *req) {
   }
 
     #ifdef TRACK_PARAMETERS
-  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%outputgap)==0) {
+  if (abs(params->track_wlru - params->w_lru) > 0.02 || (cache->n_req%OUTPUT_GAP)==0) {
     if(abs(params->track_wlru - params->w_lru) > 0.02){
         params->track_wlru = params->w_lru;
     }

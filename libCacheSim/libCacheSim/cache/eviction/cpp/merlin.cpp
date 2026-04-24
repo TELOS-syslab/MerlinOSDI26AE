@@ -89,10 +89,8 @@ namespace eviction
 } // namespace eviction
 
 #ifdef TRACK_PARAMETERS
-    #ifdef OUTPUT_GAP
-        int outputgap = OUTPUT_GAP;
-    #else
-        int outputgap = 10000;
+    #ifndefOUTPUT_GAP
+        #define OUTPUT_GAP 10000
     #endif
 #endif
 
@@ -239,7 +237,7 @@ extern "C"
     {
         #ifdef TRACK_PARAMETERS
         auto *params = reinterpret_cast<eviction::merlin_params_t *>(cache->eviction_params);
-        if(params->guard_freq != params->track_freq || (cache->n_req%outputgap)==0){
+        if(params->guard_freq != params->track_freq || (cache->n_req%OUTPUT_GAP)==0){
             params->track_freq = params->guard_freq;
             printf("%ld merlin guard_freq: %d epoch guess: %d ", cache->n_req, params->guard_freq, params->filter2staging);
             printf("obj2core: %lu average hit in core: %lf precision %lf\n", params->obj2core, params->hitobjcore==0?0:(double)params->hitcore/params->hitobjcore, params->obj2core==0?0:(double)params->hitobjcore/params->obj2core);
