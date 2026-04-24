@@ -307,7 +307,7 @@ if the machine has enough CPU and memory. The script writes raw outputs under
 `data/flash/<cache-size>/`. Use `scripts/process_flash.py` to summarize raw
 outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 
-### Parameter-Tracking
+### Figure 17: Parameter-Tracking
 
 The parameter-tracking build is created under `libCacheSim/_build2/`. Example
 commands for inspecting Merlin and baselines on individual traces are:
