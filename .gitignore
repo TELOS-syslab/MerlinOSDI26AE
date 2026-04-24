@@ -4,3 +4,4 @@ data/flash/0.1/
 data/flash/0.01/
 .vscode/
 *.cachesim
+scripts/plot/__pycache__/
