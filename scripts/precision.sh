@@ -1,6 +1,13 @@
 #!/bin/bash
 # Run precision experiments for Merlin, Cacheus, and ARC and write CSV-style
 # summaries under data/precision.
+#
+# Input:
+#   - libCacheSim/_build2/bin/cachesim
+#   - CacheTrace/twitter/... and CacheTrace/fiu/... traces
+# Output:
+#   - data/precision/twitter.dat
+#   - data/precision/fiu.dat
 set -euo pipefail
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
@@ -92,7 +99,7 @@ FIU_OUT="$ROOT/data/precision/fiu.dat"
 init_out "$TWITTER_OUT"
 init_out "$FIU_OUT"
 
-# Twitter uses a 10% cache ratio for the Figure 16 precision comparison.
+# Twitter uses a 10% cache ratio for the Figure 17 precision comparison.
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" merlin 0.1 "$TWITTER_OUT"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" cacheus 0.1 "$TWITTER_OUT"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" arc 0.1 "$TWITTER_OUT"
