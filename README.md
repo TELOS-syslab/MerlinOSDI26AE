@@ -255,7 +255,7 @@ To reproduce the throughput data, first generate the synthetic mixed trace:
 python3 ./scripts/data_genmix.py \
   -m 1000000 \
   -n 100000000 \
-  --bin-output ./mix.oracleGeneral.bin
+  --bin-output ./CacheTrace/mix.oracleGeneral.bin
 ```
 
 Then run the CacheLib microbenchmark inside the `cachelib-ae` Docker image
