@@ -6,23 +6,27 @@ Cache Eviction Algorithm via Fine-Grained Characterization."
 The artifact includes the Merlin implementation, the modified libCacheSim and
 CacheLib evaluation harnesses, the plotting scripts, and precomputed result
 files for the large experiments. The full trace-driven evaluation is optional
-because it needs large public traces and substantial compute time.
+because it needs large public datasets and substantial compute time.
 
 ## Artifact Claims
 
 This artifact supports the main evaluation claims in the paper:
 
-- Merlin improves hit rate and byte hit rate over existing cache eviction
-  algorithms across diverse traces.
-- Merlin improves the relative hit ratio compared with the dominant algorithm
-  on representative traces.
-- Merlin achieves competitive throughput in the CacheLib-based implementation.
+- Merlin improves hit-rate and byte-hit-rate metrics over existing cache
+  eviction algorithms across diverse workloads ([Figure 11-13](README.md#figure-11-13-hit-rate-byte-hit-rate-and-relative-hit-ratio)).
+- Merlin is adaptive and compatiable to the dominant algorithms on
+  representative datasets ([Figure 11-13](README.md#figure-11-13-hit-rate-byte-hit-rate-and-relative-hit-ratio)).
+- Merlin achieves competitive throughput in the CacheLib-based implementation
+  ([Figure 14](README.md#figure-14-throughput)).
 - Merlin reduces flash write amplification while preserving hit rate in the
-  CloudPhysics flash-cache experiment.
+ flash-cache experiment ([Figure 15](README.md#figure-15-flash-cache-hit-rate-and-write-bytes)).
+- Merlin remains robust under sensitivity analysis ([Figure 16](README.md#figure-16-merlin-sensitivity-evaluation)).
+- Merlin shows favorable access-pattern identification precision compared with
+  baseline mechanisms ([Figure 17](README.md#figure-17-access-pattern-precision)).
 
 Precomputed results are bundled under `data/` so reviewers can regenerate the
-main figures quickly. The scripts under `scripts/` document how the
-corresponding results were produced.
+main figures quickly (Figure 11-17). The scripts under `scripts/` document how
+the corresponding results were produced.
 
 ## Hardware and Software Requirements
 
@@ -32,7 +36,7 @@ on an AMD server with 384 hardware threads (two AMD EPYC 9965 processors).
 For the quick checks, a normal Linux machine with Python 3 is sufficient. Full
 trace-driven reproduction needs much more storage and compute:
 
-- The public traces are approximately 2 TB if downloaded in full.
+- The public datasets are approximately 2 TB if downloaded in full.
 - Reproducing all Figure 11-13 simulations can take roughly 1 million CPU hours.
 - The simulator runs experiments in parallel, but each job can require
   significant memory. If memory is limited, reduce parallelism or run individual
@@ -47,7 +51,7 @@ dependencies. The helper scripts in `scripts/install_dependency.sh` and
 
 These instructions check the basic functionality of the artifact within a short
 time frame. They regenerate figures from the bundled results and do not require
-downloading the full trace datasets.
+downloading the full datasets.
 
 Estimated runtime: about 10-30 minutes end-to-end on a common desktop/server
 CPU.
@@ -83,7 +87,7 @@ python3 scripts/plot/throughput.py
 # Figure 15: flash-cache hit rate and normalized write bytes
 python3 scripts/plot/flash.py
 
-# Figure 16: precomputed sensitivity inputs are bundled in data/sensitivity/
+# Figure 16: Merlin's sensitivity to queue size
 python3 scripts/plot/sensitivity.py
 
 # Figure 17: precision of access pattern identification
@@ -98,9 +102,9 @@ The expected output files are:
 - `relative_hit_ratio.pdf`
 - `throughput.pdf`
 - `flash.pdf`
+- `sensitivity.pdf`
 - `fiu.pdf`
 - `twitter.pdf`
-- `sensitivity.pdf`
 
 ## Detailed Instructions
 
@@ -125,18 +129,17 @@ bash ./scripts/install.sh
 XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
 
 - `libCacheSim/_build/`: normal build for the main simulations.
-- `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for parameter
-  tracking experiments.
+- `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for percision experiments.
 
 The same script also builds the Docker image `cachelib-ae` and compiles the
 throughput benchmark binaries used by `scripts/throughput.sh`.
 
-### Trace Dataset Layout
+### Downloaded Datasets Layout
 
 Estimated resource cost: about `2TB` download size; download time depends on
 network bandwidth and can range from a few hours to a few days.
 
-The Figure 11-13 simulations use public traces from the cache-dataset archive:
+The Figure 11-13 simulations use public datasets from the cache-dataset archive:
 
 <https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/>
 
@@ -158,7 +161,7 @@ CacheTrace/
   wikimedia/
 ```
 
-The full dataset is large. For spot checks, download only the traces needed for
+The full datasets are large. For spot checks, download the datasets needed for
 the experiment you want to inspect.
 
 ### Figure 11-13: Hit Rate, Byte Hit Rate, and Relative Hit Ratio
@@ -166,7 +169,7 @@ the experiment you want to inspect.
 Recommended AE path: use the bundled results and plotting scripts.
 
 Estimated cost for a full rerun: about `1M CPU-hours` in aggregate, `>=1TB`
-RAM for aggressive parallel execution, and about `2TB` of trace storage plus
+RAM for aggressive parallel execution, and about `2TB` of datasets storage plus
 small outputs.
 
 The precomputed results are already included in:
@@ -273,7 +276,7 @@ bash scripts/throughput.sh wback
 Recommended AE path: use the bundled results and `scripts/plot/flash.py`.
 
 Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
-and about `8.5GB` disk for the CloudPhysics traces.
+and about `8.5GB` disk for the CloudPhysics dataset.
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
@@ -281,11 +284,11 @@ The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 python3 scripts/plot/flash.py
 ```
 
-To reproduce the raw flash-cache measurements, download the CloudPhysics traces:
+To reproduce the raw flash-cache measurements, download the CloudPhysics dataset:
 
 <https://ftp.pdl.cmu.edu/pub/datasets/twemcacheWorkload/cacheDatasets/cloudphysics/>
 
-Place the traces under:
+Place the dataset under:
 
 ```text
 CacheTrace/cloudphysics/
@@ -307,7 +310,7 @@ outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 Recommended AE path: use the bundled processed inputs in `data/sensitivity/`.
 
 Estimated cost for the optional rerun: very high CPU load, recommend
-`>=128GB` RAM, and about `2TB` of trace storage plus outputs.
+`>=128GB` RAM, and about `2TB` of datasets storage plus outputs.
 
 Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
 `staging-size-ratio`, and `ghost-size-ratio` parameters. The precomputed
@@ -315,7 +318,7 @@ Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
 used by the paper.
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
-same trace corpus used for Figure 11-13:
+same datasets corpus used for Figure 11-13:
 
 ```bash
 python3 scripts/sensitivity.py \
@@ -357,7 +360,7 @@ Recommended AE path: use the bundled `data/precision/*.dat` files and
 `scripts/plot/precision.py`.
 
 Estimated cost for the optional rerun: high CPU load, recommend `>=128GB` RAM,
-and the same trace storage needed for the precision traces.
+and the same datasets storage needed for the precision dataset.
 
 The parameter-tracking build is created under `libCacheSim/_build2/`. Prepare
 the Twitter and FIU traces listed below, then run:
@@ -375,5 +378,5 @@ python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 - Full reproduction is available but expensive in CPU time, memory, and
   storage.
 - The scripts are resumable and skip completed results when possible.
-- No private datasets are required; all large traces are publicly available.
+- No private datasets are required; all large datasets are publicly available.
 - The installation scripts use `sudo apt`, `sudo make install`, and Docker.
