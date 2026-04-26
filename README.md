@@ -6,7 +6,7 @@ Cache Eviction Algorithm via Fine-Grained Characterization."
 The artifact includes the Merlin implementation, the modified libCacheSim and
 CacheLib evaluation harnesses, the plotting scripts, and precomputed result
 files for the large experiments. The full trace-driven evaluation is optional
-because it needs large public datasets and substantial compute time.
+because it requires large public datasets and substantial compute time.
 
 ## Artifact Claims
 
@@ -14,12 +14,11 @@ This artifact supports the main evaluation claims in the paper:
 
 - Merlin improves hit-rate and byte-hit-rate metrics over existing cache
   eviction algorithms across diverse workloads ([Figure 11-13](README.md#figure-11-13-hit-rate-byte-hit-rate-and-relative-hit-ratio)).
-- Merlin is adaptive and compatiable to the dominant algorithms on
+- Merlin is adaptive and comparable to the dominant algorithms on
   representative datasets ([Figure 11-13](README.md#figure-11-13-hit-rate-byte-hit-rate-and-relative-hit-ratio)).
 - Merlin achieves competitive throughput in the CacheLib-based implementation
   ([Figure 14](README.md#figure-14-throughput)).
-- Merlin reduces flash write amplification while preserving hit rate in the
- flash-cache experiment ([Figure 15](README.md#figure-15-flash-cache-hit-rate-and-write-bytes)).
+- Merlin reduces flash write amplification while preserving hit rate in the flash-cache experiment ([Figure 15](README.md#figure-15-flash-cache-hit-rate-and-write-bytes)).
 - Merlin remains robust under sensitivity analysis ([Figure 16](README.md#figure-16-merlin-sensitivity-evaluation)).
 - Merlin shows favorable access-pattern identification precision compared with
   baseline mechanisms ([Figure 17](README.md#figure-17-access-pattern-precision)).
@@ -114,7 +113,7 @@ runtime, memory, and storage.
 
 ### Build Dependencies and Binaries
 
-Estimated cost: about 10 minutes, moderate-to-high CPU load, recommend
+Estimated cost: about 10 minutes, moderate-to-high CPU load, recommended
 `>=128GB` RAM, and about `21GB` of additional disk for build artifacts and the
 Docker image.
 
@@ -129,7 +128,7 @@ bash ./scripts/install.sh
 XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
 
 - `libCacheSim/_build/`: normal build for the main simulations.
-- `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for percision experiments.
+- `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for precision experiments.
 
 The same script also builds the Docker image `cachelib-ae` and compiles the
 throughput benchmark binaries used by `scripts/throughput.sh`.
@@ -206,7 +205,11 @@ python3 scripts/evaluation.py \
 
 If you want to run the trace step by step instead of the script, please run:
 ```bash
+# For object hit rate
+./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral policy ratio --num-thread 2 --outputdir output_dir --ignore-obj-size=true
 
+# For byte hit rate
+./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral policy ratio --num-thread 2 --outputdir output_dir --ignore-obj-size
 ```
 
 Post-process the simulation outputs:
@@ -243,10 +246,10 @@ python3 scripts/getRHRcdf.py \
 
 Recommended AE path: use the bundled results and `scripts/plot/throughput.py`.
 
-Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
+Estimated cost for the optional rerun: high CPU load, recommended `>=32GB` RAM,
 and about `6GB` disk for the synthetic trace.
 
-**Attention: You'd better run the throughput experiment on a machine with at least`32 cores`.**
+**Attention: We recommend running the throughput experiment on a machine with at least `32 cores.`**
 
 The precomputed throughput results are in:
 
@@ -282,7 +285,7 @@ bash scripts/throughput.sh wback
 
 Recommended AE path: use the bundled results and `scripts/plot/flash.py`.
 
-Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
+Estimated cost for the optional rerun: high CPU load, recommended `>=32GB` RAM,
 and about `8.5GB` disk for the CloudPhysics dataset.
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
@@ -318,7 +321,7 @@ outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 
 Recommended AE path: use the bundled processed inputs in `data/sensitivity/`.
 
-Estimated cost for the optional rerun: very high CPU load, recommend
+Estimated cost for the optional rerun: very high CPU load, recommended
 `>=128GB` RAM, and about `2TB` of datasets storage plus outputs.
 
 Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
@@ -375,7 +378,7 @@ slice.
 Recommended AE path: use the bundled `data/precision/*.dat` files and
 `scripts/plot/precision.py`.
 
-Estimated cost for the optional rerun: high CPU load, recommend `>=128GB` RAM,
+Estimated cost for the optional rerun: high CPU load, recommended `>=128GB` RAM,
 and the same datasets storage needed for the precision dataset.
 
 The parameter-tracking build is created under `libCacheSim/_build2/`. Prepare

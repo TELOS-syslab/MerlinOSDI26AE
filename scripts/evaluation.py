@@ -109,11 +109,11 @@ def kill_shortest_jobs_until_safe():
             return
 
 # =============================
-# extract important lines
+# Extract important lines
 # =============================
 def extract_important_lines(stdout_lines):
     """
-    extract important lines from cachesim output, unify cache size format
+    Extract important lines from cachesim output and normalize the cache-size format.
     supports:
         590
         1968
@@ -141,7 +141,7 @@ def extract_important_lines(stdout_lines):
 
 def convert_to_bytes(size_str):
     """
-    convert cache size string to bytes integer
+    Convert a cache-size string to an integer number of bytes.
     2GiB -> 2*1024*1024*1024
     590  -> 590
     """
@@ -174,7 +174,7 @@ def get_available_workers():
     return max(0, workers)
 
 # -----------------------------
-# Recover from existing result files and only schedule policies that are not done.
+# Recover from existing result files and only schedule policies that have not yet completed.
 # -----------------------------
 def get_policy_todo(result_file):
     done = set()
@@ -193,7 +193,7 @@ def get_policy_todo(result_file):
     return todo
 
 # -----------------------------
-# Execute one cachesim command. The caller retries False/"KILLED" results.
+# Execute one cachesim command. The caller retries commands that return False or "KILLED".
 # -----------------------------
 def run_cmd(cmd, result_file):
     global oom_happen, oom_time

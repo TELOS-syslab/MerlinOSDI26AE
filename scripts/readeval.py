@@ -7,9 +7,8 @@ Input:
 Output:
     dataresult/<mode>/<dataset>/<cache-ratio>.csv
 
-Each output CSV contains one row per trace and one column per policy. The value
-stored here is byte miss ratio, which later scripts convert into hit-rate style
-metrics.
+Each output CSV contains one row per trace and one column per policy. The stored 
+value is the byte miss ratio, which later scripts convert into hit-rate style metrics.
 """
 import os
 import re
@@ -47,7 +46,7 @@ def normalize_policy(name):
     return name
 
 # =============================
-# size to byte
+# size to bytes
 # =============================
 def convert_size(size):
     """Normalize cache-size strings to bytes so files sort consistently."""
@@ -60,7 +59,7 @@ def convert_size(size):
     return int(float(size))
 
 # =============================
-# parse file and return list of (size, {policy: bmr})
+# Parse a file and return a list of (size, {policy: bmr})
 # =============================
 def parse_file(filepath):
     """Parse one raw result file into sorted cache-size buckets."""
