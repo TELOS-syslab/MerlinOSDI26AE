@@ -20,11 +20,11 @@ This artifact supports the main evaluation claims in the paper:
   ([Figure 14](README.md#figure-14-throughput)).
 - Merlin reduces flash write amplification while preserving hit rate in the flash-cache experiment ([Figure 15](README.md#figure-15-flash-cache-hit-rate-and-write-bytes)).
 - Merlin remains robust under sensitivity analysis ([Figure 16](README.md#figure-16-merlin-sensitivity-evaluation)).
-- Merlin shows favorable access-pattern identification precision compared with
+- Merlin shows a favorable access-pattern identification precision compared with
   baseline mechanisms ([Figure 17](README.md#figure-17-access-pattern-precision)).
 
 Precomputed results are bundled under `data/` so reviewers can regenerate the
-main figures quickly (Figure 11-17). The scripts under `scripts/` document how
+main figures quickly (Figures 11-17). The scripts under `scripts/` document how
 the corresponding results were produced.
 
 ## Hardware and Software Requirements
@@ -168,7 +168,7 @@ the experiment you want to inspect.
 Recommended AE path: use the bundled results and plotting scripts.
 
 Estimated cost for a full rerun: about `1M CPU-hours` in aggregate, `>=1TB`
-RAM for aggressive parallel execution, and about `2TB` of datasets storage plus
+RAM for aggressive parallel execution, and about `2TB` of dataset storage plus
 small outputs.
 
 The precomputed results are already included in:
@@ -247,7 +247,7 @@ python3 scripts/getRHRcdf.py \
 Recommended AE path: use the bundled results and `scripts/plot/throughput.py`.
 
 Estimated cost for the optional rerun: high CPU load, recommended `>=32GB` RAM,
-and about `6GB` disk for the synthetic trace.
+and about `6GB` of disk for the synthetic trace.
 
 **Attention: We recommend running the throughput experiment on a machine with at least `32 cores.`**
 
@@ -286,7 +286,7 @@ bash scripts/throughput.sh wback
 Recommended AE path: use the bundled results and `scripts/plot/flash.py`.
 
 Estimated cost for the optional rerun: high CPU load, recommended `>=32GB` RAM,
-and about `8.5GB` disk for the CloudPhysics dataset.
+and about `8.5GB` of disk for the CloudPhysics dataset.
 
 The precomputed flash-cache results are in `data/flash/`. Regenerate the figure:
 
@@ -335,7 +335,7 @@ used by the paper.
 ```
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
-same datasets corpus used for Figure 11-13:
+same datasets corpus used for Figures 11-13:
 
 ```bash
 python3 scripts/sensitivity.py \
@@ -367,7 +367,7 @@ python3 scripts/getSen.py \
   --output_dir ./data/sensitivity
 ```
 
-`scripts/getSen.py` aggregates the selected datasets, computes relative hit
+`scripts/getSen.py` aggregates the selected datasets, computes the relative hit
 ratio against `LRU`, and emits one `.dat` file per cache-size and ghost-size
 slice.
 
