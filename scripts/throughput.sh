@@ -52,9 +52,24 @@ cd /Merlin/CacheLib/mybench
 bash "$BUILD_SCRIPT"
 mkdir -p "/Merlin/$OUT_DIR"
 
+cpu_cores=$(nproc)
+selected_threads=""
+if [ "$cpu_cores" -lt 32 ]; then
+  for thread in $THREADS; do
+    if [ "$thread" -le "$cpu_cores" ]; then
+      selected_threads="$selected_threads $thread"
+    fi
+  done
+  selected_threads=$(echo "$selected_threads" | xargs)
+  echo "Due to hardware limitations, run experiments up to ${cpu_cores} threads: ${selected_threads}"
+else
+  selected_threads="$THREADS"
+  echo "Hardware is sufficient, run the full experiment set."
+fi
+
 for algo in $ALGOS; do
   : > "/Merlin/$OUT_DIR/$algo.dat"
-  for thread in $THREADS; do
+  for thread in $selected_threads; do
     cache_mb=$(echo "${CACHE_MB_BASE} * ${thread}" | bc)
     hashpower=$(echo "${HASHPOWER_BASE} + l(${thread})/l(2)" | bc -l | cut -d"." -f1)
     log="/tmp/${MODE}_${algo}_${thread}.log"

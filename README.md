@@ -204,6 +204,11 @@ python3 scripts/evaluation.py \
   --output_dir ./results/eval_with_obj
 ```
 
+If you want to run the trace step by step instead of the script, please run:
+```bash
+
+```
+
 Post-process the simulation outputs:
 
 ```bash
@@ -240,6 +245,8 @@ Recommended AE path: use the bundled results and `scripts/plot/throughput.py`.
 
 Estimated cost for the optional rerun: high CPU load, recommend `>=32GB` RAM,
 and about `6GB` disk for the synthetic trace.
+
+**Attention: You'd better run the throughput experiment on a machine with at least`32 cores`.**
 
 The precomputed throughput results are in:
 
@@ -305,6 +312,8 @@ if the machine has enough CPU and memory. The script writes raw outputs under
 `data/flash/<cache-size>/`. Use `scripts/process_flash.py` to summarize raw
 outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
 
+*The experimental instructions are similar to those used in Figure 11-13. Please refer to the script for specific details.*
+
 ### Figure 16: Merlin Sensitivity Evaluation
 
 Recommended AE path: use the bundled processed inputs in `data/sensitivity/`.
@@ -316,6 +325,11 @@ Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
 `staging-size-ratio`, and `ghost-size-ratio` parameters. The precomputed
 `.dat` files already in `data/sensitivity/` contain the percentile summaries
 used by the paper.
+
+**To get the baseline results, you can run with:**
+```bash
+./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral merlin 0.1
+```
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
 same datasets corpus used for Figure 11-13:
@@ -354,6 +368,8 @@ python3 scripts/getSen.py \
 ratio against `LRU`, and emits one `.dat` file per cache-size and ghost-size
 slice.
 
+*The experimental instructions are similar to those used in Figure 11-13. Please refer to the script for specific details.*
+
 ### Figure 17: Access-Pattern Precision
 
 Recommended AE path: use the bundled `data/precision/*.dat` files and
@@ -371,6 +387,7 @@ python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
 python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 ```
 
+*The experimental instructions are similar to those used in Figure 11-13. Please refer to the script for specific details.*
 
 ## Notes for Reviewers
 
