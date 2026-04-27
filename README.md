@@ -8,6 +8,26 @@ CacheLib evaluation harnesses, the plotting scripts, and precomputed result
 files for the large experiments. The full trace-driven evaluation is optional
 because it requires large public datasets and substantial compute time.
 
+## AE Workflow Options
+
+Because the datasets are large and full reruns are expensive, we provide three
+evaluation workflows for artifact evaluation:
+
+1. Fast path (about 30 minutes): use the preprocessed results bundled in
+  `data/` to directly generate figures.
+  Command reference: follow [Getting Started Instructions](README.md#getting-started-instructions),
+  especially the figure-generation commands under "Regenerate the figures from
+  the provided results."
+2. Reduced full-run path (without Twitter dataset): to shorten AE time, run all
+  datasets except Twitter. The expected wall-clock time is about 7 days on a
+  384-core server. We can provide access to a 384-core server for this path.
+  Command reference: follow [Detailed Instructions](README.md#detailed-instructions),
+  but use an input directory that excludes the Twitter dataset.
+1. Complete full-run path (all datasets): run all datasets, including Twitter.
+  The expected wall-clock time is about 30 days. Use this path only if time
+  permits.
+  Command reference: follow all commands in [Detailed Instructions](README.md#detailed-instructions) and the full datasets.
+
 ## Artifact Claims
 
 This artifact supports the main evaluation claims in the paper:
