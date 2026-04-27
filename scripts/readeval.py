@@ -144,10 +144,10 @@ def main():
             for row in bucket[dataset][ratio]:
                 all_policies.update(row.keys())
 
-            all_policies.discard("file")
+            all_policies.discard("#file")
             all_policies.discard("size")
 
-            columns = ["file", "size"] + sorted(all_policies)
+            columns = ["#file", "size"] + sorted(all_policies)
 
             with open(outfile, "w") as f:
                 f.write(",".join(columns) + "\n")

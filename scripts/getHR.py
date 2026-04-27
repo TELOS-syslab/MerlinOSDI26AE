@@ -70,6 +70,20 @@ def get_relative_hr(df):
     return result.fillna(1)
 
 
+def geometric_mean(df):
+    """Compute geometric mean in log space to avoid product overflow."""
+    invalid_rows = df[(df <= 0).any(axis=1)]
+    if len(invalid_rows) > 0:
+        print(f"[WARN] Dropping {len(invalid_rows)} rows with non-positive values before geomean")
+        print(invalid_rows.index.tolist())
+        df = df[(df > 0).all(axis=1)]
+
+    if len(df) == 0:
+        return None
+
+    return np.exp(np.log(df).mean(axis=0))
+
+
 def read_file(filepath):
     """Read one cache-ratio CSV and return a geometric-mean score per policy."""
     df = pd.read_csv(filepath,header=0,index_col=0)
@@ -78,7 +92,10 @@ def read_file(filepath):
     if len(rel) == 0:
         return None
     # Geometric mean prevents large traces from dominating the aggregate.
-    score = rel.prod(axis=0) ** (1 / len(rel)) - 1
+    geomean = geometric_mean(rel)
+    if geomean is None:
+        return None
+    score = geomean - 1
 
     return score
 

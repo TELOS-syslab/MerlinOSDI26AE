@@ -18,7 +18,7 @@ DROP_COLUMNS = ["Belady", "size"]
 DEFAULT_POLICIES = [
     "merlin", "S3FIFO", "ARC", "Cacheus",
     "LeCaR", "LIRS", "WTinyLFU", "GDSF",
-    "CAR", "GLCache"
+    "CAR"
 ]
 
 DATASETS = [
