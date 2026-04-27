@@ -21,6 +21,11 @@ if command -v nproc >/dev/null 2>&1; then
 fi
 
 mkdir -p "$output_root"
+stage_root=$(mktemp -d "$output_root/.flash_stage.XXXXXX")
+cleanup() {
+    rm -rf "$stage_root"
+}
+trap cleanup EXIT
 
 run_one() {
     local path="$1"
@@ -28,24 +33,32 @@ run_one() {
     local algo="$3"
     local extra_args="$4"
 
-    local output_dir="$output_root/${size}"
-    mkdir -p "$output_dir"
+    local stage_dir="$stage_root/${size}"
+    mkdir -p "$stage_dir"
 
-    local outfile
-    outfile="$output_dir/${algo}.txt"
+    local trace_name
+    trace_name=$(basename "$path")
+    local suffix
+    if [ -n "$extra_args" ]; then
+        suffix=$(printf '%s' "$extra_args" | tr '=,/' '---' | tr -cd '[:alnum:]._-')
+    else
+        suffix="base"
+    fi
+
+    local outfile="$stage_dir/${algo}__${trace_name}__${suffix}.txt"
 
     # The flash simulator prints a long log; the final line contains the summary
     # consumed by process_flash.py.
     if [ -n "$extra_args" ]; then
         "$flash_bin" "$path" oracleGeneral "$algo" "$size" -e "$extra_args" \
-            | tail -n 1 >> "$outfile"
+            | tail -n 1 > "$outfile"
     else
         "$flash_bin" "$path" oracleGeneral "$algo" "$size" \
-            | tail -n 1 >> "$outfile"
+            | tail -n 1 > "$outfile"
     fi
 }
 
-export dir output_root flash_bin
+export dir output_root flash_bin stage_root
 export -f run_one
 
 pids=()
@@ -112,4 +125,18 @@ done
 
 for pid in "${pids[@]}"; do
     wait "$pid"
+done
+
+for size in 0.01 0.1; do
+    stage_dir="$stage_root/${size}"
+    [ -d "$stage_dir" ] || continue
+    for algo in fifo s3fifo merlin arcfix cacheus; do
+        final_file="$output_root/${size}/${algo}.txt"
+        tmp_final="$stage_root/${size}/${algo}.merged"
+        : > "$tmp_final"
+        find "$stage_dir" -maxdepth 1 -type f -name "${algo}__*.txt" | sort | while read -r part; do
+            cat "$part" >> "$tmp_final"
+        done
+        mv "$tmp_final" "$final_file"
+    done
 done

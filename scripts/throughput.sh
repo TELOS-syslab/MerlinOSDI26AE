@@ -52,6 +52,12 @@ cd /Merlin/CacheLib/mybench
 bash "$BUILD_SCRIPT"
 mkdir -p "/Merlin/$OUT_DIR"
 
+stage_dir=$(mktemp -d "/Merlin/$OUT_DIR/.throughput_stage.XXXXXX")
+cleanup() {
+  rm -rf "$stage_dir"
+}
+trap cleanup EXIT
+
 cpu_cores=$(nproc)
 selected_threads=""
 if [ "$cpu_cores" -lt 32 ]; then
@@ -68,7 +74,8 @@ else
 fi
 
 for algo in $ALGOS; do
-  : > "/Merlin/$OUT_DIR/$algo.dat"
+  stage_file="$stage_dir/$algo.dat"
+  : > "$stage_file"
   for thread in $selected_threads; do
     cache_mb=$(echo "${CACHE_MB_BASE} * ${thread}" | bc)
     hashpower=$(echo "${HASHPOWER_BASE} + l(${thread})/l(2)" | bc -l | cut -d"." -f1)
@@ -86,7 +93,11 @@ for algo in $ALGOS; do
       echo "failed to extract miss/throughput from: $last" >&2
       exit 1
     fi
-    printf "%s %s %s %s\n" "$algo" "$thread" "$miss" "$throughput" | tee -a "/Merlin/$OUT_DIR/$algo.dat"
+    printf "%s %s %s %s\n" "$algo" "$thread" "$miss" "$throughput" | tee -a "$stage_file"
   done
+done
+
+for algo in $ALGOS; do
+  mv "$stage_dir/$algo.dat" "/Merlin/$OUT_DIR/$algo.dat"
 done
 '
