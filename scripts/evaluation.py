@@ -30,21 +30,62 @@ running_lock = threading.Lock()
 MEM_SAFE_GB = 100
 
 # -----------------------------
-# Policies evaluated in the main trace-driven experiment. policy_name must match
-# the names emitted by cachesim so get_policy_todo() can detect completed work.
+# Default policies evaluated in the main trace-driven experiment.
+# The display names must match cachesim output so get_policy_todo() can detect
+# completed work in partially generated result files.
 # -----------------------------
-policy_list = [
+DEFAULT_POLICY_LIST = [
     "fifo","arc","cacheus","car","lhd","gdsf","twoq","slru","hyperbolic",
     "lecar","tinyLFU","belady","clock","lirs","fifomerge",
     "s3fifo","qdlp","lru","lfu","sieve","merlin"
 ]
 
-policy_name = [
+DEFAULT_POLICY_NAME = [
     "FIFO","ARC","Cacheus","CAR","LHD","GDSF","TwoQ","S4LRU(25:25:25:25)",
     "Hyperbolic","LeCaR","WTinyLFU-w0.01-SLRU","Belady","Clock",
     "LIRS","FIFO_Merge_FREQUENCY","S3FIFO-0.1000-2",
     "QDLP-0.1000-0.9000-Clock2-1","LRU","LFU","Sieve","merlin-0.10-0.05-1.00-32-1.0"
 ]
+
+
+def _build_default_name_map():
+    """Build default policy->display-name map used for resume detection."""
+    return dict(zip(DEFAULT_POLICY_LIST, DEFAULT_POLICY_NAME))
+
+
+def resolve_policy_config(policy_list_arg: str):
+    """Resolve policies and display names from CLI args with safe defaults.
+
+    - If no args are provided, use the original defaults.
+    - If policy list is provided, reuse known default display names when
+      possible. Unknown policies are kept with an empty display name so resume
+      detection will not falsely mark them as done.
+    """
+    if not policy_list_arg:
+        return list(DEFAULT_POLICY_LIST), list(DEFAULT_POLICY_NAME)
+
+    selected_policies = [p.strip() for p in policy_list_arg.split(",") if p.strip()]
+    if not selected_policies:
+        raise ValueError("--policy_list is empty after parsing")
+
+    default_map = _build_default_name_map()
+    selected_names = []
+    unknown = []
+    for policy in selected_policies:
+        if policy in default_map:
+            selected_names.append(default_map[policy])
+        else:
+            selected_names.append("")
+            unknown.append(policy)
+
+    if unknown:
+        print(
+            "[WARN] Missing default policy_name mapping for: "
+            + ", ".join(unknown)
+            + ". Their policy_name entries are left empty."
+        )
+
+    return selected_policies, selected_names
 
 # =============================
 # utils
@@ -176,7 +217,7 @@ def get_available_workers():
 # -----------------------------
 # Recover from existing result files and only schedule policies that have not yet completed.
 # -----------------------------
-def get_policy_todo(result_file):
+def get_policy_todo(result_file, policy_list, policy_name):
     done = set()
     if not os.path.exists(result_file):
         pass
@@ -188,6 +229,11 @@ def get_policy_todo(result_file):
                     done.add(parts[1])
     todo = []
     for i, name in enumerate(policy_name):
+        if not name:
+            # Unknown display name: cannot reliably check completion from
+            # existing output lines, so keep this policy in the todo set.
+            todo.append(policy_list[i])
+            continue
         if name not in done:
             todo.append(policy_list[i])
     return todo
@@ -257,7 +303,7 @@ def run_cmd(cmd, result_file):
 # Construct tasks from the dataset tree. Expected layout:
 # input_dir/<dataset>/<trace files>.
 # -----------------------------
-def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
+def build_tasks(root_dir, input_dir, output_dir, ignoreobj, policy_list, policy_name):
     tasks = []
     os.makedirs(output_dir, exist_ok=True)
     for dataset in os.listdir(input_dir):
@@ -271,7 +317,7 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj):
         for file in os.listdir(dataset_path):
             input_file = os.path.join(dataset_path, file)
             result_file = os.path.join(out_dir, file)
-            policies = get_policy_todo(result_file)
+            policies = get_policy_todo(result_file, policy_list, policy_name)
             if not policies:
                 continue
             for policy in policies:
@@ -288,13 +334,30 @@ def main():
     parser.add_argument("--root_dir", required=True)
     parser.add_argument("--input_dir", required=True)
     parser.add_argument("--output_dir", required=True)
+    parser.add_argument(
+        "--policy_list",
+        default="",
+        help="Comma-separated eviction policies to run. Default uses built-in policy list.",
+    )
     parser.add_argument("--ignore_obj", action="store_true")
     parser.add_argument("--check_interval", type=float, default=1.0)
     args = parser.parse_args()
 
+    try:
+        policy_list, policy_name = resolve_policy_config(args.policy_list)
+    except ValueError as e:
+        parser.error(str(e))
+
     ignoreobj = "--ignore-obj-size=true" if args.ignore_obj else ""
 
-    tasks = build_tasks(args.root_dir, args.input_dir, args.output_dir, ignoreobj)
+    tasks = build_tasks(
+        args.root_dir,
+        args.input_dir,
+        args.output_dir,
+        ignoreobj,
+        policy_list,
+        policy_name,
+    )
     print(f"[INFO] Total tasks: {len(tasks)}")
 
     executor = ThreadPoolExecutor(max_workers=psutil.cpu_count())

@@ -29,7 +29,7 @@ the corresponding results were produced.
 
 ## Hardware and Software Requirements
 
-We recommend an x86-64 machine running Ubuntu 22.04 LTS. We tested the artifact
+We recommend an x86-64 machine running Ubuntu 22.04 LTS. We evaluated the artifact
 on an AMD server with 384 hardware threads (two AMD EPYC 9965 processors).
 
 For the quick checks, a normal Linux machine with Python 3 is sufficient. Full
@@ -206,10 +206,10 @@ python3 scripts/evaluation.py \
 If you want to run the trace step by step instead of the script, please run:
 ```bash
 # For object hit rate
-./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral policy ratio --num-thread 2 --outputdir output_dir --ignore-obj-size=true
+./libCacheSim/_build/bin/cachesim <path/to/data> <format,oracleGeneral> <algorithm> <cache size ratio> --num-thread N --outputdir <output_dir> --ignore-obj-size=true
 
 # For byte hit rate
-./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral policy ratio --num-thread 2 --outputdir output_dir --ignore-obj-size
+./libCacheSim/_build/bin/cachesim <path/to/data> <format,oracleGeneral> <algorithm> <cache size ratio> --num-thread N --outputdir <output_dir>
 ```
 
 Post-process the simulation outputs:
@@ -329,13 +329,22 @@ Figure 16 studies Merlin's sensitivity to the `filter-size-ratio`,
 `.dat` files already in `data/sensitivity/` contain the percentile summaries
 used by the paper.
 
-**To get the baseline results, you can run with:**
+**To get the baseline `LRU` results, you can run scripts in Figure 11-13 or with:**
 ```bash
-./libCacheSim/_build/bin/cachesim path/to/data oracleGeneral merlin 0.1
+python3 scripts/evaluation.py \
+  --root_dir ./libCacheSim/_build \
+  --input_dir ./CacheTrace \
+  --output_dir ./results/eval_ignore_obj \
+  --ignore_obj --policy_list lru
+
+python3 scripts/readeval.py \
+  --input_dir ./results/eval_ignore_obj \
+  --output_dir ./dataresult/withoutobjsize \
+  --normalize_policy
 ```
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
-same datasets corpus used for Figures 11-13:
+same datasets used for Figures 11-13:
 
 ```bash
 python3 scripts/sensitivity.py \
