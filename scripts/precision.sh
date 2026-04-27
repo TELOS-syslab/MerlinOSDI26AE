@@ -106,15 +106,15 @@ FIU_STAGE="$STAGE_DIR/fiu.dat"
 init_out "$TWITTER_STAGE"
 init_out "$FIU_STAGE"
 
-# FIU uses a larger 20% cache ratio to match the artifact experiment setup.
-run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" merlin 0.2 "$FIU_STAGE"
-run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" cacheus 0.2 "$FIU_STAGE"
-run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" arc 0.2 "$FIU_STAGE"
-
 # Twitter uses a 10% cache ratio for the Figure 17 precision comparison.
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" merlin 0.1 "$TWITTER_STAGE"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" cacheus 0.1 "$TWITTER_STAGE"
 run_case "CacheTrace/twitter/cluster8.oracleGeneral.zst" arc 0.1 "$TWITTER_STAGE"
+
+# FIU uses a larger 20% cache ratio to match the artifact experiment setup.
+run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" merlin 0.2 "$FIU_STAGE"
+run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" cacheus 0.2 "$FIU_STAGE"
+run_case "CacheTrace/fiu/fiu_webmail.cs.fiu.edu-110108-113008.oracleGeneral.zst" arc 0.2 "$FIU_STAGE"
 
 mv "$TWITTER_STAGE" "$TWITTER_OUT"
 mv "$FIU_STAGE" "$FIU_OUT"
