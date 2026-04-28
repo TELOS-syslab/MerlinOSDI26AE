@@ -57,7 +57,7 @@ RUN cd cachelib/external/liburing && \
 # fbthrift conformance codegen expects this output directory to already exist.
 RUN mkdir -p /CacheLib/build-fbthrift/thrift/conformance/if
 
-# Build and install CacheLib dependencies into /CacheLib/opt/cachelib inside the image.
-RUN ./contrib/build.sh -S -O -j -v
+# # Build and install CacheLib dependencies into /CacheLib/opt/cachelib inside the image.
+# RUN ./contrib/build.sh -O -j -v
 
 CMD ["/bin/bash"]

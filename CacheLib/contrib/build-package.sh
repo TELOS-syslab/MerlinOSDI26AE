@@ -33,6 +33,29 @@ die()
   exit 1
 }
 
+retry_command()
+{
+  attempts=$1
+  delay=$2
+  shift 2
+
+  count=1
+  while :
+  do
+    if "$@" ; then
+      return 0
+    fi
+
+    if test "$count" -ge "$attempts" ; then
+      return 1
+    fi
+
+    echo "Retry $count/$attempts failed for: $*" >&2
+    sleep "$delay"
+    count=$((count + 1))
+  done
+}
+
 show_help_and_exit()
 {
   base=$(basename "$0")
@@ -326,27 +349,22 @@ if test "$source" ; then
   if test "$external_git_clone" ; then
 
     # This is an external (non-facebook) project, clone/pull it.
-    if test -d "$SRCDIR" ; then
+    if test -d "$SRCDIR/.git" ; then
       # cloned repository already exists, update it, unless we're on a specific tag
-      :
-      #( cd "$SRCDIR" && git fetch --all ) \
-      #  || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
+      if test -z "$external_git_tag" ; then
+        retry_command 3 5 sh -c "cd '$SRCDIR' && git fetch --all --tags"           || die "failed to fetch git repository for '$NAME' in '$SRCDIR'"
+      fi
     else
-      # Clone new repository directory
-      git clone "$REPO" "$REPODIR" \
-        || die "failed to clone git repository $REPO to '$REPODIR'"
+      rm -rf "$REPODIR"
+      retry_command 3 5 git clone "$REPO" "$REPODIR"         || die "failed to clone git repository $REPO to '$REPODIR'"
     fi
 
 
     # switch to specific branch/tag if needed
     if test "$external_git_branch" ; then
-        ( cd "$REPODIR" \
-           && git checkout --force "origin/$external_git_branch" ) #\
-           #|| die "failed to checkout branch $external_git_branch in $REPODIR"
+        retry_command 3 5 sh -c "cd '$REPODIR' && git checkout --force 'origin/$external_git_branch'"           || die "failed to checkout branch $external_git_branch in $REPODIR"
     elif test "$external_git_tag" ; then
-        ( cd "$REPODIR" \
-           && git checkout --force "$external_git_tag" ) #\
-           #|| die "failed to checkout tag $external_git_tag in $REPODIR"
+        retry_command 3 5 sh -c "cd '$REPODIR' && git checkout --force '$external_git_tag'"           || die "failed to checkout tag $external_git_tag in $REPODIR"
     fi
 
   fi
