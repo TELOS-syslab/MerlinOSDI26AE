@@ -1,0 +1,12 @@
+.git
+.gitmodules
+CacheLib/build-*
+CacheLib/opt
+CacheLib/mybench/_build
+libCacheSim/_build
+libCacheSim/_build2
+data/
+dataresult/
+CacheTrace/
+results/
+scripts/flashield/results

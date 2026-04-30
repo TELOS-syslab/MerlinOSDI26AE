@@ -1,0 +1,28 @@
+18:26:23: INFO [flashield.py:220 (root)]: 	calculating wss for w29.oracleGeneral.bin
+18:26:38: INFO [flashield.py:228 (root)]: 	w29.oracleGeneral.bin wss_obj: 4906097, wss_byte: 50400624832
+18:26:38: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 5040062483
+18:26:38: INFO [cache.py:19 (cache)]: 	create LRU cache with size 50400624
+18:26:38: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 4989661859
+18:26:38: INFO [flashield.py:37 (root)]: 	w29.oracleGeneral.bin Training Flashield...
+18:26:38: INFO [flashield.py:42 (root)]: 	w29.oracleGeneral.bin Training Flashield: 69203 features 69203 labels ...
+18:26:38: INFO [flashield.py:55 (root)]: 	w29.oracleGeneral.bin finish training
+18:28:02: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 1000000, n_miss: 898864, miss ratio: 0.8989, disk write 1023472128 + 0 (0.0203)
+18:29:24: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 2000000, n_miss: 1664425, miss ratio: 0.8322, disk write 1023472128 + 0 (0.0203)
+18:30:48: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 3000000, n_miss: 2485762, miss ratio: 0.8286, disk write 1023472128 + 0 (0.0203)
+18:32:20: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 4000000, n_miss: 3344067, miss ratio: 0.8360, disk write 1023472128 + 0 (0.0203)
+18:33:46: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 5000000, n_miss: 4154575, miss ratio: 0.8309, disk write 1023472128 + 0 (0.0203)
+18:35:09: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 6000000, n_miss: 4931640, miss ratio: 0.8219, disk write 1023472128 + 0 (0.0203)
+18:36:42: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 7000000, n_miss: 5799104, miss ratio: 0.8284, disk write 1023472128 + 0 (0.0203)
+18:38:14: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 8000000, n_miss: 6665729, miss ratio: 0.8332, disk write 1023472128 + 0 (0.0203)
+18:39:53: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 9000000, n_miss: 7583764, miss ratio: 0.8426, disk write 1023472128 + 0 (0.0203)
+18:41:32: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 10000000, n_miss: 8499003, miss ratio: 0.8499, disk write 1023472128 + 0 (0.0203)
+18:43:10: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 11000000, n_miss: 9412081, miss ratio: 0.8556, disk write 1023472128 + 0 (0.0203)
+18:44:55: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 12000000, n_miss: 10393779, miss ratio: 0.8661, disk write 1023472128 + 0 (0.0203)
+18:46:22: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 13000000, n_miss: 11217041, miss ratio: 0.8628, disk write 1023472128 + 0 (0.0203)
+18:47:47: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 14000000, n_miss: 12018240, miss ratio: 0.8584, disk write 1023472128 + 0 (0.0203)
+18:49:14: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 15000000, n_miss: 12817210, miss ratio: 0.8545, disk write 1023472128 + 0 (0.0203)
+18:49:35: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 16000000, n_miss: 13007818, miss ratio: 0.8130, disk write 1023472128 + 0 (0.0203)
+18:51:02: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 17000000, n_miss: 13832585, miss ratio: 0.8137, disk write 1023472128 + 0 (0.0203)
+18:52:40: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 18000000, n_miss: 14764906, miss ratio: 0.8203, disk write 1023472128 + 0 (0.0203)
+18:54:14: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 19000000, n_miss: 15667581, miss ratio: 0.8246, disk write 1023472128 + 0 (0.0203)
+18:54:24: INFO [flashield.py:182 (root)]: 	w29.oracleGeneral.bin-0.01-FIFO-True n_req: 19087784, n_miss: 15755223, miss ratio: 0.8254, disk write 1023472128 + 0 (0.0203)

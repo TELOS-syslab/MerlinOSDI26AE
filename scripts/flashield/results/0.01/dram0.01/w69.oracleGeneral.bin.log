@@ -1,0 +1,16 @@
+16:59:45: INFO [flashield.py:220 (root)]: 	calculating wss for w69.oracleGeneral.bin
+16:59:50: INFO [flashield.py:228 (root)]: 	w69.oracleGeneral.bin wss_obj: 1328886, wss_byte: 33812690944
+16:59:50: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 338126909
+16:59:50: INFO [cache.py:19 (cache)]: 	create LRU cache with size 3381269
+16:59:50: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 334745640
+16:59:50: INFO [flashield.py:37 (root)]: 	w69.oracleGeneral.bin Training Flashield...
+16:59:50: INFO [flashield.py:42 (root)]: 	w69.oracleGeneral.bin Training Flashield: 23810 features 23810 labels ...
+16:59:50: INFO [flashield.py:55 (root)]: 	w69.oracleGeneral.bin finish training
+17:00:55: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 1000000, n_miss: 669896, miss ratio: 0.6699, disk write 1202168320 + 0 (0.0356)
+17:02:04: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 2000000, n_miss: 1317696, miss ratio: 0.6588, disk write 1202168320 + 0 (0.0356)
+17:03:10: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 3000000, n_miss: 1942792, miss ratio: 0.6476, disk write 1202168320 + 0 (0.0356)
+17:04:37: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 4000000, n_miss: 2770215, miss ratio: 0.6926, disk write 1202168320 + 0 (0.0356)
+17:05:44: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 5000000, n_miss: 3402057, miss ratio: 0.6804, disk write 1202168320 + 0 (0.0356)
+17:06:48: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 6000000, n_miss: 4006022, miss ratio: 0.6677, disk write 1202168320 + 0 (0.0356)
+17:07:58: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 7000000, n_miss: 4673860, miss ratio: 0.6677, disk write 1202168320 + 0 (0.0356)
+17:09:02: INFO [flashield.py:182 (root)]: 	w69.oracleGeneral.bin-0.01-FIFO-True n_req: 7874006, n_miss: 5276053, miss ratio: 0.6701, disk write 1202168320 + 0 (0.0356)

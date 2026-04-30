@@ -1,0 +1,16 @@
+22:46:38: INFO [flashield.py:220 (root)]: 	calculating wss for w64.oracleGeneral.bin
+22:46:43: INFO [flashield.py:228 (root)]: 	w64.oracleGeneral.bin wss_obj: 6435308, wss_byte: 426016347656
+22:46:43: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 4260163476
+22:46:43: INFO [cache.py:19 (cache)]: 	create LRU cache with size 426016347
+22:46:43: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 3834147129
+22:46:43: INFO [flashield.py:37 (root)]: 	w64.oracleGeneral.bin Training Flashield...
+22:46:43: INFO [flashield.py:42 (root)]: 	w64.oracleGeneral.bin Training Flashield: 17405 features 17405 labels ...
+22:46:43: INFO [flashield.py:55 (root)]: 	w64.oracleGeneral.bin finish training
+22:48:01: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 765248, miss ratio: 0.7652, disk write 992571904 + 0 (0.0023)
+22:49:46: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 1763363, miss ratio: 0.8817, disk write 992571904 + 0 (0.0023)
+22:51:31: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 2762696, miss ratio: 0.9209, disk write 992571904 + 0 (0.0023)
+22:53:17: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 3761272, miss ratio: 0.9403, disk write 992571904 + 0 (0.0023)
+22:55:02: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 4760619, miss ratio: 0.9521, disk write 992571904 + 0 (0.0023)
+22:56:43: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 5716622, miss ratio: 0.9528, disk write 992571904 + 0 (0.0023)
+22:58:19: INFO [flashield.py:170 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 6617993, miss ratio: 0.9454, disk write 992571904 + 0 (0.0023)
+22:58:40: INFO [flashield.py:182 (root)]: 	w64.oracleGeneral.bin-0.1-FIFO-True n_req: 7458266, n_miss: 6811202, miss ratio: 0.9132, disk write 992571904 + 0 (0.0023)

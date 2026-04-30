@@ -1,0 +1,17 @@
+23:51:54: INFO [flashield.py:220 (root)]: 	calculating wss for w55.oracleGeneral.bin
+23:51:59: INFO [flashield.py:228 (root)]: 	w55.oracleGeneral.bin wss_obj: 7281718, wss_byte: 41211979968
+23:51:59: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 4121197996
+23:51:59: INFO [cache.py:19 (cache)]: 	create LRU cache with size 412119799
+23:51:59: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 3709078197
+23:51:59: INFO [flashield.py:37 (root)]: 	w55.oracleGeneral.bin Training Flashield...
+23:51:59: INFO [flashield.py:42 (root)]: 	w55.oracleGeneral.bin Training Flashield: 1237 features 1237 labels ...
+23:51:59: INFO [flashield.py:55 (root)]: 	w55.oracleGeneral.bin finish training
+23:53:05: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 730425, miss ratio: 0.7304, disk write 0 + 0 (0.0000)
+23:54:48: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 1719267, miss ratio: 0.8596, disk write 0 + 0 (0.0000)
+23:56:29: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 2678520, miss ratio: 0.8928, disk write 0 + 0 (0.0000)
+23:58:11: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 3590136, miss ratio: 0.8975, disk write 0 + 0 (0.0000)
+23:59:42: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 4510994, miss ratio: 0.9022, disk write 0 + 0 (0.0000)
+00:01:22: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 5496813, miss ratio: 0.9161, disk write 0 + 0 (0.0000)
+00:03:04: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 6484534, miss ratio: 0.9264, disk write 0 + 0 (0.0000)
+00:04:46: INFO [flashield.py:170 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 8000000, n_miss: 7467801, miss ratio: 0.9335, disk write 0 + 0 (0.0000)
+00:05:16: INFO [flashield.py:182 (root)]: 	w55.oracleGeneral.bin-0.1-FIFO-True n_req: 8855434, n_miss: 7726681, miss ratio: 0.8725, disk write 0 + 0 (0.0000)

@@ -1,0 +1,17 @@
+16:59:45: INFO [flashield.py:220 (root)]: 	calculating wss for w68.oracleGeneral.bin
+16:59:51: INFO [flashield.py:228 (root)]: 	w68.oracleGeneral.bin wss_obj: 816544, wss_byte: 22198114816
+16:59:51: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 221981148
+16:59:51: INFO [cache.py:19 (cache)]: 	create LRU cache with size 2219811
+16:59:51: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 219761337
+16:59:52: INFO [flashield.py:37 (root)]: 	w68.oracleGeneral.bin Training Flashield...
+16:59:52: INFO [flashield.py:42 (root)]: 	w68.oracleGeneral.bin Training Flashield: 25179 features 25179 labels ...
+16:59:52: INFO [flashield.py:55 (root)]: 	w68.oracleGeneral.bin finish training
+17:00:39: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 1000000, n_miss: 543838, miss ratio: 0.5438, disk write 1572806656 + 0 (0.0709)
+17:01:42: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 2000000, n_miss: 1136931, miss ratio: 0.5685, disk write 1572806656 + 0 (0.0709)
+17:02:43: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 3000000, n_miss: 1711323, miss ratio: 0.5704, disk write 1572806656 + 0 (0.0709)
+17:03:47: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 4000000, n_miss: 2311351, miss ratio: 0.5778, disk write 1572806656 + 0 (0.0709)
+17:04:56: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 5000000, n_miss: 2963730, miss ratio: 0.5927, disk write 1572806656 + 0 (0.0709)
+17:06:00: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 6000000, n_miss: 3567064, miss ratio: 0.5945, disk write 1572806656 + 0 (0.0709)
+17:07:09: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 7000000, n_miss: 4210344, miss ratio: 0.6015, disk write 1572806656 + 0 (0.0709)
+17:08:16: INFO [flashield.py:170 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 8000000, n_miss: 4847039, miss ratio: 0.6059, disk write 1572806656 + 0 (0.0709)
+17:09:13: INFO [flashield.py:182 (root)]: 	w68.oracleGeneral.bin-0.01-FIFO-True n_req: 8875971, n_miss: 5381970, miss ratio: 0.6064, disk write 1572806656 + 0 (0.0709)

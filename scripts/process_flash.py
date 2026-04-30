@@ -17,12 +17,12 @@ cache_sizes = [0.01, 0.1]
 input_files = []
 for cache_size in cache_sizes:
     input_files.extend([
-        # f"{cache_size}/arcfix-{cache_size}.txt",
-        # f"{cache_size}/cacheus-{cache_size}.txt",
+        f"{cache_size}/arcfix-{cache_size}.txt",
+        f"{cache_size}/cacheus-{cache_size}.txt",
         f"{cache_size}/merlin-{cache_size}.txt",
-        # f"{cache_size}/fifo-{cache_size}.txt",
-        # f"{cache_size}/flashield-{cache_size}.txt",
-        # f"{cache_size}/s3fifo-{cache_size}.txt",
+        f"{cache_size}/fifo-{cache_size}.txt",
+        f"{cache_size}/flashield-{cache_size}.txt",
+        f"{cache_size}/s3fifo-{cache_size}.txt",
     ])
 
 # Aggregation layout:

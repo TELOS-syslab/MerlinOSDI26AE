@@ -1,0 +1,28 @@
+10:41:35: INFO [flashield.py:220 (root)]: 	calculating wss for w34.oracleGeneral.bin
+10:41:49: INFO [flashield.py:228 (root)]: 	w34.oracleGeneral.bin wss_obj: 5140683, wss_byte: 220393296384
+10:41:49: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 2203932963
+10:41:49: INFO [cache.py:19 (cache)]: 	create LRU cache with size 2203932
+10:41:49: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 2201729031
+10:41:49: INFO [flashield.py:37 (root)]: 	w34.oracleGeneral.bin Training Flashield...
+10:41:49: INFO [flashield.py:42 (root)]: 	w34.oracleGeneral.bin Training Flashield: 19405 features 19405 labels ...
+10:41:49: INFO [flashield.py:55 (root)]: 	w34.oracleGeneral.bin finish training
+10:42:47: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 1000000, n_miss: 650416, miss ratio: 0.6504, disk write 1232307712 + 0 (0.0056)
+10:44:12: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 2000000, n_miss: 1458664, miss ratio: 0.7293, disk write 1232307712 + 0 (0.0056)
+10:45:18: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 3000000, n_miss: 2089782, miss ratio: 0.6966, disk write 1232307712 + 0 (0.0056)
+10:46:39: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 4000000, n_miss: 2858341, miss ratio: 0.7146, disk write 1232307712 + 0 (0.0056)
+10:47:54: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 5000000, n_miss: 3573828, miss ratio: 0.7148, disk write 1232307712 + 0 (0.0056)
+10:49:15: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 6000000, n_miss: 4344626, miss ratio: 0.7241, disk write 1232307712 + 0 (0.0056)
+10:50:29: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 7000000, n_miss: 5050864, miss ratio: 0.7216, disk write 1232307712 + 0 (0.0056)
+10:52:09: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 8000000, n_miss: 6000012, miss ratio: 0.7500, disk write 1232307712 + 0 (0.0056)
+10:53:51: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 9000000, n_miss: 6982827, miss ratio: 0.7759, disk write 1232307712 + 0 (0.0056)
+10:55:31: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 10000000, n_miss: 7938292, miss ratio: 0.7938, disk write 1232307712 + 0 (0.0056)
+10:57:15: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 11000000, n_miss: 8928758, miss ratio: 0.8117, disk write 1232307712 + 0 (0.0056)
+10:58:59: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 12000000, n_miss: 9920833, miss ratio: 0.8267, disk write 1232307712 + 0 (0.0056)
+11:00:30: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 13000000, n_miss: 10795953, miss ratio: 0.8305, disk write 1232307712 + 0 (0.0056)
+11:01:54: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 14000000, n_miss: 11594792, miss ratio: 0.8282, disk write 1232307712 + 0 (0.0056)
+11:03:34: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 15000000, n_miss: 12556551, miss ratio: 0.8371, disk write 1232307712 + 0 (0.0056)
+11:05:03: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 16000000, n_miss: 13401697, miss ratio: 0.8376, disk write 1232307712 + 0 (0.0056)
+11:06:42: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 17000000, n_miss: 14347313, miss ratio: 0.8440, disk write 1232307712 + 0 (0.0056)
+11:08:13: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 18000000, n_miss: 15215244, miss ratio: 0.8453, disk write 1232307712 + 0 (0.0056)
+11:09:44: INFO [flashield.py:170 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 19000000, n_miss: 16087246, miss ratio: 0.8467, disk write 1232307712 + 0 (0.0056)
+11:10:37: INFO [flashield.py:182 (root)]: 	w34.oracleGeneral.bin-0.001-FIFO-True n_req: 19553551, n_miss: 16592585, miss ratio: 0.8486, disk write 1232307712 + 0 (0.0056)

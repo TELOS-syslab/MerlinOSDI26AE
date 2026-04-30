@@ -1,0 +1,28 @@
+22:46:38: INFO [flashield.py:220 (root)]: 	calculating wss for w27.oracleGeneral.bin
+22:46:51: INFO [flashield.py:228 (root)]: 	w27.oracleGeneral.bin wss_obj: 4330076, wss_byte: 48981732032
+22:46:51: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 489817320
+22:46:51: INFO [cache.py:19 (cache)]: 	create LRU cache with size 48981732
+22:46:51: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 440835588
+22:46:52: INFO [flashield.py:37 (root)]: 	w27.oracleGeneral.bin Training Flashield...
+22:46:52: INFO [flashield.py:42 (root)]: 	w27.oracleGeneral.bin Training Flashield: 175926 features 175926 labels ...
+22:46:52: INFO [flashield.py:55 (root)]: 	w27.oracleGeneral.bin finish training
+22:47:55: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 800174, miss ratio: 0.8002, disk write 1393130496 + 0 (0.0284)
+22:49:14: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 1554657, miss ratio: 0.7773, disk write 1393130496 + 0 (0.0284)
+22:50:54: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 2508233, miss ratio: 0.8361, disk write 1393130496 + 0 (0.0284)
+22:52:25: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 3369090, miss ratio: 0.8423, disk write 1393130496 + 0 (0.0284)
+22:54:03: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 4298085, miss ratio: 0.8596, disk write 1393130496 + 0 (0.0284)
+22:55:32: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 5129492, miss ratio: 0.8549, disk write 1393130496 + 0 (0.0284)
+22:57:10: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 6037704, miss ratio: 0.8625, disk write 1393130496 + 0 (0.0284)
+22:58:42: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 8000000, n_miss: 6907628, miss ratio: 0.8635, disk write 1393130496 + 0 (0.0284)
+23:00:03: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 9000000, n_miss: 7681117, miss ratio: 0.8535, disk write 1393130496 + 0 (0.0284)
+23:01:28: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 10000000, n_miss: 8484128, miss ratio: 0.8484, disk write 1393130496 + 0 (0.0284)
+23:03:01: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 11000000, n_miss: 9354256, miss ratio: 0.8504, disk write 1393130496 + 0 (0.0284)
+23:04:33: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 12000000, n_miss: 10210474, miss ratio: 0.8509, disk write 1393130496 + 0 (0.0284)
+23:06:05: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 13000000, n_miss: 11070112, miss ratio: 0.8515, disk write 1393130496 + 0 (0.0284)
+23:07:38: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 14000000, n_miss: 11936392, miss ratio: 0.8526, disk write 1393130496 + 0 (0.0284)
+23:09:12: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 15000000, n_miss: 12804422, miss ratio: 0.8536, disk write 1393130496 + 0 (0.0284)
+23:10:44: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 16000000, n_miss: 13670096, miss ratio: 0.8544, disk write 1393130496 + 0 (0.0284)
+23:12:18: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 17000000, n_miss: 14552284, miss ratio: 0.8560, disk write 1393130496 + 0 (0.0284)
+23:13:39: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 18000000, n_miss: 15322498, miss ratio: 0.8512, disk write 1393130496 + 0 (0.0284)
+23:15:04: INFO [flashield.py:170 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 19000000, n_miss: 16135724, miss ratio: 0.8492, disk write 1393130496 + 0 (0.0284)
+23:15:51: INFO [flashield.py:182 (root)]: 	w27.oracleGeneral.bin-0.1-FIFO-True n_req: 19501541, n_miss: 16582234, miss ratio: 0.8503, disk write 1393130496 + 0 (0.0284)

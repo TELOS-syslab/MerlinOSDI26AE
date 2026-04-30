@@ -1,0 +1,40 @@
+22:46:38: INFO [flashield.py:220 (root)]: 	calculating wss for w17.oracleGeneral.bin
+22:46:58: INFO [flashield.py:228 (root)]: 	w17.oracleGeneral.bin wss_obj: 2731428, wss_byte: 47919264256
+22:46:58: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 479192642
+22:46:58: INFO [cache.py:19 (cache)]: 	create LRU cache with size 47919264
+22:46:58: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 431273378
+22:46:59: INFO [flashield.py:37 (root)]: 	w17.oracleGeneral.bin Training Flashield...
+22:46:59: INFO [flashield.py:42 (root)]: 	w17.oracleGeneral.bin Training Flashield: 153241 features 153241 labels ...
+22:46:59: INFO [flashield.py:55 (root)]: 	w17.oracleGeneral.bin finish training
+22:47:07: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 349286, miss ratio: 0.3493, disk write 3134272512 + 0 (0.0654)
+22:47:28: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 550269, miss ratio: 0.2751, disk write 3134272512 + 0 (0.0654)
+22:48:17: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 1018697, miss ratio: 0.3396, disk write 3134272512 + 0 (0.0654)
+22:49:18: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 1606812, miss ratio: 0.4017, disk write 3134272512 + 0 (0.0654)
+22:50:04: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 2042756, miss ratio: 0.4086, disk write 3134272512 + 0 (0.0654)
+22:50:46: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 2442108, miss ratio: 0.4070, disk write 3134272512 + 0 (0.0654)
+22:51:34: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 2897304, miss ratio: 0.4139, disk write 3134272512 + 0 (0.0654)
+22:52:06: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 8000000, n_miss: 3205858, miss ratio: 0.4007, disk write 3134272512 + 0 (0.0654)
+22:53:35: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 9000000, n_miss: 4066009, miss ratio: 0.4518, disk write 3134272512 + 0 (0.0654)
+22:54:48: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 10000000, n_miss: 4765916, miss ratio: 0.4766, disk write 3134272512 + 0 (0.0654)
+22:56:01: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 11000000, n_miss: 5455056, miss ratio: 0.4959, disk write 3134272512 + 0 (0.0654)
+22:57:16: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 12000000, n_miss: 6168798, miss ratio: 0.5141, disk write 3134272512 + 0 (0.0654)
+22:58:27: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 13000000, n_miss: 6847832, miss ratio: 0.5268, disk write 3134272512 + 0 (0.0654)
+22:59:41: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 14000000, n_miss: 7546971, miss ratio: 0.5391, disk write 3134272512 + 0 (0.0654)
+23:01:15: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 15000000, n_miss: 8456246, miss ratio: 0.5637, disk write 3134272512 + 0 (0.0654)
+23:02:45: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 16000000, n_miss: 9324040, miss ratio: 0.5828, disk write 3134272512 + 0 (0.0654)
+23:04:02: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 17000000, n_miss: 10049928, miss ratio: 0.5912, disk write 3134272512 + 0 (0.0654)
+23:05:21: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 18000000, n_miss: 10804129, miss ratio: 0.6002, disk write 3134272512 + 0 (0.0654)
+23:06:42: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 19000000, n_miss: 11572915, miss ratio: 0.6091, disk write 3134272512 + 0 (0.0654)
+23:08:00: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 20000000, n_miss: 12321949, miss ratio: 0.6161, disk write 3134272512 + 0 (0.0654)
+23:09:31: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 21000000, n_miss: 13199290, miss ratio: 0.6285, disk write 3134272512 + 0 (0.0654)
+23:10:56: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 22000000, n_miss: 14013594, miss ratio: 0.6370, disk write 3134272512 + 0 (0.0654)
+23:12:10: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 23000000, n_miss: 14715688, miss ratio: 0.6398, disk write 3134272512 + 0 (0.0654)
+23:13:29: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 24000000, n_miss: 15464833, miss ratio: 0.6444, disk write 3134272512 + 0 (0.0654)
+23:14:49: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 25000000, n_miss: 16232975, miss ratio: 0.6493, disk write 3134272512 + 0 (0.0654)
+23:16:24: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 26000000, n_miss: 17140578, miss ratio: 0.6593, disk write 3134272512 + 0 (0.0654)
+23:17:52: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 27000000, n_miss: 17984514, miss ratio: 0.6661, disk write 3134272512 + 0 (0.0654)
+23:19:15: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 28000000, n_miss: 18771485, miss ratio: 0.6704, disk write 3134272512 + 0 (0.0654)
+23:20:38: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 29000000, n_miss: 19563358, miss ratio: 0.6746, disk write 3134272512 + 0 (0.0654)
+23:21:59: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 30000000, n_miss: 20340322, miss ratio: 0.6780, disk write 3134272512 + 0 (0.0654)
+23:23:29: INFO [flashield.py:170 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 31000000, n_miss: 21199607, miss ratio: 0.6839, disk write 3134272512 + 0 (0.0654)
+23:24:07: INFO [flashield.py:182 (root)]: 	w17.oracleGeneral.bin-0.1-FIFO-True n_req: 31398089, n_miss: 21565121, miss ratio: 0.6868, disk write 3134272512 + 0 (0.0654)

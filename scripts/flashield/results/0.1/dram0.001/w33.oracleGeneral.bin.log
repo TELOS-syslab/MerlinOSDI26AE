@@ -1,0 +1,28 @@
+12:37:09: INFO [flashield.py:220 (root)]: 	calculating wss for w33.oracleGeneral.bin
+12:37:19: INFO [flashield.py:228 (root)]: 	w33.oracleGeneral.bin wss_obj: 1446572, wss_byte: 9092542464
+12:37:19: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 909254246
+12:37:19: INFO [cache.py:19 (cache)]: 	create LRU cache with size 909254
+12:37:19: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 908344992
+12:37:20: INFO [flashield.py:37 (root)]: 	w33.oracleGeneral.bin Training Flashield...
+12:37:20: INFO [flashield.py:42 (root)]: 	w33.oracleGeneral.bin Training Flashield: 22485 features 22485 labels ...
+12:37:20: INFO [flashield.py:55 (root)]: 	w33.oracleGeneral.bin finish training
+12:37:38: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 1000000, n_miss: 204385, miss ratio: 0.2044, disk write 576581632 + 0 (0.0634)
+12:38:02: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 2000000, n_miss: 424091, miss ratio: 0.2120, disk write 576581632 + 0 (0.0634)
+12:38:26: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 3000000, n_miss: 639915, miss ratio: 0.2133, disk write 576581632 + 0 (0.0634)
+12:38:51: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 4000000, n_miss: 861999, miss ratio: 0.2155, disk write 576581632 + 0 (0.0634)
+12:39:15: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 5000000, n_miss: 1073955, miss ratio: 0.2148, disk write 576581632 + 0 (0.0634)
+12:39:39: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 6000000, n_miss: 1291017, miss ratio: 0.2152, disk write 576581632 + 0 (0.0634)
+12:40:05: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 7000000, n_miss: 1517475, miss ratio: 0.2168, disk write 576581632 + 0 (0.0634)
+12:40:29: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 8000000, n_miss: 1735313, miss ratio: 0.2169, disk write 576581632 + 0 (0.0634)
+12:40:53: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 9000000, n_miss: 1951573, miss ratio: 0.2168, disk write 576581632 + 0 (0.0634)
+12:41:18: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 10000000, n_miss: 2174869, miss ratio: 0.2175, disk write 576581632 + 0 (0.0634)
+12:41:43: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 11000000, n_miss: 2398146, miss ratio: 0.2180, disk write 576581632 + 0 (0.0634)
+12:42:07: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 12000000, n_miss: 2614458, miss ratio: 0.2179, disk write 576581632 + 0 (0.0634)
+12:42:31: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 13000000, n_miss: 2825824, miss ratio: 0.2174, disk write 576581632 + 0 (0.0634)
+12:42:56: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 14000000, n_miss: 3051529, miss ratio: 0.2180, disk write 576581632 + 0 (0.0634)
+12:43:22: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 15000000, n_miss: 3281225, miss ratio: 0.2187, disk write 576581632 + 0 (0.0634)
+12:43:46: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 16000000, n_miss: 3501055, miss ratio: 0.2188, disk write 576581632 + 0 (0.0634)
+12:44:12: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 17000000, n_miss: 3732028, miss ratio: 0.2195, disk write 576581632 + 0 (0.0634)
+12:44:37: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 18000000, n_miss: 3960643, miss ratio: 0.2200, disk write 576581632 + 0 (0.0634)
+12:45:03: INFO [flashield.py:170 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 19000000, n_miss: 4195312, miss ratio: 0.2208, disk write 576581632 + 0 (0.0634)
+12:45:26: INFO [flashield.py:182 (root)]: 	w33.oracleGeneral.bin-0.001-FIFO-True n_req: 19868346, n_miss: 4396682, miss ratio: 0.2213, disk write 576581632 + 0 (0.0634)

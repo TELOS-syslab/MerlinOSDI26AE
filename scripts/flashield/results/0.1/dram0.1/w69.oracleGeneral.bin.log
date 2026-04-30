@@ -1,0 +1,16 @@
+23:51:54: INFO [flashield.py:220 (root)]: 	calculating wss for w69.oracleGeneral.bin
+23:51:59: INFO [flashield.py:228 (root)]: 	w69.oracleGeneral.bin wss_obj: 1328886, wss_byte: 33812690944
+23:51:59: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 3381269094
+23:51:59: INFO [cache.py:19 (cache)]: 	create LRU cache with size 338126909
+23:51:59: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 3043142185
+23:52:00: INFO [flashield.py:37 (root)]: 	w69.oracleGeneral.bin Training Flashield...
+23:52:00: INFO [flashield.py:42 (root)]: 	w69.oracleGeneral.bin Training Flashield: 23810 features 23810 labels ...
+23:52:00: INFO [flashield.py:55 (root)]: 	w69.oracleGeneral.bin finish training
+23:52:57: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 580441, miss ratio: 0.5804, disk write 471818240 + 0 (0.0140)
+23:53:58: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 1137190, miss ratio: 0.5686, disk write 471818240 + 0 (0.0140)
+23:54:52: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 1655163, miss ratio: 0.5517, disk write 471818240 + 0 (0.0140)
+23:56:15: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 2429503, miss ratio: 0.6074, disk write 471818240 + 0 (0.0140)
+23:57:10: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 2968463, miss ratio: 0.5937, disk write 471818240 + 0 (0.0140)
+23:58:03: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 3445508, miss ratio: 0.5743, disk write 471818240 + 0 (0.0140)
+23:59:01: INFO [flashield.py:170 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 4002893, miss ratio: 0.5718, disk write 471818240 + 0 (0.0140)
+23:59:59: INFO [flashield.py:182 (root)]: 	w69.oracleGeneral.bin-0.1-FIFO-True n_req: 7874006, n_miss: 4529563, miss ratio: 0.5753, disk write 471818240 + 0 (0.0140)

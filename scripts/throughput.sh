@@ -14,7 +14,7 @@ MODE=${1:-woback}
 TRACE=${2:-CacheTrace/mix.oracleGeneral.bin}
 CACHE_MB_BASE=${3:-4000}
 HASHPOWER_BASE=${4:-21}
-THREADS=${THREADS:-"1 2 4 8 16 24 32 48 64 128"}
+THREADS=${THREADS:-"1 2 4 8 16 24 32 48 64"}
 ALGOS=${ALGOS:-"merlin s3fifo arc lru"}
 
 case "$MODE" in
@@ -35,10 +35,11 @@ esac
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 mkdir -p "$ROOT/$OUT_DIR"
 
-sudo docker run --rm --cap-add=SYS_NICE \
+docker run --rm --cap-add=SYS_NICE \
   -v "$ROOT":/Merlin \
   -w /Merlin \
   -e MODE="$MODE" \
+  --network=host \
   -e TRACE="$TRACE" \
   -e CACHE_MB_BASE="$CACHE_MB_BASE" \
   -e HASHPOWER_BASE="$HASHPOWER_BASE" \
@@ -46,7 +47,7 @@ sudo docker run --rm --cap-add=SYS_NICE \
   -e ALGOS="$ALGOS" \
   -e BUILD_SCRIPT="$BUILD_SCRIPT" \
   -e OUT_DIR="$OUT_DIR" \
-  cachelib-ae /bin/bash -lc '
+  merlin-ae /bin/bash -lc '
 set -euo pipefail
 cd /Merlin/CacheLib/mybench
 bash "$BUILD_SCRIPT"

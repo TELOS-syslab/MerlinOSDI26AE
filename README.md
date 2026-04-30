@@ -140,8 +140,8 @@ Docker image.
 On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
 
 ```bash
-bash ./scripts/install_dependency.sh
-bash ./scripts/install.sh
+docker build --network=host -t merlin-ae .
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc 'bash scripts/install.sh'
 ```
 
 `scripts/install_dependency.sh` installs the system packages and builds zstd,
@@ -149,8 +149,9 @@ XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
 
 - `libCacheSim/_build/`: normal build for the main simulations.
 - `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for precision experiments.
+- `CacheLib/mybench/_build/`: normal build for eviction algorithms in CacheLib.
 
-The same script also builds the Docker image `cachelib-ae` and compiles the
+The same script also builds the Docker image `merlin-ae` and compiles the
 throughput benchmark binaries used by `scripts/throughput.sh`.
 
 ### Downloaded Datasets Layout
@@ -210,26 +211,34 @@ To rerun the full simulation, use:
 
 ```bash
 # Object size ignored: used for the hit-rate figure.
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 python3 scripts/evaluation.py \
   --root_dir ./libCacheSim/_build \
   --input_dir ./CacheTrace \
   --output_dir ./results/eval_ignore_obj \
   --ignore_obj
+'
 
 # Object size considered: used for the byte-hit-rate figure.
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 python3 scripts/evaluation.py \
   --root_dir ./libCacheSim/_build \
   --input_dir ./CacheTrace \
   --output_dir ./results/eval_with_obj
+'
 ```
 
 If you want to run the trace step by step instead of the script, please run:
 ```bash
 # For object hit rate
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 ./libCacheSim/_build/bin/cachesim <path/to/data> <format,oracleGeneral> <algorithm> <cache size ratio> --num-thread N --outputdir <output_dir> --ignore-obj-size=true
+'
 
 # For byte hit rate
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 ./libCacheSim/_build/bin/cachesim <path/to/data> <format,oracleGeneral> <algorithm> <cache size ratio> --num-thread N --outputdir <output_dir>
+'
 ```
 
 Post-process the simulation outputs:
@@ -327,13 +336,27 @@ CacheTrace/cloudphysics/
 Then run:
 
 ```bash
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 MAX_JOBS=2 bash scripts/flash.sh
+'
 ```
 
 `MAX_JOBS` controls the number of concurrent flash-cache jobs. Increase it only
 if the machine has enough CPU and memory. The script writes raw outputs under
 `data/flash/<cache-size>/`. Use `scripts/process_flash.py` to summarize raw
 outputs into the `data/flash/*.txt` files consumed by `scripts/plot/flash.py`.
+
+If you want to get the results of Flashield, please use the following instruction:
+```bash
+python3 -m pip install scikit-learn lru-dict
+# The data should be decompress before running.
+python3 scripts/flashield/flashield.py /path/to/data --ram-size-ratio=0.001 --disk-cache-type=FIFO --use-obj-size true
+python3 scripts/flashield/flashield.py /path/to/data --ram-size-ratio=0.01 --disk-cache-type=FIFO --use-obj-size true
+python3 scripts/flashield/flashield.py /path/to/data --ram-size-ratio=0.10 --disk-cache-type=FIFO --use-obj-size true
+```
+You can take the last line as the result.
+
+Because it needs machine learning to obtain the results, so we recommend you to use a machine with abundant GPU resources.
 
 *The experimental instructions are similar to those used in Figure 11-13. Please refer to the script for specific details.*
 
@@ -351,27 +374,33 @@ used by the paper.
 
 **To get the baseline `LRU` results, you can run scripts in Figure 11-13 or with:**
 ```bash
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 python3 scripts/evaluation.py \
   --root_dir ./libCacheSim/_build \
   --input_dir ./CacheTrace \
   --output_dir ./results/eval_ignore_obj \
   --ignore_obj --policy_list lru
+'
 
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 python3 scripts/readeval.py \
   --input_dir ./results/eval_ignore_obj \
   --output_dir ./dataresult/withoutobjsize \
   --normalize_policy
+'
 ```
 
 To reproduce the raw sensitivity evaluation, run Merlin-only simulations on the
 same datasets used for Figures 11-13:
 
 ```bash
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 python3 scripts/sensitivity.py \
   --root_dir ./libCacheSim/_build \
   --input_dir ./CacheTrace \
   --output_dir ./results/sensitivity \
   --ignore_obj
+'
 ```
 
 The script writes raw simulator outputs under `./results/sensitivity/`. Convert
@@ -414,7 +443,9 @@ The parameter-tracking build is created under `libCacheSim/_build2/`. Prepare
 the Twitter and FIU traces listed below, then run:
 
 ```bash
+docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc '
 bash scripts/precision.sh
+'
 python3 scripts/plot/precision.py data/precision/fiu.dat -o fiu.pdf
 python3 scripts/plot/precision.py data/precision/twitter.dat -o twitter.pdf
 ```

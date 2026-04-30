@@ -1,0 +1,28 @@
+22:46:38: INFO [flashield.py:220 (root)]: 	calculating wss for w29.oracleGeneral.bin
+22:46:52: INFO [flashield.py:228 (root)]: 	w29.oracleGeneral.bin wss_obj: 4906097, wss_byte: 50400624832
+22:46:52: INFO [cache.py:19 (cache)]: 	create Flashield cache with size 504006248
+22:46:52: INFO [cache.py:19 (cache)]: 	create LRU cache with size 50400624
+22:46:52: INFO [cache.py:19 (cache)]: 	create FIFO cache with size 453605624
+22:46:53: INFO [flashield.py:37 (root)]: 	w29.oracleGeneral.bin Training Flashield...
+22:46:53: INFO [flashield.py:42 (root)]: 	w29.oracleGeneral.bin Training Flashield: 69203 features 69203 labels ...
+22:46:53: INFO [flashield.py:55 (root)]: 	w29.oracleGeneral.bin finish training
+22:48:17: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 1000000, n_miss: 904130, miss ratio: 0.9041, disk write 1035555328 + 0 (0.0205)
+22:49:52: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 2000000, n_miss: 1793634, miss ratio: 0.8968, disk write 1035555328 + 0 (0.0205)
+22:51:23: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 3000000, n_miss: 2676321, miss ratio: 0.8921, disk write 1035555328 + 0 (0.0205)
+22:52:56: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 4000000, n_miss: 3536002, miss ratio: 0.8840, disk write 1035555328 + 0 (0.0205)
+22:54:22: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 5000000, n_miss: 4347031, miss ratio: 0.8694, disk write 1035555328 + 0 (0.0205)
+22:55:47: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 6000000, n_miss: 5124538, miss ratio: 0.8541, disk write 1035555328 + 0 (0.0205)
+22:57:19: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 7000000, n_miss: 5992803, miss ratio: 0.8561, disk write 1035555328 + 0 (0.0205)
+22:58:53: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 8000000, n_miss: 6875954, miss ratio: 0.8595, disk write 1035555328 + 0 (0.0205)
+23:00:33: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 9000000, n_miss: 7794369, miss ratio: 0.8660, disk write 1035555328 + 0 (0.0205)
+23:02:12: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 10000000, n_miss: 8709897, miss ratio: 0.8710, disk write 1035555328 + 0 (0.0205)
+23:03:51: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 11000000, n_miss: 9623419, miss ratio: 0.8749, disk write 1035555328 + 0 (0.0205)
+23:05:35: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 12000000, n_miss: 10605428, miss ratio: 0.8838, disk write 1035555328 + 0 (0.0205)
+23:07:04: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 13000000, n_miss: 11445182, miss ratio: 0.8804, disk write 1035555328 + 0 (0.0205)
+23:08:30: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 14000000, n_miss: 12246767, miss ratio: 0.8748, disk write 1035555328 + 0 (0.0205)
+23:10:00: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 15000000, n_miss: 13079855, miss ratio: 0.8720, disk write 1035555328 + 0 (0.0205)
+23:11:13: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 16000000, n_miss: 13751856, miss ratio: 0.8595, disk write 1035555328 + 0 (0.0205)
+23:12:46: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 17000000, n_miss: 14632172, miss ratio: 0.8607, disk write 1035555328 + 0 (0.0205)
+23:14:24: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 18000000, n_miss: 15564821, miss ratio: 0.8647, disk write 1035555328 + 0 (0.0205)
+23:15:59: INFO [flashield.py:170 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 19000000, n_miss: 16470006, miss ratio: 0.8668, disk write 1035555328 + 0 (0.0205)
+23:16:09: INFO [flashield.py:182 (root)]: 	w29.oracleGeneral.bin-0.1-FIFO-True n_req: 19087784, n_miss: 16557674, miss ratio: 0.8674, disk write 1035555328 + 0 (0.0205)
