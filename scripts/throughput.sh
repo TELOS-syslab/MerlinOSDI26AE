@@ -14,7 +14,7 @@ MODE=${1:-woback}
 TRACE=${2:-CacheTrace/mix.oracleGeneral.bin}
 CACHE_MB_BASE=${3:-4000}
 HASHPOWER_BASE=${4:-21}
-THREADS=${THREADS:-"1 2 4 8 16 24 32 48 64"}
+THREADS=${THREADS:-"1 2 4 8 16 24 32"}
 ALGOS=${ALGOS:-"merlin s3fifo arc lru"}
 
 case "$MODE" in
