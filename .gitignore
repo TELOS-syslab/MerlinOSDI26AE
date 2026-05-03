@@ -5,3 +5,4 @@ data/flash/0.01/
 .vscode/
 *.cachesim
 scripts/plot/__pycache__/
+scripts/flashield/__pycache__/
