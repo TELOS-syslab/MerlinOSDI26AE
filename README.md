@@ -23,7 +23,7 @@ evaluation workflows for artifact evaluation:
   384-core server. We can provide access to a 384-core server for this path.
   Command reference: follow [Detailed Instructions](README.md#detailed-instructions),
   but use an input directory that excludes the Twitter dataset.
-1. Complete full-run path (all datasets): run all datasets, including Twitter.
+3. Complete full-run path (all datasets): run all datasets, including Twitter.
   The expected wall-clock time is about 30 days. Use this path only if time
   permits.
   Command reference: follow all commands in [Detailed Instructions](README.md#detailed-instructions) and the full datasets.

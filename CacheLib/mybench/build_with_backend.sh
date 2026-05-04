@@ -7,7 +7,7 @@ sudo apt install ninja-build >/dev/null;
 
 clear
 pushd ../; 
-./contrib/build.sh -j -v;
+./contrib/build.sh -S -j -v;
 echo "Building CacheLib ...";
 # cd build-cachelib; make -j > /dev/null && make install > /dev/null;
 # cp cachelib/allocator/*.h opt/cachelib/include/cachelib/allocator/
