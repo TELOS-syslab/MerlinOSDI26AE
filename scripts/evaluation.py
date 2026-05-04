@@ -124,7 +124,7 @@ def kill_shortest_jobs_until_safe():
                 alive.append((pid, info))
 
         if len(alive) <= 1:
-            print("[OOM] only 1 task left")
+            #print("[OOM] only 1 task left")
             return
 
         pid, info = sorted(
@@ -133,19 +133,21 @@ def kill_shortest_jobs_until_safe():
         )[0]
 
         runtime = now - info["start_time"]
-        print(f"[KILL] PID={pid}, runtime={runtime:.1f}s")
+        #print(f"[KILL] PID={pid}, runtime={runtime:.1f}s")
 
         try:
             # kill the whole process group to avoid orphan processes
             os.killpg(os.getpgid(pid), signal.SIGKILL)
         except Exception as e:
-            print(f"[WARN] killpg failed {pid}: {e}")
+            pass
+            #print(f"[WARN] killpg failed {pid}: {e}")
 
         killed += 1
         time.sleep(5 * killed)
 
         if killed >= 10:
-            print("[WARN] killed too many tasks, pause")
+            #print("[WARN] killed too many tasks, pause")
+            print("Waiting for execution")
             time.sleep(60)
             return
 
@@ -268,16 +270,16 @@ def run_cmd(cmd, result_file):
         if rc != 0:
             # killed by SIGKILL
             if rc == -signal.SIGKILL:
-                print(f"[KILLED] {cmd}")
+                #print(f"[KILLED] {cmd}")
                 return "KILLED"
 
             if is_oom(stderr):
-                print(f"[OOM] {cmd}")
+                #print(f"[OOM] {cmd}")
                 oom_happen = True
                 oom_time = time.time()
                 return False
 
-            print(f"[FAIL rc={rc}] {cmd}")
+            #print(f"[FAIL rc={rc}] {cmd}")
             return False
 
         # -----------------------------
@@ -296,7 +298,7 @@ def run_cmd(cmd, result_file):
         return True
 
     except Exception as e:
-        print(f"[ERROR] {e}")
+        #print(f"[ERROR] {e}")
         return False
 
 # -----------------------------
@@ -382,7 +384,7 @@ def main():
             try:
                 result = fut.result()
             except Exception as e:
-                print(f"[FUTURE ERROR] {e}")
+                #print(f"[FUTURE ERROR] {e}")
                 result = False
 
             cmd, result_file = futures.pop(fut)
