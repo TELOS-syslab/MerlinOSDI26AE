@@ -296,7 +296,7 @@ To reproduce the throughput data, first generate the synthetic mixed trace:
 ```bash
 python3 ./scripts/data_genmix.py \
   -m 1000000 \
-  -n 100000000 \
+  -n 200000000 \
   --bin-output ./CacheTrace/mix.oracleGeneral.bin
 ```
 

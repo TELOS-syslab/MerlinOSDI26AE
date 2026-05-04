@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 example usage
-python3 ./data_genmix.py -m 1000000 -n 100000000 --bin-output mix.oracleGeneral.bin
+python3 ./data_genmix.py -m 1000000 -n 200000000 --bin-output mix.oracleGeneral.bin
 """
 
 import numpy as np
@@ -123,14 +123,14 @@ def write_requests(requests: np.ndarray, start_index: int, output_file, record_s
             print(int(obj_id))
     return request_index
 
-#python3 ./data_genmix.py -m 1000000 -n 100000000 --bin-output mix.oracleGeneral.bin
+#python3 ./data_genmix.py -m 1000000 -n 200000000 --bin-output mix.oracleGeneral.bin
 if __name__ == "__main__":
     from argparse import ArgumentParser
     ap = ArgumentParser()
     ap.add_argument("-m", type=int, default=1000000, help="Number of objects")
     ap.add_argument("-n",
                     type=int,
-                    default=100000000,
+                    default=200000000,
                     help="Number of requests")
     ap.add_argument("--alpha", type=float, default=1.0, help="Zipf parameter")
     ap.add_argument("--bin-output",
@@ -145,12 +145,12 @@ if __name__ == "__main__":
                     type=int,
                     default=86400 * 7,
                     help="Time span of all requests in seconds")
-    ap.add_argument("--zipf-ratio", type=float, default=0.5, help="Zipf distributed accessed in m")
-    ap.add_argument("--churn-ratio", type=float, default=0.5, help="Total churn as a fraction of m")
-    ap.add_argument("--uniform-ratio", type=float, default=0.5, help="Uniformly and random distributed accesses as a fraction of m")
+    ap.add_argument("--zipf-ratio", type=float, default=0.6, help="Zipf distributed accessed in m")
+    ap.add_argument("--churn-ratio", type=float, default=0.6, help="Total churn as a fraction of m")
+    ap.add_argument("--uniform-ratio", type=float, default=0.6, help="Uniformly and random distributed accesses as a fraction of m")
     ap.add_argument("--uniform-multiplier", type=int, default=20, help="Number of uniform requests is this multiplier times the uniform-ratio * m")
-    ap.add_argument("--frequent-ratio", type=float, default=0.1, help="Frequently accessed objects as a fraction of m")
-    ap.add_argument("--frequent-repeats", type=int, default=50, help="Number of repeats for frequently accessed objects")
+    ap.add_argument("--frequent-ratio", type=float, default=0.2, help="Frequently accessed objects as a fraction of m")
+    ap.add_argument("--frequent-repeats", type=int, default=30, help="Number of repeats for frequently accessed objects")
     ap.add_argument("--scan-ratio", type=float, default=0.6, help="Scan-like accesses as a fraction of m")
     ap.add_argument("--scan-repeats", type=int, default=1, help="Number of repeats for each large scan segment")
 
