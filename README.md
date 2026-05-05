@@ -300,15 +300,16 @@ python3 ./scripts/data_genmix.py \
   --bin-output ./CacheTrace/mix.oracleGeneral.bin
 ```
 
-Then run the CacheLib microbenchmark inside the `cachelib-ae` Docker image
-created by `scripts/install.sh`. The helper script `scripts/throughput.sh`
-records the algorithm, cache-size, hash-power, and thread-count settings used
-for this experiment.
+Then run the CacheLib microbenchmark inside the `merlin-ae` Docker image.
+The helper script `scripts/throughput.sh` records the algorithm, cache-size,
+hash-power, and thread-count settings used for this experiment.
 
 ```bash
 bash scripts/throughput.sh woback
 bash scripts/throughput.sh wback
 ```
+
+*These experiments might consume 10h or more.*
 
 ### Figure 15: Flash-Cache Hit Rate and Write Bytes
 
