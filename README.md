@@ -142,6 +142,7 @@ libCacheSim and CacheLib from the mounted source tree:
 
 ```bash
 docker pull ghcr.io/telos-syslab/merlin-ae:ae-v1
+docker tag ghcr.io/telos-syslab/merlin-ae:ae-v1 merlin-ae:latest
 docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc 'bash scripts/install.sh'
 ```
 
