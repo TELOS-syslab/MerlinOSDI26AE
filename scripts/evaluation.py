@@ -318,6 +318,8 @@ def build_tasks(root_dir, input_dir, output_dir, ignoreobj, policy_list, policy_
 
         for file in os.listdir(dataset_path):
             input_file = os.path.join(dataset_path, file)
+            if not input_file.endswith(".zst"):
+                continue
             result_file = os.path.join(out_dir, file)
             policies = get_policy_todo(result_file, policy_list, policy_name)
             if not policies:

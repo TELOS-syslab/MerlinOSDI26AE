@@ -30,6 +30,7 @@ normalize_policy_map = {
     "WTinyLFU": "WTinyLFU",
     "FIFO_Merge": "FIFOMerge",
     "ARC": "ARC",
+    "Cacheus": "Cacheus",
     "merlin": "merlin"
 }
 enable_normalize_policy = True
