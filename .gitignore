@@ -1,4 +1,7 @@
 *.pdf
+merlin-ae-image*.tar
+merlin-ae-image*.tar.gz
+merlin-ae-image*.tar.gz.sha256
 CacheTrace/
 data/flash/0.1/
 data/flash/0.01/

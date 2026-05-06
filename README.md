@@ -131,28 +131,33 @@ This section describes how to rebuild the artifact and reproduce the results in
 more detail. The full experiments are optional because they are expensive in
 runtime, memory, and storage.
 
-### Build Dependencies and Binaries
+### Load Docker Image and Build Binaries
 
 Estimated cost: about 10 minutes, moderate-to-high CPU load, recommended
 `>=128GB` RAM, and about `21GB` of additional disk for build artifacts and the
-Docker image.
+loaded Docker image.
 
-On Ubuntu 22.04, install system dependencies and build libCacheSim and CacheLib:
+Load the prebuilt Docker image included with the artifact package, then build
+libCacheSim and CacheLib from the mounted source tree:
 
 ```bash
-docker build --network=host -t merlin-ae .
+docker pull ghcr.io/telos-syslab/merlin-ae:ae-v1
 docker run --rm --network=host --cap-add=SYS_NICE -v "$(pwd)":/Merlin -w /Merlin merlin-ae /bin/bash -lc 'bash scripts/install.sh'
 ```
 
-`scripts/install_dependency.sh` installs the system packages and builds zstd,
-XGBoost, and LightGBM. `scripts/install.sh` builds two libCacheSim variants:
+`scripts/install_dependency.sh` installs the system packages and builds zstd. `scripts/install.sh` builds two libCacheSim variants and CacheLib:
 
 - `libCacheSim/_build/`: normal build for the main simulations.
 - `libCacheSim/_build2/`: build with `TRACK_PARAMETERS` enabled for precision experiments.
 - `CacheLib/mybench/_build/`: normal build for eviction algorithms in CacheLib.
 
-The same script also builds the Docker image `merlin-ae` and compiles the
-throughput benchmark binaries used by `scripts/throughput.sh`.
+Artifact maintainers can regenerate the image tarball from the Dockerfile with:
+
+```bash
+bash scripts/package_docker_image.sh
+```
+
+This produces `merlin-ae-image.tar.gz` and `merlin-ae-image.tar.gz.sha256`.
 
 ### Downloaded Datasets Layout
 
