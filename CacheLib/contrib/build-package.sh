@@ -198,7 +198,6 @@ case "$1" in
     REPO=https://github.com/facebook/zstd
     REPODIR=cachelib/external/$NAME
     SRCDIR=$REPODIR/build/cmake
-    external_git_clone=yes
     # Previously, we pinned to release branch. v1.5.4 needed
     # CMake >= 3.18, later reverted. While waiting for v1.5.5,
     # pin to the fix: https://github.com/facebook/zstd/pull/3510

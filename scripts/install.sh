@@ -29,12 +29,9 @@ cmake -DCMAKE_CXX_FLAGS="-DTRACK_PARAMETERS" -DCMAKE_C_FLAGS="-DTRACK_PARAMETERS
 make -j
 popd
 
-# Github proxy for building CacheLib
-git config --global http.proxy http://127.0.0.1:20171
-git config --global https.proxy http://127.0.0.1:20171
-
 # CacheLib install
 pushd CacheLib
 mkdir -p build-fbthrift/thrift/conformance/if
+mkdir -p cachelib/external/zstd/build/cmake/.git
 ./contrib/build.sh -O -j -v
 popd

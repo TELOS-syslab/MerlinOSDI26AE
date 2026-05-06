@@ -66,14 +66,8 @@ setup_zstd() {
 	popd
 }
 
-# We have a proxy port for Github due to the network issues.
-# If you don't need this, or you don't have one proxy, please delete them.
-export http_proxy=http://127.0.0.1:20171
-export https_proxy=http://127.0.0.1:20171
-
-git config --global http.proxy http://127.0.0.1:20171
-git config --global https.proxy http://127.0.0.1:20171
-
 setup_zstd
 # setup_xgboost
 # setup_lightgbm
+
+pip install psutil
