@@ -169,7 +169,6 @@ cache_t *Cacheus_init(const common_cache_params_t ccache_params,
     params->hitlfug = 0;
     params->hitobjlfug = 0;
   #endif
-  snprintf(cache->cache_name, CACHE_NAME_ARRAY_LEN, "Cacheus-%.4lf", SR_LRU_params->p);
 
   return cache;
 }
